@@ -11,9 +11,9 @@ Logic quản lý ngôn ngữ (toggle giữa vi/en)
       <NavRight :currentLanguage="currentLanguage" @toggle-language="toggleLanguage" />
     </div>
     <div class="body">
-      <Left :currentLanguage="currentLanguage" />
-      <Main />
-      <Right />
+      <HomeLeft :currentLanguage="currentLanguage" />
+      <HomeMain />
+      <HomeRight />
     </div>
     <Footer />
   </div>
@@ -23,9 +23,9 @@ Logic quản lý ngôn ngữ (toggle giữa vi/en)
 import NavLeft from '@/components/NavLeft.vue'
 import NavMid from '@/components/NavMid.vue'
 import NavRight from '@/components/NavRight.vue'
-import Left from '@/components/Left.vue'
-import Main from '@/components/Main.vue'
-import Right from '@/components/Right.vue'
+import HomeLeft from '@/components/HomeLeft.vue'
+import HomeMain from '@/components/HomeMain.vue'
+import HomeRight from '@/components/HomeRight.vue'
 import Footer from '@/components/Footer.vue'
 
 export default {
@@ -34,9 +34,9 @@ export default {
     NavLeft,
     NavMid,
     NavRight,
-    Left,
-    Main,
-    Right,
+    HomeLeft,
+    HomeMain,
+    HomeRight,
     Footer
   },
   data() {

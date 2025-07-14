@@ -3,7 +3,7 @@ Component sidebar bên trái
 Chứa các button: Tạo Bài Đăng, Khám Phá, Cài Đặt
 -->
 <template>
-  <div class="left">
+  <div class="menu">
     <button class="btn">
       {{ currentLanguage === 'vi' ? 'Tạo Bài Đăng' : 'Create Post' }}
     </button>
@@ -18,7 +18,7 @@ Chứa các button: Tạo Bài Đăng, Khám Phá, Cài Đặt
 
 <script>
 export default {
-  name: 'Left',
+  name: 'Menu',
   props: {
     currentLanguage: {
       type: String,
@@ -29,7 +29,7 @@ export default {
 </script>
 
 <style scoped>
-.left {
+.menu {
   width: 22.13%;
   background: #2B2D42;
   display: flex;
@@ -39,7 +39,7 @@ export default {
   gap: 1.25rem;
 }
 
-.left .btn {
+.menu .btn {
   width: 11.25rem;
   height: 2.5rem;
   border: none;

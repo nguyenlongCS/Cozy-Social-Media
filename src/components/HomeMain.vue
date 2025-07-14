@@ -1,9 +1,9 @@
 <!--
-Component main content
+Component Feed content
 Chứa post với thông tin user, timestamp, media area và actions
 -->
 <template>
-  <div class="main">
+  <div class="feed">
     <div class="user-info">
       <div class="avatar"></div>
       <span class="name">Tên Người Dùng</span>
@@ -22,12 +22,12 @@ Chứa post với thông tin user, timestamp, media area và actions
 
 <script>
 export default {
-  name: 'Main'
+  name: 'Feed'
 }
 </script>
 
 <style scoped>
-.main {
+.feed {
   width: 39.53%;
   height: 26.44rem;
   margin: 3rem 0;
