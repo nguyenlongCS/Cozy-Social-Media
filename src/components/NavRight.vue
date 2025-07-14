@@ -1,6 +1,7 @@
 <!--
 Component navigation bên phải header
 Chứa theme selector, language button, login button
+Logic: Thêm chức năng chuyển trang khi nhấn login button
 -->
 <template>
   <div class="nav-right">
@@ -12,7 +13,7 @@ Chứa theme selector, language button, login button
     <button class="language-btn btn" @click="toggleLanguage">
       {{ currentLanguage === 'vi' ? 'VN' : 'EN' }}
     </button>
-    <button class="login-button btn">
+    <button class="login-button btn" @click="goToLogin">
       {{ loginText }}
     </button>
   </div>
@@ -38,6 +39,9 @@ export default {
     },
     toggleLanguage() {
       this.$emit('toggle-language')
+    },
+    goToLogin() {
+      this.$router.push('/login')
     }
   }
 }

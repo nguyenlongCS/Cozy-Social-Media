@@ -2,19 +2,19 @@
 
 -->
 <template>
-  <div class="feed">
+  <div class="loginform">
     
   </div>
 </template>
 
 <script>
 export default {
-  name: 'Feed'
+  name: 'Loginform'
 }
 </script>
 
 <style scoped>
-.feed {
+.loginform {
   width: 39.53%;
   height: 26.44rem;
   margin: 3rem 0;

@@ -1,11 +1,13 @@
 <!--
 Component navigation bên trái header
 Chứa icon user và search box
+Logic: Ẩn các thành phần khi đang ở trang login
 -->
 <template>
   <div class="nav-left">
-    <div class="icon-user"></div>
+    <div v-show="!isLoginPage" class="icon-user"></div>
     <input 
+      v-show="!isLoginPage"
       type="text" 
       class="search" 
       :placeholder="searchPlaceholder"
@@ -25,6 +27,9 @@ export default {
   computed: {
     searchPlaceholder() {
       return this.currentLanguage === 'vi' ? 'Tìm kiếm...' : 'Search...'
+    },
+    isLoginPage() {
+      return this.$route.name === 'Login'
     }
   }
 }

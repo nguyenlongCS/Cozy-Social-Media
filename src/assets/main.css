@@ -19,7 +19,7 @@ body {
 
 .home {
   width: 100%;
-  max-width: 79.0625rem;
+  max-width: 80rem;
   height: 39.4375rem;
   display: flex;
   flex-direction: column;

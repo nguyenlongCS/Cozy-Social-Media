@@ -1,20 +1,26 @@
 <!--
 Component navigation giữa header
 Chứa 3 button: profile, home, message
+Logic: Ẩn các thành phần khi đang ở trang login
 -->
 <template>
   <div class="nav-mid">
-    <button class="profile-button btn"></button>
-    <button class="friends-button btn"></button>
-    <button class="home-button btn"></button>
-    <button class="mess-button btn"></button>
-    <button class="notification-button btn"></button>
+    <button v-if="!isLoginPage" class="profile-button btn"></button>
+    <button v-if="!isLoginPage" class="friends-button btn"></button>
+    <button v-if="!isLoginPage" class="home-button btn"></button>
+    <button v-if="!isLoginPage" class="mess-button btn"></button>
+    <button v-if="!isLoginPage" class="notification-button btn"></button>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'NavMid'
+  name: 'NavMid',
+  computed: {
+    isLoginPage() {
+      return this.$route.name === 'Login'
+    }
+  }
 }
 </script>
 
