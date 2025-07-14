@@ -5,8 +5,10 @@ Chứa 3 button: profile, home, message
 <template>
   <div class="nav-mid">
     <button class="profile-button btn"></button>
+    <button class="friends-button btn"></button>
     <button class="home-button btn"></button>
     <button class="mess-button btn"></button>
+    <button class="notification-button btn"></button>
   </div>
 </template>
 
@@ -28,7 +30,7 @@ export default {
   border-radius: 0.9375rem;
 }
 
-.home-button, .profile-button, .mess-button {
+.home-button, .profile-button, .mess-button, .friends-button, .notification-button {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
@@ -36,6 +38,10 @@ export default {
 
 .home-button {
   background: url('src/icons/home.png') center/cover var(--theme-color);
+}
+
+.friends-button {
+  background: url('src/icons/friends.png') center/cover var(--theme-color);
 }
 
 .profile-button {
@@ -46,7 +52,11 @@ export default {
   background: url('src/icons/mess.png') center/cover var(--theme-color);
 }
 
-.home-button:hover, .profile-button:hover, .mess-button:hover {
+.notification-button {
+  background: url('src/icons/notification.png') center/cover var(--theme-color);
+}
+
+.home-button:hover, .profile-button:hover, .mess-button:hover, .friends-button:hover, .notification-button:hover {
   transform: scale(1.15);
   background-color: #2B2D42;
 }
