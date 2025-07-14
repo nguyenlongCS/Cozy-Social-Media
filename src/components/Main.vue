@@ -78,7 +78,8 @@ export default {
 .media-area {
   width: 80%;
   height: 18.75rem;
-  background: var(--theme-color) url('src/icons/plus.png') center/3rem no-repeat;
+  /* background: var(--theme-color) url('src/icons/plus.png') center/3rem no-repeat; phần này nằm trong CreatePost.Vue*/
+  background: var(--theme-color);
   display: flex;
   align-items: center;
   justify-content: center;

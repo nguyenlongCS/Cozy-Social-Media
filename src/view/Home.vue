@@ -23,7 +23,7 @@ Logic quản lý ngôn ngữ (toggle giữa vi/en)
 import NavLeft from '@/components/NavLeft.vue'
 import NavMid from '@/components/NavMid.vue'
 import NavRight from '@/components/NavRight.vue'
-import Left from '@/components/Left.vue'
+import Left from '@/components/Menu.vue'
 import Main from '@/components/Main.vue'
 import Right from '@/components/Right.vue'
 import Footer from '@/components/Footer.vue'
