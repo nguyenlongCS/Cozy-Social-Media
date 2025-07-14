@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # cozy-project-vue
 
 ## Project setup
