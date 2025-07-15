@@ -1,11 +1,12 @@
 <!--
 Component navigation bên phải header
-Chứa theme selector, language button, login/logout button
+Chứa theme selector, language button, back/home button
 Logic: 
-- Theo dõi trạng thái đăng nhập từ Firebase Auth
-- Thay đổi nút Login/Logout dựa trên trạng thái user
-- Thêm chức năng đăng xuất khi user đã đăng nhập
-- Thêm chức năng chuyển trang khi nhấn login button
+- Thay đổi nút login thành nút "Trở về" khi ở trang login
+- Nút "Trở về" sẽ chuyển về trang chủ mà không cần đăng nhập
+- Theo dõi trạng thái đăng nhập từ Firebase Auth (giữ nguyên cho tương lai)
+- Thay đổi nút Login/Logout dựa trên trạng thái user (chỉ ở trang chủ)
+- Thêm chức năng đăng xuất khi user đã đăng nhập (chỉ ở trang chủ)
 -->
 <template>
   <div class="nav-right">
@@ -44,11 +45,20 @@ export default {
   },
   computed: {
     authButtonText() {
+      // Nếu đang ở trang login thì hiển thị nút "Trở về"
+      if (this.isLoginPage) {
+        return this.currentLanguage === 'vi' ? 'Trở về' : 'Back'
+      }
+      
+      // Nếu ở trang chủ thì hiển thị Login/Logout dựa trên trạng thái user
       if (this.user) {
         return this.currentLanguage === 'vi' ? 'Đăng xuất' : 'Logout'
       } else {
         return this.currentLanguage === 'vi' ? 'Đăng nhập' : 'Login'
       }
+    },
+    isLoginPage() {
+      return this.$route.name === 'Login'
     }
   },
   mounted() {
@@ -72,6 +82,13 @@ export default {
       this.$emit('toggle-language')
     },
     async handleAuthAction() {
+      // Nếu đang ở trang login thì quay về trang chủ
+      if (this.isLoginPage) {
+        this.goToHome()
+        return
+      }
+      
+      // Nếu ở trang chủ thì xử lý login/logout
       if (this.user) {
         // Nếu đã đăng nhập thì đăng xuất
         await this.handleLogout()
@@ -108,6 +125,9 @@ export default {
     },
     goToLogin() {
       this.$router.push('/login')
+    },
+    goToHome() {
+      this.$router.push('/')
     }
   }
 }

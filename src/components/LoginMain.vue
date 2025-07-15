@@ -2,11 +2,14 @@
 Component form đăng nhập/đăng ký
 Logic: 
 - Toggle giữa tab Login và SignUp
-- Form Login: email, password với nút ẩn/hiện mật khẩu, kết nối Firebase Auth
+- Form Login: email, password với nút ẹn/hiện mật khẩu, kết nối Firebase Auth
 - Form SignUp: email, password, confirm password với nút ẩn/hiện mật khẩu, kết nối Firebase Auth
 - Validate confirm password khớp với password
 - Hỗ trợ chuyển đổi ngôn ngữ (vi/en)
 - Firebase authentication cho email/password login và registration
+- Chức năng Remember Me: lưu email vào localStorage khi được chọn
+- Tự động load email đã lưu khi component được mount
+- Xóa email khỏi localStorage khi không chọn Remember Me
 -->
 <template>
   <div class="loginform">
@@ -50,10 +53,10 @@ Logic:
           class="toggle-password"
           @click="showLoginPassword = !showLoginPassword"
         >
-          <img 
-            :src="showLoginPassword ? '@/icons/hide.png' : '@/icons/show.png'"
-            alt="Toggle password"
-          >
+          <div 
+            class="password-icon"
+            :class="showLoginPassword ? 'hide-icon' : 'show-icon'"
+          ></div>
         </button>
       </div>
       
@@ -64,6 +67,7 @@ Logic:
             type="checkbox" 
             v-model="loginForm.rememberMe"
             class="checkbox"
+            @change="handleRememberMeChange"
           >
           <span class="checkmark"></span>
           {{ currentLanguage === 'vi' ? 'Ghi nhớ đăng nhập' : 'Remember me' }}
@@ -100,10 +104,10 @@ Logic:
           class="toggle-password"
           @click="showSignupPassword = !showSignupPassword"
         >
-          <img 
-            :src="showSignupPassword ? '@/icons/hide.png' : '@/icons/show.png'"
-            alt="Toggle password"
-          >
+          <div 
+            class="password-icon"
+            :class="showSignupPassword ? 'hide-icon' : 'show-icon'"
+          ></div>
         </button>
       </div>
       <div class="input-group">
@@ -118,10 +122,10 @@ Logic:
           class="toggle-password"
           @click="showConfirmPassword = !showConfirmPassword"
         >
-          <img 
-            :src="showConfirmPassword ? '@/icons/hide.png' : '@/icons/show.png'"
-            alt="Toggle password"
-          >
+          <div 
+            class="password-icon"
+            :class="showConfirmPassword ? 'hide-icon' : 'show-icon'"
+          ></div>
         </button>
       </div>
       <button class="signup-btn btn" @click="handleSignup" :disabled="isLoading">
@@ -167,7 +171,43 @@ export default {
       }
     }
   },
+  mounted() {
+    // Load remembered email when component mounts
+    this.loadRememberedEmail()
+  },
   methods: {
+    loadRememberedEmail() {
+      try {
+        const rememberedEmail = localStorage.getItem('rememberedEmail')
+        const rememberMe = localStorage.getItem('rememberMe') === 'true'
+        
+        if (rememberedEmail && rememberMe) {
+          this.loginForm.email = rememberedEmail
+          this.loginForm.rememberMe = true
+        }
+      } catch (error) {
+        console.error('Error loading remembered email:', error)
+      }
+    },
+    
+    handleRememberMeChange() {
+      try {
+        if (this.loginForm.rememberMe) {
+          // Save email to localStorage when remember me is checked
+          if (this.loginForm.email) {
+            localStorage.setItem('rememberedEmail', this.loginForm.email)
+            localStorage.setItem('rememberMe', 'true')
+          }
+        } else {
+          // Remove email from localStorage when remember me is unchecked
+          localStorage.removeItem('rememberedEmail')
+          localStorage.removeItem('rememberMe')
+        }
+      } catch (error) {
+        console.error('Error handling remember me:', error)
+      }
+    },
+    
     async handleLogin() {
       if (!this.loginForm.email || !this.loginForm.password) {
         const message = this.currentLanguage === 'vi' 
@@ -175,6 +215,19 @@ export default {
           : 'Please fill in all fields!'
         alert(message)
         return
+      }
+
+      // Handle remember me functionality before login
+      try {
+        if (this.loginForm.rememberMe) {
+          localStorage.setItem('rememberedEmail', this.loginForm.email)
+          localStorage.setItem('rememberMe', 'true')
+        } else {
+          localStorage.removeItem('rememberedEmail')
+          localStorage.removeItem('rememberMe')
+        }
+      } catch (error) {
+        console.error('Error saving remember me:', error)
       }
 
       this.isLoading = true
@@ -417,9 +470,18 @@ export default {
   justify-content: center;
 }
 
-.toggle-password img {
+.password-icon {
   width: 1rem;
   height: 1rem;
+}
+
+.show-icon {
+  background: url('src/icons/show.png') center/cover;
+  filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
+}
+
+.hide-icon {
+  background: url('src/icons/hide.png') center/cover;
   filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
 }
 
