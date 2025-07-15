@@ -1,7 +1,7 @@
 /*
-Composable quản lý authentication
+Composable quản lý authentication - Updated with MySQL sync
 Centralize logic đăng nhập, đăng ký, đăng xuất và theo dõi trạng thái user
-Sử dụng chung cho tất cả components liên quan đến auth
+Tự động đồng bộ với MySQL khi user login thành công
 */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { 
@@ -15,6 +15,7 @@ import {
   onAuthStateChanged 
 } from 'firebase/auth'
 import { auth } from '@/firebase/config'
+import { useDatabase } from '@/composables/useDatabase'
 
 export function useAuth() {
   const user = ref(null)
@@ -22,12 +23,35 @@ export function useAuth() {
   const error = ref(null)
   let unsubscribe = null
 
+  // Database composable để sync user - chỉ sync khi có backend
+  const { syncUser } = useDatabase()
+
   // Khởi tạo listener theo dõi trạng thái auth
   const initAuthListener = () => {
-    unsubscribe = onAuthStateChanged(auth, (authUser) => {
+    unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       user.value = authUser
       console.log('Auth state changed:', authUser ? 'Logged in' : 'Logged out')
+      
+      // Sync với MySQL khi user login (optional - không ảnh hưởng UI nếu lỗi)
+      if (authUser) {
+        try {
+          await syncUser(authUser)
+        } catch (error) {
+          console.warn('Auto MySQL sync failed (backend may be offline):', error)
+          // Không throw - app vẫn hoạt động bình thường
+        }
+      }
     })
+  }
+
+  // Sync user với provider info - với error handling
+  const syncUserWithProvider = async (user, provider) => {
+    try {
+      await syncUser(user, provider)
+    } catch (error) {
+      console.warn('MySQL sync failed (this is optional):', error)
+      // Không throw error để không ảnh hưởng đến login flow chính
+    }
   }
 
   // Đăng nhập với email/password
@@ -41,6 +65,10 @@ export function useAuth() {
     
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      
+      // Sync với MySQL với provider 'email'
+      await syncUserWithProvider(userCredential.user, 'email')
+      
       return userCredential.user
     } catch (err) {
       error.value = err
@@ -69,6 +97,10 @@ export function useAuth() {
     
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      
+      // Sync với MySQL với provider 'email'
+      await syncUserWithProvider(userCredential.user, 'email')
+      
       return userCredential.user
     } catch (err) {
       error.value = err
@@ -89,6 +121,10 @@ export function useAuth() {
       provider.addScope('profile')
       
       const result = await signInWithPopup(auth, provider)
+      
+      // Sync với MySQL với provider 'google'
+      await syncUserWithProvider(result.user, 'google')
+      
       return result.user
     } catch (err) {
       error.value = err
@@ -112,6 +148,10 @@ export function useAuth() {
       })
       
       const result = await signInWithPopup(auth, provider)
+      
+      // Sync với MySQL với provider 'facebook'
+      await syncUserWithProvider(result.user, 'facebook')
+      
       return result.user
     } catch (err) {
       error.value = err
@@ -147,6 +187,7 @@ export function useAuth() {
     
     try {
       await signOut(auth)
+      // Không cần sync khi logout vì MySQL chỉ track login times
     } catch (err) {
       error.value = err
       throw err
@@ -182,6 +223,7 @@ export function useAuth() {
     resetPassword,
     logout,
     initAuthListener,
-    cleanup
+    cleanup,
+    syncUserWithProvider
   }
 }
