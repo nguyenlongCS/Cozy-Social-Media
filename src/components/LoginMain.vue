@@ -455,6 +455,25 @@ export default {
   color: rgba(255, 235, 124, 0.6);
 }
 
+/* Override autofill styles để giữ màu sắc nhất quán */
+.form-input:-webkit-autofill,
+.form-input:-webkit-autofill:hover,
+.form-input:-webkit-autofill:focus,
+.form-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 30px #2B2D42 inset !important;
+  -webkit-text-fill-color: var(--theme-color) !important;
+  background-color: #2B2D42 !important;
+  border: 0.125rem solid var(--theme-color) !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Firefox autofill override */
+.form-input:-moz-autofill {
+  background-color: #2B2D42 !important;
+  color: var(--theme-color) !important;
+  border: 0.125rem solid var(--theme-color) !important;
+}
+
 .toggle-password {
   position: absolute;
   right: 0.75rem;
