@@ -10,7 +10,7 @@ View trang đăng nhập
     </div>
     <div class="body">
       <LoginLeft :currentLanguage="currentLanguage" />
-      <LoginMain />
+      <LoginMain :currentLanguage="currentLanguage" />
       <LoginRight />
     </div>
     <Footer />
