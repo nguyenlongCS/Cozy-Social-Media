@@ -1,19 +1,21 @@
 <!--
-Component sidebar bên phải trang login
-Logic: Thêm Google và Facebook login với popup authentication
-Kết nối Firebase Auth cho đăng nhập social media
+Component sidebar bên phải trang login - Refactored
+Logic: 
+- Sử dụng composables để quản lý auth, language và error handling
+- Thêm Google và Facebook login với popup authentication
+- Kết nối Firebase Auth cho đăng nhập social media
 -->
 <template>
   <div class="social">
     <div class="social-login-container">
-      <h3 class="social-title">{{ currentLanguage === 'vi' ? 'Hoặc đăng nhập bằng' : 'Or sign in with' }}</h3>
+      <h3 class="social-title">{{ getText('orSignInWith') }}</h3>
       
-      <button class="social-btn google-btn" @click="signInWithGoogle">
+      <button class="social-btn google-btn" @click="handleGoogleLogin" :disabled="isLoading">
         <img src="@/icons/google-logo.png" alt="Google" class="social-icon">
         <span>Google</span>
       </button>
       
-      <button class="social-btn facebook-btn" @click="signInWithFacebook">
+      <button class="social-btn facebook-btn" @click="handleFacebookLogin" :disabled="isLoading">
         <img src="@/icons/facebook-logo.png" alt="Facebook" class="social-icon">
         <span>Facebook</span>
       </button>
@@ -22,13 +24,11 @@ Kết nối Firebase Auth cho đăng nhập social media
 </template>
 
 <script>
-// Import Firebase Auth functions
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  FacebookAuthProvider 
-} from 'firebase/auth'
-import { auth } from '@/firebase/config'
+import { watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
+import { useLanguage } from '@/composables/useLanguage'
+import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
   name: 'Social',
@@ -38,90 +38,49 @@ export default {
       default: 'vi'
     }
   },
-  methods: {
-    async signInWithGoogle() {
+  setup(props) {
+    const router = useRouter()
+    const { loginWithGoogle, loginWithFacebook, isLoading } = useAuth()
+    const { getText, syncWithProp } = useLanguage()
+    const { showError } = useErrorHandler()
+
+    // Sync với prop changes
+    watch(() => props.currentLanguage, (newLang) => {
+      syncWithProp(newLang)
+    }, { immediate: true })
+
+    // Handle Google login
+    const handleGoogleLogin = async () => {
       try {
-        const provider = new GoogleAuthProvider()
-        provider.addScope('email')
-        provider.addScope('profile')
-        
-        const result = await signInWithPopup(auth, provider)
-        const user = result.user
-        
+        const user = await loginWithGoogle()
         console.log('Google login successful:', user)
-        // Chuyển hướng về trang chủ sau khi đăng nhập thành công
-        this.$router.push('/')
-        
+        router.push('/')
       } catch (error) {
-        console.error('Google login error:', error)
-        const message = this.currentLanguage === 'vi' 
-          ? 'Đăng nhập Google thất bại!' 
-          : 'Google login failed!'
-        alert(message)
+        showError(error, 'google')
       }
-    },
+    }
     
-    async signInWithFacebook() {
+    // Handle Facebook login
+    const handleFacebookLogin = async () => {
       try {
-        const provider = new FacebookAuthProvider()
-        provider.addScope('email')
-        provider.addScope('public_profile')
-        
-        // Thêm custom parameters cho Facebook
-        provider.setCustomParameters({
-          'display': 'popup'
-        })
-        
-        const result = await signInWithPopup(auth, provider)
-        const user = result.user
-        
+        const user = await loginWithFacebook()
         console.log('Facebook login successful:', user)
-        
-        // Lấy thông tin credential nếu cần
-        const credential = FacebookAuthProvider.credentialFromResult(result)
-        const accessToken = credential.accessToken
-        console.log('Facebook access token:', accessToken)
-        
-        // Chuyển hướng về trang chủ sau khi đăng nhập thành công
-        this.$router.push('/')
-        
+        router.push('/')
       } catch (error) {
-        console.error('Facebook login error:', error)
-        
-        let message = this.currentLanguage === 'vi' 
-          ? 'Đăng nhập Facebook thất bại!' 
-          : 'Facebook login failed!'
-          
-        // Xử lý các lỗi cụ thể
-        if (error.code === 'auth/popup-closed-by-user') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Đăng nhập bị hủy!' 
-            : 'Login cancelled!'
-        } else if (error.code === 'auth/popup-blocked') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Popup bị chặn! Vui lòng cho phép popup.' 
-            : 'Popup blocked! Please allow popups.'
-        } else if (error.code === 'auth/account-exists-with-different-credential') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Email đã được sử dụng với phương thức đăng nhập khác!' 
-            : 'Email already used with different sign-in method!'
-        } else if (error.code === 'auth/auth-domain-config-required') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Cấu hình domain chưa đúng!' 
-            : 'Auth domain configuration required!'
-        } else if (error.code === 'auth/operation-not-allowed') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Đăng nhập Facebook chưa được kích hoạt!' 
-            : 'Facebook sign-in not enabled!'
-        }
-        
-        alert(message)
+        showError(error, 'facebook')
         console.log('Error details:', {
           code: error.code,
           message: error.message,
           customData: error.customData
         })
       }
+    }
+
+    return {
+      isLoading,
+      getText,
+      handleGoogleLogin,
+      handleFacebookLogin
     }
   }
 }
@@ -172,10 +131,16 @@ export default {
   transition: all 0.3s ease;
 }
 
-.social-btn:hover {
+.social-btn:hover:not(:disabled) {
   transform: scale(1.05);
   background: var(--theme-color);
   color: #000;
+}
+
+.social-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .social-icon {
@@ -184,11 +149,11 @@ export default {
   object-fit: contain;
 }
 
-.google-btn:hover .social-icon {
+.google-btn:hover:not(:disabled) .social-icon {
   filter: brightness(0);
 }
 
-.facebook-btn:hover .social-icon {
+.facebook-btn:hover:not(:disabled) .social-icon {
   filter: brightness(0);
 }
 </style>

@@ -1,15 +1,16 @@
 <!--
-View trang chủ
-Tổng hợp tất cả components để tạo thành layout hoàn chỉnh
-Logic quản lý ngôn ngữ (toggle giữa vi/en)
-Import Firebase config để đảm bảo auth hoạt động
+View trang chủ - Refactored
+Logic: 
+- Sử dụng composables để quản lý language
+- Tổng hợp tất cả components để tạo thành layout hoàn chỉnh
+- Import Firebase config để đảm bảo auth hoạt động
 -->
 <template>
   <div class="home">
     <div class="header">
       <NavLeft :currentLanguage="currentLanguage" />
       <NavMid />
-      <NavRight :currentLanguage="currentLanguage" @toggle-language="toggleLanguage" />
+      <NavRight :currentLanguage="currentLanguage" @toggle-language="handleToggleLanguage" />
     </div>
     <div class="body">
       <HomeLeft :currentLanguage="currentLanguage" />
@@ -21,6 +22,7 @@ Import Firebase config để đảm bảo auth hoạt động
 </template>
 
 <script>
+import { watch } from 'vue'
 import NavLeft from '@/components/NavLeft.vue'
 import NavMid from '@/components/NavMid.vue'
 import NavRight from '@/components/NavRight.vue'
@@ -28,6 +30,7 @@ import HomeLeft from '@/components/HomeLeft.vue'
 import HomeMain from '@/components/HomeMain.vue'
 import HomeRight from '@/components/HomeRight.vue'
 import Footer from '@/components/Footer.vue'
+import { useLanguage } from '@/composables/useLanguage'
 
 // Import Firebase để đảm bảo được khởi tạo
 import '@/firebase/config'
@@ -43,14 +46,16 @@ export default {
     HomeRight,
     Footer
   },
-  data() {
-    return {
-      currentLanguage: 'vi'
+  setup() {
+    const { currentLanguage, toggleLanguage } = useLanguage()
+
+    const handleToggleLanguage = () => {
+      toggleLanguage()
     }
-  },
-  methods: {
-    toggleLanguage() {
-      this.currentLanguage = this.currentLanguage === 'vi' ? 'en' : 'vi'
+
+    return {
+      currentLanguage,
+      handleToggleLanguage
     }
   }
 }

@@ -1,7 +1,9 @@
 <!--
-Component navigation bên trái header
-Chứa icon user và search box
-Logic: Ẩn các thành phần khi đang ở trang login
+Component navigation bên trái header - Refactored
+Logic: 
+- Sử dụng composables để quản lý language
+- Chứa icon user và search box
+- Ẩn các thành phần khi đang ở trang login
 -->
 <template>
   <div class="nav-left">
@@ -10,12 +12,16 @@ Logic: Ẩn các thành phần khi đang ở trang login
       v-show="!isLoginPage"
       type="text" 
       class="search" 
-      :placeholder="searchPlaceholder"
+      :placeholder="getText('search')"
     >
   </div>
 </template>
 
 <script>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
+import { useLanguage } from '@/composables/useLanguage'
+
 export default {
   name: 'NavLeft',
   props: {
@@ -24,12 +30,19 @@ export default {
       default: 'vi'
     }
   },
-  computed: {
-    searchPlaceholder() {
-      return this.currentLanguage === 'vi' ? 'Tìm kiếm...' : 'Search...'
-    },
-    isLoginPage() {
-      return this.$route.name === 'Login'
+  setup(props) {
+    const route = useRoute()
+    const { getText, setLanguage } = useLanguage()
+
+    // Set language từ props
+    setLanguage(props.currentLanguage)
+
+    // Computed properties
+    const isLoginPage = computed(() => route.name === 'Login')
+
+    return {
+      isLoginPage,
+      getText
     }
   }
 }

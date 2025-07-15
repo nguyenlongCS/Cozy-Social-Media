@@ -1,10 +1,10 @@
 <!--
-Component navigation bên phải header
-Chứa theme selector, language button, back/home button
+Component navigation bên phải header - Refactored
 Logic: 
+- Sử dụng composables để quản lý auth, language và error handling
 - Thay đổi nút login thành nút "Trở về" khi ở trang login
 - Nút "Trở về" sẽ chuyển về trang chủ mà không cần đăng nhập
-- Theo dõi trạng thái đăng nhập từ Firebase Auth (giữ nguyên cho tương lai)
+- Theo dõi trạng thái đăng nhập từ Firebase Auth
 - Thay đổi nút Login/Logout dựa trên trạng thái user (chỉ ở trang chủ)
 - Thêm chức năng đăng xuất khi user đã đăng nhập (chỉ ở trang chủ)
 -->
@@ -15,7 +15,7 @@ Logic:
       <button class="theme-btn green" @click="changeTheme('#a4f28d')"></button>
       <button class="theme-btn aqua" @click="changeTheme('#7FFFD4')"></button>
     </div>
-    <button class="language-btn btn" @click="toggleLanguage">
+    <button class="language-btn btn" @click="handleToggleLanguage">
       {{ currentLanguage === 'vi' ? 'VN' : 'EN' }}
     </button>
     <button class="login-button btn" @click="handleAuthAction" :disabled="isLoading">
@@ -25,9 +25,11 @@ Logic:
 </template>
 
 <script>
-// Import Firebase Auth functions để theo dõi trạng thái đăng nhập và đăng xuất
-import { signOut, onAuthStateChanged } from 'firebase/auth'
-import { auth } from '@/firebase/config'
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
+import { useLanguage } from '@/composables/useLanguage'
+import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
   name: 'NavRight',
@@ -37,97 +39,79 @@ export default {
       default: 'vi'
     }
   },
-  data() {
-    return {
-      user: null,
-      isLoading: false
-    }
-  },
-  computed: {
-    authButtonText() {
-      // Nếu đang ở trang login thì hiển thị nút "Trở về"
-      if (this.isLoginPage) {
-        return this.currentLanguage === 'vi' ? 'Trở về' : 'Back'
+  emits: ['toggle-language'],
+  setup(props, { emit }) {
+    const route = useRoute()
+    const router = useRouter()
+    const { user, logout, isLoading } = useAuth()
+    const { getText, setLanguage } = useLanguage()
+    const { showError } = useErrorHandler()
+
+    // Set language từ props
+    setLanguage(props.currentLanguage)
+
+    // Computed properties
+    const isLoginPage = computed(() => route.name === 'Login')
+
+    const authButtonText = computed(() => {
+      if (isLoginPage.value) {
+        return getText('back')
       }
       
-      // Nếu ở trang chủ thì hiển thị Login/Logout dựa trên trạng thái user
-      if (this.user) {
-        return this.currentLanguage === 'vi' ? 'Đăng xuất' : 'Logout'
+      if (user.value) {
+        return getText('logout')
       } else {
-        return this.currentLanguage === 'vi' ? 'Đăng nhập' : 'Login'
+        return getText('login')
       }
-    },
-    isLoginPage() {
-      return this.$route.name === 'Login'
-    }
-  },
-  mounted() {
-    // Theo dõi trạng thái đăng nhập
-    this.unsubscribe = onAuthStateChanged(auth, (user) => {
-      this.user = user
-      console.log('Auth state changed:', user ? 'Logged in' : 'Logged out')
     })
-  },
-  beforeUnmount() {
-    // Cleanup listener khi component bị destroy
-    if (this.unsubscribe) {
-      this.unsubscribe()
-    }
-  },
-  methods: {
-    changeTheme(color) {
+
+    // Methods
+    const changeTheme = (color) => {
       document.documentElement.style.setProperty('--theme-color', color)
-    },
-    toggleLanguage() {
-      this.$emit('toggle-language')
-    },
-    async handleAuthAction() {
-      // Nếu đang ở trang login thì quay về trang chủ
-      if (this.isLoginPage) {
-        this.goToHome()
+    }
+
+    const handleToggleLanguage = () => {
+      emit('toggle-language')
+    }
+
+    const handleAuthAction = async () => {
+      if (isLoginPage.value) {
+        goToHome()
         return
       }
       
-      // Nếu ở trang chủ thì xử lý login/logout
-      if (this.user) {
-        // Nếu đã đăng nhập thì đăng xuất
-        await this.handleLogout()
+      if (user.value) {
+        await handleLogout()
       } else {
-        // Nếu chưa đăng nhập thì chuyển tới trang login
-        this.goToLogin()
+        goToLogin()
       }
-    },
-    async handleLogout() {
-      this.isLoading = true
+    }
+
+    const handleLogout = async () => {
       try {
-        await signOut(auth)
+        await logout()
         console.log('Logout successful')
-        
-        const message = this.currentLanguage === 'vi' 
-          ? 'Đăng xuất thành công!' 
-          : 'Logout successful!'
-        
-        // Hiển thị thông báo ngắn gọn (có thể comment lại nếu không muốn)
-        // alert(message)
-        
-        // Vẫn ở lại trang hiện tại (home)
+        // Không hiển thị alert để tránh làm phiền user
         // Trạng thái user sẽ tự động cập nhật qua onAuthStateChanged
-        
       } catch (error) {
-        console.error('Logout error:', error)
-        const message = this.currentLanguage === 'vi' 
-          ? 'Đăng xuất thất bại!' 
-          : 'Logout failed!'
-        alert(message)
-      } finally {
-        this.isLoading = false
+        showError(error, 'logout')
       }
-    },
-    goToLogin() {
-      this.$router.push('/login')
-    },
-    goToHome() {
-      this.$router.push('/')
+    }
+
+    const goToLogin = () => {
+      router.push('/login')
+    }
+
+    const goToHome = () => {
+      router.push('/')
+    }
+
+    return {
+      isLoading,
+      authButtonText,
+      changeTheme,
+      handleToggleLanguage,
+      handleAuthAction
     }
   }
 }

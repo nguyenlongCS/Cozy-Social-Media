@@ -1,8 +1,9 @@
 <!--
-Component form đăng nhập/đăng ký
+Component form đăng nhập/đăng ký - Refactored
 Logic: 
+- Sử dụng composables để quản lý auth, storage, language và error handling
 - Toggle giữa tab Login và SignUp
-- Form Login: email, password với nút ẹn/hiện mật khẩu, kết nối Firebase Auth
+- Form Login: email, password với nút ẩn/hiện mật khẩu, kết nối Firebase Auth
 - Form SignUp: email, password, confirm password với nút ẩn/hiện mật khẩu, kết nối Firebase Auth
 - Validate confirm password khớp với password
 - Hỗ trợ chuyển đổi ngôn ngữ (vi/en)
@@ -20,14 +21,14 @@ Logic:
         :class="{ active: activeTab === 'login' }"
         @click="activeTab = 'login'"
       >
-        {{ currentLanguage === 'vi' ? 'Đăng nhập' : 'Login' }}
+        {{ getText('login') }}
       </button>
       <button 
         class="tab-btn" 
         :class="{ active: activeTab === 'signup' }"
         @click="activeTab = 'signup'"
       >
-        {{ currentLanguage === 'vi' ? 'Đăng ký' : 'Sign Up' }}
+        {{ getText('signup') }}
       </button>
     </div>
 
@@ -37,7 +38,7 @@ Logic:
         <input 
           type="email" 
           v-model="loginForm.email"
-          :placeholder="currentLanguage === 'vi' ? 'Email' : 'Email'"
+          :placeholder="getText('email')"
           class="form-input"
         >
       </div>
@@ -45,7 +46,7 @@ Logic:
         <input 
           :type="showLoginPassword ? 'text' : 'password'"
           v-model="loginForm.password"
-          :placeholder="currentLanguage === 'vi' ? 'Mật khẩu' : 'Password'"
+          :placeholder="getText('password')"
           class="form-input"
         >
         <button 
@@ -70,15 +71,15 @@ Logic:
             @change="handleRememberMeChange"
           >
           <span class="checkmark"></span>
-          {{ currentLanguage === 'vi' ? 'Ghi nhớ đăng nhập' : 'Remember me' }}
+          {{ getText('rememberMe') }}
         </label>
         <a href="#" class="forgot-pass" @click.prevent="handleForgotPassword">
-          {{ currentLanguage === 'vi' ? 'Quên mật khẩu?' : 'Forgot Password?' }}
+          {{ getText('forgotPassword') }}
         </a>
       </div>
       
       <button class="login-btn btn" @click="handleLogin" :disabled="isLoading">
-        {{ isLoading ? '...' : (currentLanguage === 'vi' ? 'Đăng nhập' : 'Login') }}
+        {{ isLoading ? '...' : getText('login') }}
       </button>
     </div>
 
@@ -88,7 +89,7 @@ Logic:
         <input 
           type="email" 
           v-model="signupForm.email"
-          :placeholder="currentLanguage === 'vi' ? 'Email' : 'Email'"
+          :placeholder="getText('email')"
           class="form-input"
         >
       </div>
@@ -96,7 +97,7 @@ Logic:
         <input 
           :type="showSignupPassword ? 'text' : 'password'"
           v-model="signupForm.password"
-          :placeholder="currentLanguage === 'vi' ? 'Mật khẩu' : 'Password'"
+          :placeholder="getText('password')"
           class="form-input"
         >
         <button 
@@ -114,7 +115,7 @@ Logic:
         <input 
           :type="showConfirmPassword ? 'text' : 'password'"
           v-model="signupForm.confirmPassword"
-          :placeholder="currentLanguage === 'vi' ? 'Xác nhận mật khẩu' : 'Confirm Password'"
+          :placeholder="getText('confirmPassword')"
           class="form-input"
         >
         <button 
@@ -129,20 +130,19 @@ Logic:
         </button>
       </div>
       <button class="signup-btn btn" @click="handleSignup" :disabled="isLoading">
-        {{ isLoading ? '...' : (currentLanguage === 'vi' ? 'Đăng ký' : 'Sign Up') }}
+        {{ isLoading ? '...' : getText('signup') }}
       </button>
     </div>
   </div>
 </template>
 
 <script>
-// Import Firebase Auth functions
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail
-} from 'firebase/auth'
-import { auth } from '@/firebase/config'
+import { ref, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuth } from '@/composables/useAuth'
+import { useStorage } from '@/composables/useStorage'
+import { useLanguage } from '@/composables/useLanguage'
+import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
   name: 'Loginform',
@@ -152,224 +152,115 @@ export default {
       default: 'vi'
     }
   },
-  data() {
-    return {
-      activeTab: 'login',
-      showLoginPassword: false,
-      showSignupPassword: false,
-      showConfirmPassword: false,
-      isLoading: false,
-      loginForm: {
-        email: '',
-        password: '',
-        rememberMe: false
-      },
-      signupForm: {
-        email: '',
-        password: '',
-        confirmPassword: ''
+  setup(props) {
+    const router = useRouter()
+    const { loginWithEmail, signupWithEmail, resetPassword, isLoading } = useAuth()
+    const { loadRememberedEmail, saveRememberedEmail } = useStorage()
+    const { getText, syncWithProp } = useLanguage()
+    const { showError, showSuccess } = useErrorHandler()
+
+    // Reactive data
+    const activeTab = ref('login')
+    const showLoginPassword = ref(false)
+    const showSignupPassword = ref(false)
+    const showConfirmPassword = ref(false)
+    
+    const loginForm = ref({
+      email: '',
+      password: '',
+      rememberMe: false
+    })
+    
+    const signupForm = ref({
+      email: '',
+      password: '',
+      confirmPassword: ''
+    })
+
+    // Load remembered email khi component mount
+    onMounted(() => {
+      const { email, remember } = loadRememberedEmail()
+      if (email && remember) {
+        loginForm.value.email = email
+        loginForm.value.rememberMe = true
+      }
+    })
+
+    // Sync với prop changes
+    watch(() => props.currentLanguage, (newLang) => {
+      syncWithProp(newLang)
+    }, { immediate: true })
+
+    // Handle remember me change
+    const handleRememberMeChange = () => {
+      saveRememberedEmail(loginForm.value.email, loginForm.value.rememberMe)
+    }
+
+    // Handle login
+    const handleLogin = async () => {
+      try {
+        // Save remember me before login
+        saveRememberedEmail(loginForm.value.email, loginForm.value.rememberMe)
+        
+        await loginWithEmail(loginForm.value.email, loginForm.value.password)
+        console.log('Login successful')
+        router.push('/')
+      } catch (error) {
+        showError(error, 'login')
       }
     }
-  },
-  mounted() {
-    // Load remembered email when component mounts
-    this.loadRememberedEmail()
-  },
-  methods: {
-    loadRememberedEmail() {
-      try {
-        const rememberedEmail = localStorage.getItem('rememberedEmail')
-        const rememberMe = localStorage.getItem('rememberMe') === 'true'
-        
-        if (rememberedEmail && rememberMe) {
-          this.loginForm.email = rememberedEmail
-          this.loginForm.rememberMe = true
-        }
-      } catch (error) {
-        console.error('Error loading remembered email:', error)
-      }
-    },
-    
-    handleRememberMeChange() {
-      try {
-        if (this.loginForm.rememberMe) {
-          // Save email to localStorage when remember me is checked
-          if (this.loginForm.email) {
-            localStorage.setItem('rememberedEmail', this.loginForm.email)
-            localStorage.setItem('rememberMe', 'true')
-          }
-        } else {
-          // Remove email from localStorage when remember me is unchecked
-          localStorage.removeItem('rememberedEmail')
-          localStorage.removeItem('rememberMe')
-        }
-      } catch (error) {
-        console.error('Error handling remember me:', error)
-      }
-    },
-    
-    async handleLogin() {
-      if (!this.loginForm.email || !this.loginForm.password) {
-        const message = this.currentLanguage === 'vi' 
-          ? 'Vui lòng nhập đầy đủ thông tin!' 
-          : 'Please fill in all fields!'
-        alert(message)
+
+    // Handle forgot password
+    const handleForgotPassword = async () => {
+      if (!loginForm.value.email) {
+        showError({ message: 'MISSING_EMAIL' }, 'reset')
         return
       }
 
-      // Handle remember me functionality before login
       try {
-        if (this.loginForm.rememberMe) {
-          localStorage.setItem('rememberedEmail', this.loginForm.email)
-          localStorage.setItem('rememberMe', 'true')
-        } else {
-          localStorage.removeItem('rememberedEmail')
-          localStorage.removeItem('rememberMe')
-        }
+        await resetPassword(loginForm.value.email)
+        showSuccess('reset')
       } catch (error) {
-        console.error('Error saving remember me:', error)
+        showError(error, 'reset')
       }
+    }
 
-      this.isLoading = true
+    // Handle signup
+    const handleSignup = async () => {
       try {
-        const userCredential = await signInWithEmailAndPassword(
-          auth, 
-          this.loginForm.email, 
-          this.loginForm.password
+        await signupWithEmail(
+          signupForm.value.email, 
+          signupForm.value.password, 
+          signupForm.value.confirmPassword
         )
-        const user = userCredential.user
         
-        console.log('Login successful:', user)
+        showSuccess('signup')
         
-        // Chuyển hướng về trang chủ sau khi đăng nhập thành công
-        this.$router.push('/')
-        
-      } catch (error) {
-        console.error('Login error:', error)
-        let message = this.currentLanguage === 'vi' 
-          ? 'Đăng nhập thất bại!' 
-          : 'Login failed!'
-          
-        // Customize error messages based on error code
-        if (error.code === 'auth/user-not-found') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Email không tồn tại!' 
-            : 'Email not found!'
-        } else if (error.code === 'auth/wrong-password') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Mật khẩu không đúng!' 
-            : 'Wrong password!'
-        } else if (error.code === 'auth/invalid-email') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Email không hợp lệ!' 
-            : 'Invalid email!'
-        }
-        
-        alert(message)
-      } finally {
-        this.isLoading = false
-      }
-    },
-    
-    async handleForgotPassword() {
-      if (!this.loginForm.email) {
-        const message = this.currentLanguage === 'vi' 
-          ? 'Vui lòng nhập email!' 
-          : 'Please enter your email!'
-        alert(message)
-        return
-      }
-
-      try {
-        await sendPasswordResetEmail(auth, this.loginForm.email)
-        const message = this.currentLanguage === 'vi' 
-          ? 'Email đặt lại mật khẩu đã được gửi!' 
-          : 'Password reset email sent!'
-        alert(message)
-      } catch (error) {
-        console.error('Password reset error:', error)
-        const message = this.currentLanguage === 'vi' 
-          ? 'Gửi email thất bại!' 
-          : 'Failed to send email!'
-        alert(message)
-      }
-    },
-    
-    async handleSignup() {
-      // Validate inputs
-      if (!this.signupForm.email || !this.signupForm.password || !this.signupForm.confirmPassword) {
-        const message = this.currentLanguage === 'vi' 
-          ? 'Vui lòng nhập đầy đủ thông tin!' 
-          : 'Please fill in all fields!'
-        alert(message)
-        return
-      }
-
-      if (this.signupForm.password !== this.signupForm.confirmPassword) {
-        const message = this.currentLanguage === 'vi' 
-          ? 'Mật khẩu không khớp!' 
-          : 'Passwords do not match!'
-        alert(message)
-        return
-      }
-
-      if (this.signupForm.password.length < 6) {
-        const message = this.currentLanguage === 'vi' 
-          ? 'Mật khẩu phải có ít nhất 6 ký tự!' 
-          : 'Password must be at least 6 characters!'
-        alert(message)
-        return
-      }
-
-      this.isLoading = true
-      try {
-        const userCredential = await createUserWithEmailAndPassword(
-          auth, 
-          this.signupForm.email, 
-          this.signupForm.password
-        )
-        const user = userCredential.user
-        
-        console.log('Signup successful:', user)
-        
-        const message = this.currentLanguage === 'vi' 
-          ? 'Đăng ký thành công!' 
-          : 'Registration successful!'
-        alert(message)
-        
-        // Chuyển về tab login sau khi đăng ký thành công
-        this.activeTab = 'login'
-        this.signupForm = {
+        // Reset form và chuyển về tab login
+        activeTab.value = 'login'
+        signupForm.value = {
           email: '',
           password: '',
           confirmPassword: ''
         }
-        
       } catch (error) {
-        console.error('Signup error:', error)
-        let message = this.currentLanguage === 'vi' 
-          ? 'Đăng ký thất bại!' 
-          : 'Registration failed!'
-          
-        // Customize error messages based on error code
-        if (error.code === 'auth/email-already-in-use') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Email đã được sử dụng!' 
-            : 'Email already in use!'
-        } else if (error.code === 'auth/invalid-email') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Email không hợp lệ!' 
-            : 'Invalid email!'
-        } else if (error.code === 'auth/weak-password') {
-          message = this.currentLanguage === 'vi' 
-            ? 'Mật khẩu quá yếu!' 
-            : 'Password too weak!'
-        }
-        
-        alert(message)
-      } finally {
-        this.isLoading = false
+        showError(error, 'signup')
       }
+    }
+
+    return {
+      activeTab,
+      showLoginPassword,
+      showSignupPassword,
+      showConfirmPassword,
+      loginForm,
+      signupForm,
+      isLoading,
+      getText,
+      handleLogin,
+      handleForgotPassword,
+      handleSignup,
+      handleRememberMeChange
     }
   }
 }
