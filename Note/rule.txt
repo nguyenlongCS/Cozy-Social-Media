@@ -1,0 +1,105 @@
+# DEVELOPMENT RULES & GUIDELINES
+
+## 🏗️ ARCHITECTURE RULES
+
+### Composables Structure (/src/composables/)
+- **useAuth.js**: All authentication logic (login, signup, logout, social auth)
+- **useStorage.js**: localStorage operations (remember me, data persistence)
+- **useLanguage.js**: Global language state, translations, text management
+- **useErrorHandler.js**: Centralized error handling with consistent messages
+
+### Component Rules
+- Use Composition API with setup()
+- Import composables, not direct Firebase/localStorage
+- Watch props for language sync: `watch(() => props.currentLanguage, syncWithProp, { immediate: true })`
+- Return all template-used variables/methods from setup()
+
+## 🔄 STATE MANAGEMENT
+
+### Language System
+- Global state in useLanguage: `const globalLanguage = ref('vi')`
+- All components sync with global state via `syncWithProp()`
+- Parent components use `toggleLanguage()` to change language
+- Text via `getText(key)` - never hardcode strings
+
+### Auth State
+- Single auth listener in useAuth composable
+- User state shared across all components
+- Auto-cleanup on component unmount
+
+## 🎯 CODE STANDARDS
+
+### NO Ternary Operators
+```javascript
+// ❌ Bad
+const text = isVi ? 'Đăng nhập' : 'Login'
+
+// ✅ Good
+let text
+if (isVi) {
+  text = 'Đăng nhập'
+} else {
+  text = 'Login'
+}
+```
+
+### Error Handling
+- Always use `showError(error, context)` from useErrorHandler
+- Never direct alert() - use composable methods
+- Context types: 'login', 'signup', 'google', 'facebook', 'reset', 'logout'
+
+### File Comments
+```javascript
+/*
+Component purpose and main logic
+- Feature 1: Description
+- Feature 2: Description
+*/
+```
+
+## 📁 FILE STRUCTURE
+
+```
+src/
+├── composables/          # Reusable logic
+├── components/          # UI components
+├── view/               # Page views
+├── firebase/           # Firebase config
+└── router/            # Vue Router
+```
+
+## 🚫 FORBIDDEN PRACTICES
+
+- ❌ Direct Firebase imports in components
+- ❌ Direct localStorage usage in components  
+- ❌ Duplicate auth state management
+- ❌ Hardcoded text strings
+- ❌ Ternary operators for complex logic
+- ❌ Multiple onAuthStateChanged listeners
+- ❌ Props mutation
+
+## ✅ REQUIRED PRACTICES
+
+- ✅ Use composables for all logic
+- ✅ Watch props for reactivity
+- ✅ Global language state
+- ✅ Consistent error handling
+- ✅ Clean component separation
+- ✅ Return setup() values
+- ✅ Immediate watch for props
+
+## 🔧 DEBUGGING CHECKLIST
+
+1. **Language not working**: Check if component watches props and calls syncWithProp
+2. **Auth issues**: Verify useAuth composable import and user state binding
+3. **Errors not showing**: Ensure useErrorHandler is imported and used
+4. **State not syncing**: Check global state usage in composables
+5. **Components breaking**: Verify all template variables returned from setup()
+
+## 📝 COMMIT STANDARDS
+
+- feat: new functionality
+- fix: bug fixes  
+- refactor: code restructuring
+- style: UI/CSS changes
+- docs: documentation updates
