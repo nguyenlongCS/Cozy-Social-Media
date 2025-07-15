@@ -1,5 +1,6 @@
 <!--
 View trang đăng nhập
+Import Firebase config để đảm bảo auth hoạt động
 -->
 <template>
   <div class="login">
@@ -11,7 +12,7 @@ View trang đăng nhập
     <div class="body">
       <LoginLeft :currentLanguage="currentLanguage" />
       <LoginMain :currentLanguage="currentLanguage" />
-      <LoginRight />
+      <LoginRight :currentLanguage="currentLanguage" />
     </div>
     <Footer />
   </div>
@@ -25,6 +26,9 @@ import LoginLeft from '@/components/LoginLeft.vue'
 import LoginMain from '@/components/LoginMain.vue'
 import LoginRight from '@/components/LoginRight.vue'
 import Footer from '@/components/Footer.vue'
+
+// Import Firebase để đảm bảo được khởi tạo
+import '@/firebase/config'
 
 export default {
   name: 'Login',

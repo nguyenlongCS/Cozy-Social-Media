@@ -2,6 +2,7 @@
 View trang chủ
 Tổng hợp tất cả components để tạo thành layout hoàn chỉnh
 Logic quản lý ngôn ngữ (toggle giữa vi/en)
+Import Firebase config để đảm bảo auth hoạt động
 -->
 <template>
   <div class="home">
@@ -27,6 +28,9 @@ import HomeLeft from '@/components/HomeLeft.vue'
 import HomeMain from '@/components/HomeMain.vue'
 import HomeRight from '@/components/HomeRight.vue'
 import Footer from '@/components/Footer.vue'
+
+// Import Firebase để đảm bảo được khởi tạo
+import '@/firebase/config'
 
 export default {
   name: 'Home',

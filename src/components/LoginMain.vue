@@ -2,10 +2,11 @@
 Component form đăng nhập/đăng ký
 Logic: 
 - Toggle giữa tab Login và SignUp
-- Form Login: email, password với nút ẩn/hiện mật khẩu
-- Form SignUp: email, password, confirm password với nút ẩn/hiện mật khẩu
+- Form Login: email, password với nút ẩn/hiện mật khẩu, kết nối Firebase Auth
+- Form SignUp: email, password, confirm password với nút ẩn/hiện mật khẩu, kết nối Firebase Auth
 - Validate confirm password khớp với password
 - Hỗ trợ chuyển đổi ngôn ngữ (vi/en)
+- Firebase authentication cho email/password login và registration
 -->
 <template>
   <div class="loginform">
@@ -50,7 +51,7 @@ Logic:
           @click="showLoginPassword = !showLoginPassword"
         >
           <img 
-            :src="showLoginPassword ? 'src/icons/hide.png' : 'src/icons/show.png'"
+            :src="showLoginPassword ? '@/icons/hide.png' : '@/icons/show.png'"
             alt="Toggle password"
           >
         </button>
@@ -72,8 +73,8 @@ Logic:
         </a>
       </div>
       
-      <button class="login-btn btn" @click="handleLogin">
-        {{ currentLanguage === 'vi' ? 'Đăng nhập' : 'Login' }}
+      <button class="login-btn btn" @click="handleLogin" :disabled="isLoading">
+        {{ isLoading ? '...' : (currentLanguage === 'vi' ? 'Đăng nhập' : 'Login') }}
       </button>
     </div>
 
@@ -100,7 +101,7 @@ Logic:
           @click="showSignupPassword = !showSignupPassword"
         >
           <img 
-            :src="showSignupPassword ? 'src/icons/hide.png' : 'src/icons/show.png'"
+            :src="showSignupPassword ? '@/icons/hide.png' : '@/icons/show.png'"
             alt="Toggle password"
           >
         </button>
@@ -118,19 +119,27 @@ Logic:
           @click="showConfirmPassword = !showConfirmPassword"
         >
           <img 
-            :src="showConfirmPassword ? 'src/icons/hide.png' : 'src/icons/show.png'"
+            :src="showConfirmPassword ? '@/icons/hide.png' : '@/icons/show.png'"
             alt="Toggle password"
           >
         </button>
       </div>
-      <button class="signup-btn btn" @click="handleSignup">
-        {{ currentLanguage === 'vi' ? 'Đăng ký' : 'Sign Up' }}
+      <button class="signup-btn btn" @click="handleSignup" :disabled="isLoading">
+        {{ isLoading ? '...' : (currentLanguage === 'vi' ? 'Đăng ký' : 'Sign Up') }}
       </button>
     </div>
   </div>
 </template>
 
 <script>
+// Import Firebase Auth functions
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail
+} from 'firebase/auth'
+import { auth } from '@/firebase/config'
+
 export default {
   name: 'Loginform',
   props: {
@@ -145,6 +154,7 @@ export default {
       showLoginPassword: false,
       showSignupPassword: false,
       showConfirmPassword: false,
+      isLoading: false,
       loginForm: {
         email: '',
         password: '',
@@ -158,22 +168,155 @@ export default {
     }
   },
   methods: {
-    handleLogin() {
-      // Logic đăng nhập sẽ được thêm sau
-      console.log('Login:', this.loginForm)
-    },
-    handleForgotPassword() {
-      // Logic quên mật khẩu sẽ được thêm sau
-      console.log('Forgot Password clicked')
-    },
-    handleSignup() {
-      // Logic đăng ký sẽ được thêm sau
-      if (this.signupForm.password !== this.signupForm.confirmPassword) {
-        const message = this.currentLanguage === 'vi' ? 'Mật khẩu không khớp!' : 'Passwords do not match!'
+    async handleLogin() {
+      if (!this.loginForm.email || !this.loginForm.password) {
+        const message = this.currentLanguage === 'vi' 
+          ? 'Vui lòng nhập đầy đủ thông tin!' 
+          : 'Please fill in all fields!'
         alert(message)
         return
       }
-      console.log('Signup:', this.signupForm)
+
+      this.isLoading = true
+      try {
+        const userCredential = await signInWithEmailAndPassword(
+          auth, 
+          this.loginForm.email, 
+          this.loginForm.password
+        )
+        const user = userCredential.user
+        
+        console.log('Login successful:', user)
+        
+        // Chuyển hướng về trang chủ sau khi đăng nhập thành công
+        this.$router.push('/')
+        
+      } catch (error) {
+        console.error('Login error:', error)
+        let message = this.currentLanguage === 'vi' 
+          ? 'Đăng nhập thất bại!' 
+          : 'Login failed!'
+          
+        // Customize error messages based on error code
+        if (error.code === 'auth/user-not-found') {
+          message = this.currentLanguage === 'vi' 
+            ? 'Email không tồn tại!' 
+            : 'Email not found!'
+        } else if (error.code === 'auth/wrong-password') {
+          message = this.currentLanguage === 'vi' 
+            ? 'Mật khẩu không đúng!' 
+            : 'Wrong password!'
+        } else if (error.code === 'auth/invalid-email') {
+          message = this.currentLanguage === 'vi' 
+            ? 'Email không hợp lệ!' 
+            : 'Invalid email!'
+        }
+        
+        alert(message)
+      } finally {
+        this.isLoading = false
+      }
+    },
+    
+    async handleForgotPassword() {
+      if (!this.loginForm.email) {
+        const message = this.currentLanguage === 'vi' 
+          ? 'Vui lòng nhập email!' 
+          : 'Please enter your email!'
+        alert(message)
+        return
+      }
+
+      try {
+        await sendPasswordResetEmail(auth, this.loginForm.email)
+        const message = this.currentLanguage === 'vi' 
+          ? 'Email đặt lại mật khẩu đã được gửi!' 
+          : 'Password reset email sent!'
+        alert(message)
+      } catch (error) {
+        console.error('Password reset error:', error)
+        const message = this.currentLanguage === 'vi' 
+          ? 'Gửi email thất bại!' 
+          : 'Failed to send email!'
+        alert(message)
+      }
+    },
+    
+    async handleSignup() {
+      // Validate inputs
+      if (!this.signupForm.email || !this.signupForm.password || !this.signupForm.confirmPassword) {
+        const message = this.currentLanguage === 'vi' 
+          ? 'Vui lòng nhập đầy đủ thông tin!' 
+          : 'Please fill in all fields!'
+        alert(message)
+        return
+      }
+
+      if (this.signupForm.password !== this.signupForm.confirmPassword) {
+        const message = this.currentLanguage === 'vi' 
+          ? 'Mật khẩu không khớp!' 
+          : 'Passwords do not match!'
+        alert(message)
+        return
+      }
+
+      if (this.signupForm.password.length < 6) {
+        const message = this.currentLanguage === 'vi' 
+          ? 'Mật khẩu phải có ít nhất 6 ký tự!' 
+          : 'Password must be at least 6 characters!'
+        alert(message)
+        return
+      }
+
+      this.isLoading = true
+      try {
+        const userCredential = await createUserWithEmailAndPassword(
+          auth, 
+          this.signupForm.email, 
+          this.signupForm.password
+        )
+        const user = userCredential.user
+        
+        console.log('Signup successful:', user)
+        
+        const message = this.currentLanguage === 'vi' 
+          ? 'Đăng ký thành công!' 
+          : 'Registration successful!'
+        alert(message)
+        
+        // Chuyển về tab login sau khi đăng ký thành công
+        this.activeTab = 'login'
+        this.signupForm = {
+          email: '',
+          password: '',
+          confirmPassword: ''
+        }
+        
+      } catch (error) {
+        console.error('Signup error:', error)
+        let message = this.currentLanguage === 'vi' 
+          ? 'Đăng ký thất bại!' 
+          : 'Registration failed!'
+          
+        // Customize error messages based on error code
+        if (error.code === 'auth/email-already-in-use') {
+          message = this.currentLanguage === 'vi' 
+            ? 'Email đã được sử dụng!' 
+            : 'Email already in use!'
+        } else if (error.code === 'auth/invalid-email') {
+          message = this.currentLanguage === 'vi' 
+            ? 'Email không hợp lệ!' 
+            : 'Invalid email!'
+        } else if (error.code === 'auth/weak-password') {
+          message = this.currentLanguage === 'vi' 
+            ? 'Mật khẩu quá yếu!' 
+            : 'Password too weak!'
+        }
+        
+        alert(message)
+      } finally {
+        this.isLoading = false
+      }
     }
   }
 }
@@ -288,6 +431,12 @@ export default {
   font-size: 0.875rem;
   font-weight: 500;
   margin-top: 1rem;
+}
+
+.login-btn:disabled, .signup-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .form-options {
