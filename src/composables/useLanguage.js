@@ -1,11 +1,38 @@
 /*
-Composable quản lý ngôn ngữ
+Composable quản lý ngôn ngữ - Updated with localStorage
 Centralize logic chuyển đổi ngôn ngữ và provide text translations
+- Thêm localStorage để lưu trữ ngôn ngữ hiện tại
+- Auto load ngôn ngữ từ localStorage khi khởi tạo
+- Save ngôn ngữ vào localStorage khi thay đổi
 */
 import { ref, computed, watch } from 'vue'
 
 // Global state để sync giữa các components
 const globalLanguage = ref('vi')
+
+// Load language từ localStorage khi khởi tạo
+const loadLanguageFromStorage = () => {
+  try {
+    const savedLanguage = localStorage.getItem('appLanguage')
+    if (savedLanguage && (savedLanguage === 'vi' || savedLanguage === 'en')) {
+      globalLanguage.value = savedLanguage
+    }
+  } catch (error) {
+    console.error('Error loading language from localStorage:', error)
+  }
+}
+
+// Save language vào localStorage
+const saveLanguageToStorage = (language) => {
+  try {
+    localStorage.setItem('appLanguage', language)
+  } catch (error) {
+    console.error('Error saving language to localStorage:', error)
+  }
+}
+
+// Initialize language từ storage
+loadLanguageFromStorage()
 
 export function useLanguage(initialLanguage = null) {
   // Sử dụng global state
@@ -14,17 +41,21 @@ export function useLanguage(initialLanguage = null) {
   // Sync với initial language nếu có
   if (initialLanguage && (initialLanguage === 'vi' || initialLanguage === 'en')) {
     currentLanguage.value = initialLanguage
+    saveLanguageToStorage(initialLanguage)
   }
 
   // Toggle ngôn ngữ
   const toggleLanguage = () => {
-    currentLanguage.value = currentLanguage.value === 'vi' ? 'en' : 'vi'
+    const newLanguage = currentLanguage.value === 'vi' ? 'en' : 'vi'
+    currentLanguage.value = newLanguage
+    saveLanguageToStorage(newLanguage)
   }
 
   // Set ngôn ngữ cụ thể
   const setLanguage = (lang) => {
     if (lang === 'vi' || lang === 'en') {
       currentLanguage.value = lang
+      saveLanguageToStorage(lang)
     }
   }
 

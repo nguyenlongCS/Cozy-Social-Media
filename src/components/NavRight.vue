@@ -1,12 +1,13 @@
 <!--
-Component navigation bên phải header - Refactored
+Component navigation bên phải header - Refactored with theme management
 Logic: 
-- Sử dụng composables để quản lý auth, language và error handling
+- Sử dụng composables để quản lý auth, language, theme và error handling
 - Thay đổi nút login thành nút "Trở về" khi ở trang login
 - Nút "Trở về" sẽ chuyển về trang chủ mà không cần đăng nhập
 - Theo dõi trạng thái đăng nhập từ Firebase Auth
 - Thay đổi nút Login/Logout dựa trên trạng thái user (chỉ ở trang chủ)
 - Thêm chức năng đăng xuất khi user đã đăng nhập (chỉ ở trang chủ)
+- Thêm theme management với localStorage persistence
 -->
 <template>
   <div class="nav-right">
@@ -29,6 +30,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useLanguage } from '@/composables/useLanguage'
+import { useTheme } from '@/composables/useTheme'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
@@ -45,6 +47,7 @@ export default {
     const router = useRouter()
     const { user, logout, isLoading } = useAuth()
     const { getText, setLanguage } = useLanguage()
+    const { changeTheme } = useTheme()
     const { showError } = useErrorHandler()
 
     // Set language từ props
@@ -66,10 +69,6 @@ export default {
     })
 
     // Methods
-    const changeTheme = (color) => {
-      document.documentElement.style.setProperty('--theme-color', color)
-    }
-
     const handleToggleLanguage = () => {
       emit('toggle-language')
     }

@@ -5,7 +5,8 @@
 ### Composables Structure (/src/composables/)
 - **useAuth.js**: All authentication logic (login, signup, logout, social auth)
 - **useStorage.js**: localStorage operations (remember me, data persistence)
-- **useLanguage.js**: Global language state, translations, text management
+- **useLanguage.js**: Global language state, translations, text management, language persistence
+- **useTheme.js**: Theme color management, theme persistence via localStorage
 - **useErrorHandler.js**: Centralized error handling with consistent messages
 
 ### Component Rules
@@ -21,11 +22,33 @@
 - All components sync with global state via `syncWithProp()`
 - Parent components use `toggleLanguage()` to change language
 - Text via `getText(key)` - never hardcode strings
+- Auto-save language to localStorage on change
+- Auto-load language from localStorage on init
+
+### Theme System
+- Global theme management via useTheme composable
+- Save theme color to localStorage when changed
+- Load saved theme on app initialization
+- Apply theme via CSS variables: `--theme-color`
 
 ### Auth State
 - Single auth listener in useAuth composable
 - User state shared across all components
 - Auto-cleanup on component unmount
+
+## 🔄 PERSISTENCE RULES
+
+### localStorage Usage
+- Always use composables for localStorage operations
+- Language persistence: key `appLanguage`, values `'vi'` or `'en'`
+- Theme persistence: key `appTheme`, value hex color code
+- Error handling for localStorage operations
+- Auto-load saved data on app initialization
+
+### Component Initialization
+- Use `onMounted()` to initialize persistent data
+- Call `initTheme()` in main view components (Home.vue, Login.vue)
+- Ensure localStorage data is loaded before component renders
 
 ## 🎯 CODE STANDARDS
 
@@ -54,6 +77,7 @@ if (isVi) {
 Component purpose and main logic
 - Feature 1: Description
 - Feature 2: Description
+- Updated: Brief description of changes
 */
 ```
 
@@ -62,6 +86,11 @@ Component purpose and main logic
 ```
 src/
 ├── composables/          # Reusable logic
+│   ├── useAuth.js       # Authentication
+│   ├── useStorage.js    # localStorage operations
+│   ├── useLanguage.js   # Language + persistence
+│   ├── useTheme.js      # Theme + persistence
+│   └── useErrorHandler.js
 ├── components/          # UI components
 ├── view/               # Page views
 ├── firebase/           # Firebase config
@@ -77,6 +106,7 @@ src/
 - ❌ Ternary operators for complex logic
 - ❌ Multiple onAuthStateChanged listeners
 - ❌ Props mutation
+- ❌ Direct CSS variable manipulation in components
 
 ## ✅ REQUIRED PRACTICES
 
@@ -87,6 +117,9 @@ src/
 - ✅ Clean component separation
 - ✅ Return setup() values
 - ✅ Immediate watch for props
+- ✅ localStorage persistence via composables
+- ✅ Initialize persistent data in onMounted()
+- ✅ Theme management via useTheme composable
 
 ## 🔧 DEBUGGING CHECKLIST
 
@@ -95,6 +128,9 @@ src/
 3. **Errors not showing**: Ensure useErrorHandler is imported and used
 4. **State not syncing**: Check global state usage in composables
 5. **Components breaking**: Verify all template variables returned from setup()
+6. **Theme not persisting**: Check useTheme import and initTheme() call
+7. **Language not persisting**: Verify localStorage operations in useLanguage
+8. **Data not loading**: Ensure onMounted() calls initialization functions
 
 ## 📝 COMMIT STANDARDS
 
@@ -103,3 +139,4 @@ src/
 - refactor: code restructuring
 - style: UI/CSS changes
 - docs: documentation updates
+- persist: localStorage/persistence features
