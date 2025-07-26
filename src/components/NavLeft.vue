@@ -1,15 +1,14 @@
 <!--
 Component navigation bên trái header - Refactored
 Logic: 
-- Sử dụng composables để quản lý language
-- Chứa icon user và search box
-- Ẩn các thành phần khi đang ở trang login
+- Loại bỏ prop currentLanguage không cần thiết
+- Đơn giản hóa logic ẩn/hiện elements
 -->
 <template>
   <div class="nav-left">
-    <div v-show="!isLoginPage" class="icon-user"></div>
+    <div v-if="!isLoginPage" class="icon-user"></div>
     <input 
-      v-show="!isLoginPage"
+      v-if="!isLoginPage"
       type="text" 
       class="search" 
       :placeholder="getText('search')"
@@ -24,20 +23,10 @@ import { useLanguage } from '@/composables/useLanguage'
 
 export default {
   name: 'NavLeft',
-  props: {
-    currentLanguage: {
-      type: String,
-      default: 'vi'
-    }
-  },
-  setup(props) {
+  setup() {
     const route = useRoute()
-    const { getText, setLanguage } = useLanguage()
+    const { getText } = useLanguage()
 
-    // Set language từ props
-    setLanguage(props.currentLanguage)
-
-    // Computed properties
     const isLoginPage = computed(() => route.name === 'Login')
 
     return {

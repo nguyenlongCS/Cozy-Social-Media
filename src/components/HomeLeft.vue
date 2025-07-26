@@ -1,8 +1,8 @@
 <!--
 Component sidebar bên trái - Refactored
 Logic: 
-- Sử dụng composables để quản lý language
-- Chứa các button: Tạo Bài Đăng, Khám Phá, Cài Đặt
+- Loại bỏ props và watch logic phức tạp không cần thiết
+- Đơn giản hóa component chỉ sử dụng useLanguage trực tiếp
 -->
 <template>
   <div class="menu">
@@ -19,24 +19,12 @@ Logic:
 </template>
 
 <script>
-import { watch } from 'vue'
 import { useLanguage } from '@/composables/useLanguage'
 
 export default {
   name: 'Menu',
-  props: {
-    currentLanguage: {
-      type: String,
-      default: 'vi'
-    }
-  },
-  setup(props) {
-    const { getText, syncWithProp } = useLanguage()
-
-    // Sync với prop changes
-    watch(() => props.currentLanguage, (newLang) => {
-      syncWithProp(newLang)
-    }, { immediate: true })
+  setup() {
+    const { getText } = useLanguage()
 
     return {
       getText

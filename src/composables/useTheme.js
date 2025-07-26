@@ -1,25 +1,33 @@
 /*
-Composable quản lý theme
+Composable quản lý theme - Refactored
 Centralize logic chuyển đổi theme color và lưu trữ vào localStorage
-- Load theme từ localStorage khi khởi tạo
-- Save theme vào localStorage khi thay đổi
-- Apply theme color vào CSS variables
+- Đơn giản hóa logic load/save localStorage
+- Loại bỏ initTheme method không cần thiết vì đã auto load
 */
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 
 // Global state cho theme color
 const currentTheme = ref('#ffeb7c') // Default yellow theme
 
-// Load theme từ localStorage
+// Apply theme color vào CSS
+const applyTheme = (color) => {
+  document.documentElement.style.setProperty('--theme-color', color)
+}
+
+// Load và apply theme từ localStorage
 const loadThemeFromStorage = () => {
   try {
     const savedTheme = localStorage.getItem('appTheme')
     if (savedTheme) {
       currentTheme.value = savedTheme
       applyTheme(savedTheme)
+    } else {
+      // Apply default theme nếu chưa có theme được lưu
+      applyTheme(currentTheme.value)
     }
   } catch (error) {
     console.error('Error loading theme from localStorage:', error)
+    applyTheme(currentTheme.value)
   }
 }
 
@@ -30,11 +38,6 @@ const saveThemeToStorage = (theme) => {
   } catch (error) {
     console.error('Error saving theme to localStorage:', error)
   }
-}
-
-// Apply theme color vào CSS
-const applyTheme = (color) => {
-  document.documentElement.style.setProperty('--theme-color', color)
 }
 
 // Initialize theme từ storage khi module load
@@ -48,14 +51,8 @@ export function useTheme() {
     saveThemeToStorage(color)
   }
 
-  // Initialize theme khi component mount
-  const initTheme = () => {
-    loadThemeFromStorage()
-  }
-
   return {
     currentTheme,
-    changeTheme,
-    initTheme
+    changeTheme
   }
 }

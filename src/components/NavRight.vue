@@ -1,13 +1,9 @@
 <!--
-Component navigation bên phải header - Refactored with theme management
+Component navigation bên phải header - Refactored
 Logic: 
-- Sử dụng composables để quản lý auth, language, theme và error handling
-- Thay đổi nút login thành nút "Trở về" khi ở trang login
-- Nút "Trở về" sẽ chuyển về trang chủ mà không cần đăng nhập
-- Theo dõi trạng thái đăng nhập từ Firebase Auth
-- Thay đổi nút Login/Logout dựa trên trạng thái user (chỉ ở trang chủ)
-- Thêm chức năng đăng xuất khi user đã đăng nhập (chỉ ở trang chủ)
-- Thêm theme management với localStorage persistence
+- Loại bỏ prop currentLanguage và watch logic phức tạp
+- Đơn giản hóa auth button logic bằng cách sử dụng if-else thay vì computed phức tạp
+- Gộp chung handleAuthAction logic để dễ hiểu hơn
 -->
 <template>
   <div class="nav-right">
@@ -20,13 +16,12 @@ Logic:
       {{ currentLanguage === 'vi' ? 'VN' : 'EN' }}
     </button>
     <button class="login-button btn" @click="handleAuthAction" :disabled="isLoading">
-      {{ isLoading ? '...' : authButtonText }}
+      {{ getAuthButtonText() }}
     </button>
   </div>
 </template>
 
 <script>
-import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useLanguage } from '@/composables/useLanguage'
@@ -35,80 +30,60 @@ import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
   name: 'NavRight',
-  props: {
-    currentLanguage: {
-      type: String,
-      default: 'vi'
-    }
-  },
   emits: ['toggle-language'],
   setup(props, { emit }) {
     const route = useRoute()
     const router = useRouter()
     const { user, logout, isLoading } = useAuth()
-    const { getText, setLanguage } = useLanguage()
+    const { currentLanguage, getText } = useLanguage()
     const { changeTheme } = useTheme()
     const { showError } = useErrorHandler()
 
-    // Set language từ props
-    setLanguage(props.currentLanguage)
-
-    // Computed properties
-    const isLoginPage = computed(() => route.name === 'Login')
-
-    const authButtonText = computed(() => {
-      if (isLoginPage.value) {
+    // Đơn giản hóa auth button text logic
+    const getAuthButtonText = () => {
+      if (isLoading.value) {
+        return '...'
+      }
+      
+      if (route.name === 'Login') {
         return getText('back')
       }
       
       if (user.value) {
         return getText('logout')
-      } else {
-        return getText('login')
       }
-    })
+      
+      return getText('login')
+    }
 
-    // Methods
     const handleToggleLanguage = () => {
       emit('toggle-language')
     }
 
+    // Gộp chung auth action logic
     const handleAuthAction = async () => {
-      if (isLoginPage.value) {
-        goToHome()
+      if (route.name === 'Login') {
+        router.push('/')
         return
       }
       
       if (user.value) {
-        await handleLogout()
+        try {
+          await logout()
+          console.log('Logout successful')
+        } catch (error) {
+          showError(error, 'logout')
+        }
       } else {
-        goToLogin()
+        router.push('/login')
       }
-    }
-
-    const handleLogout = async () => {
-      try {
-        await logout()
-        console.log('Logout successful')
-        // Không hiển thị alert để tránh làm phiền user
-        // Trạng thái user sẽ tự động cập nhật qua onAuthStateChanged
-      } catch (error) {
-        showError(error, 'logout')
-      }
-    }
-
-    const goToLogin = () => {
-      router.push('/login')
-    }
-
-    const goToHome = () => {
-      router.push('/')
     }
 
     return {
       isLoading,
-      authButtonText,
+      currentLanguage,
       changeTheme,
+      getAuthButtonText,
       handleToggleLanguage,
       handleAuthAction
     }

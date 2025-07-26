@@ -1,7 +1,9 @@
 <!--
 Component form đăng nhập/đăng ký - Refactored
 Logic: 
-- Sử dụng composables để quản lý auth, storage, language và error handling
+- Loại bỏ props và watch logic phức tạp
+- Đơn giản hóa validation logic
+- Gộp chung xử lý remember me
 - Toggle giữa tab Login và SignUp
 - Form Login: email, password với nút ẩn/hiện mật khẩu, kết nối Firebase Auth
 - Form SignUp: email, password, confirm password với nút ẩn/hiện mật khẩu, kết nối Firebase Auth
@@ -137,7 +139,7 @@ Logic:
 </template>
 
 <script>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useStorage } from '@/composables/useStorage'
@@ -146,17 +148,11 @@ import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
   name: 'Loginform',
-  props: {
-    currentLanguage: {
-      type: String,
-      default: 'vi'
-    }
-  },
-  setup(props) {
+  setup() {
     const router = useRouter()
     const { loginWithEmail, signupWithEmail, resetPassword, isLoading } = useAuth()
     const { loadRememberedEmail, saveRememberedEmail } = useStorage()
-    const { getText, syncWithProp } = useLanguage()
+    const { getText } = useLanguage()
     const { showError, showSuccess } = useErrorHandler()
 
     // Reactive data
@@ -186,11 +182,6 @@ export default {
       }
     })
 
-    // Sync với prop changes
-    watch(() => props.currentLanguage, (newLang) => {
-      syncWithProp(newLang)
-    }, { immediate: true })
-
     // Handle remember me change
     const handleRememberMeChange = () => {
       saveRememberedEmail(loginForm.value.email, loginForm.value.rememberMe)
@@ -199,9 +190,7 @@ export default {
     // Handle login
     const handleLogin = async () => {
       try {
-        // Save remember me before login
         saveRememberedEmail(loginForm.value.email, loginForm.value.rememberMe)
-        
         await loginWithEmail(loginForm.value.email, loginForm.value.password)
         console.log('Login successful')
         router.push('/')

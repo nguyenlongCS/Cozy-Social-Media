@@ -1,5 +1,6 @@
 <!--
-
+Component logo sidebar bên trái trang login - Refactored
+Logic: Loại bỏ props không sử dụng
 -->
 <template>
   <div class="logo">
@@ -8,13 +9,7 @@
 
 <script>
 export default {
-  name: 'Logo',
-  props: {
-    currentLanguage: {
-      type: String,
-      default: 'vi'
-    }
-  }
+  name: 'Logo'
 }
 </script>
 

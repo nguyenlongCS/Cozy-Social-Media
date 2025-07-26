@@ -1,28 +1,27 @@
 <!--
-View trang đăng nhập - Refactored with theme initialization
+View trang đăng nhập - Refactored
 Logic: 
-- Sử dụng composables để quản lý language và theme
-- Import Firebase config để đảm bảo auth hoạt động
-- Initialize theme từ localStorage khi component mount
+- Loại bỏ currentLanguage props truyền qua components
+- Đơn giản hóa language toggle logic
+- Theme initialization đã được xử lý trong useTheme composable
 -->
 <template>
   <div class="login">
     <div class="header">
-      <NavLeft :currentLanguage="currentLanguage" />
+      <NavLeft />
       <NavMid />
-      <NavRight :currentLanguage="currentLanguage" @toggle-language="handleToggleLanguage" />
+      <NavRight @toggle-language="toggleLanguage" />
     </div>
     <div class="body">
-      <LoginLeft :currentLanguage="currentLanguage" />
-      <LoginMain :currentLanguage="currentLanguage" />
-      <LoginRight :currentLanguage="currentLanguage" />
+      <LoginLeft />
+      <LoginMain />
+      <LoginRight />
     </div>
     <Footer />
   </div>
 </template>
 
 <script>
-import { onMounted } from 'vue'
 import NavLeft from '@/components/NavLeft.vue'
 import NavMid from '@/components/NavMid.vue'
 import NavRight from '@/components/NavRight.vue'
@@ -31,7 +30,6 @@ import LoginMain from '@/components/LoginMain.vue'
 import LoginRight from '@/components/LoginRight.vue'
 import Footer from '@/components/Footer.vue'
 import { useLanguage } from '@/composables/useLanguage'
-import { useTheme } from '@/composables/useTheme'
 
 // Import Firebase để đảm bảo được khởi tạo
 import '@/firebase/config'
@@ -48,21 +46,10 @@ export default {
     Footer
   },
   setup() {
-    const { currentLanguage, toggleLanguage } = useLanguage()
-    const { initTheme } = useTheme()
-
-    const handleToggleLanguage = () => {
-      toggleLanguage()
-    }
-
-    // Initialize theme khi component mount
-    onMounted(() => {
-      initTheme()
-    })
+    const { toggleLanguage } = useLanguage()
 
     return {
-      currentLanguage,
-      handleToggleLanguage
+      toggleLanguage
     }
   }
 }

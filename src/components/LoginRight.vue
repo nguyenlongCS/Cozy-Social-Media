@@ -1,9 +1,8 @@
 <!--
 Component sidebar bên phải trang login - Refactored
 Logic: 
-- Sử dụng composables để quản lý auth, language và error handling
-- Thêm Google và Facebook login với popup authentication
-- Kết nối Firebase Auth cho đăng nhập social media
+- Loại bỏ props và watch logic phức tạp
+- Đơn giản hóa social login handlers
 -->
 <template>
   <div class="social">
@@ -24,7 +23,6 @@ Logic:
 </template>
 
 <script>
-import { watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useLanguage } from '@/composables/useLanguage'
@@ -32,22 +30,11 @@ import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
   name: 'Social',
-  props: {
-    currentLanguage: {
-      type: String,
-      default: 'vi'
-    }
-  },
-  setup(props) {
+  setup() {
     const router = useRouter()
     const { loginWithGoogle, loginWithFacebook, isLoading } = useAuth()
-    const { getText, syncWithProp } = useLanguage()
+    const { getText } = useLanguage()
     const { showError } = useErrorHandler()
-
-    // Sync với prop changes
-    watch(() => props.currentLanguage, (newLang) => {
-      syncWithProp(newLang)
-    }, { immediate: true })
 
     // Handle Google login
     const handleGoogleLogin = async () => {
