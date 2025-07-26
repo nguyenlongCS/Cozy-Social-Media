@@ -1,12 +1,14 @@
 <!--
+src/components/CreatePost.vue
 Component CreatePost - Tạo bài đăng mới
 Logic:
 - Giao diện giống HomeMain.vue nhưng có thể chọn file và nhập caption
-- Preview media được chọn trong media-area với object-fit để tự động fit
+- Preview media được chọn trong media-area với object-fit: contain để không bị tràn
 - Actions buttons giống HomeMain.vue (chỉ icon, không text)
 - Sử dụng Firebase Storage để upload media và Firestore để lưu bài đăng
 - Hỗ trợ đa ngôn ngữ cho UI text
 - Bài đăng được lưu vào collection 'posts' để hiển thị cho mọi người
+- Fixed: Media preview không được vượt quá kích thước media-area
 -->
 <template>
   <div class="create-post">
@@ -330,8 +332,9 @@ export default {
 }
 
 .preview-media {
-  max-width: 100%;
-  max-height: 100%;
+  /* FIXED: Đảm bảo media không vượt quá kích thước container */
+  max-width: 90%;
+  max-height: 90%;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -355,6 +358,7 @@ export default {
   align-items: center;
   justify-content: center;
   transition: background 0.3s ease;
+  z-index: 10;
 }
 
 .remove-media:hover {

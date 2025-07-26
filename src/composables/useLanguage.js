@@ -1,4 +1,5 @@
 /*
+src/composables/useLanguage.js
 Composable quản lý ngôn ngữ
 Centralize logic chuyển đổi ngôn ngữ và provide text translations
 */
@@ -62,6 +63,15 @@ const translations = {
     guest: 'Khách',
     user: 'Người dùng',
     
+    // Feed states
+    loading: 'Đang tải...',
+    noPosts: 'Chưa có bài viết nào',
+    textPost: 'Bài viết văn bản',
+    
+    // Footer messages
+    scrollToNext: 'Cuộn để xem bài viết tiếp theo',
+    scrollTooFast: 'Thao tác cuộn quá nhanh',
+    
     // Success Messages
     loginSuccess: 'Đăng nhập thành công!',
     signupSuccess: 'Đăng ký thành công!',
@@ -99,6 +109,9 @@ const translations = {
     missingCaption: 'Vui lòng nhập chú thích!',
     notAuthenticated: 'Vui lòng đăng nhập!',
     
+    // Error Messages - Load Posts
+    loadPostsFailed: 'Tải bài viết thất bại!',
+    
     // Default Error
     defaultError: 'Có lỗi xảy ra!'
   },
@@ -130,6 +143,15 @@ const translations = {
     post: 'Post',
     guest: 'Guest',
     user: 'User',
+    
+    // Feed states
+    loading: 'Loading...',
+    noPosts: 'No posts yet',
+    textPost: 'Text post',
+    
+    // Footer messages
+    scrollToNext: 'Scroll to see next post',
+    scrollTooFast: 'Scrolling too fast',
     
     // Success Messages
     loginSuccess: 'Login successful!',
@@ -167,6 +189,9 @@ const translations = {
     invalidFileType: 'Invalid file type! Only images/videos allowed.',
     missingCaption: 'Please enter a caption!',
     notAuthenticated: 'Please login first!',
+    
+    // Error Messages - Load Posts
+    loadPostsFailed: 'Failed to load posts!',
     
     // Default Error
     defaultError: 'An error occurred!'

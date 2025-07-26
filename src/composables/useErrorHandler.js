@@ -1,4 +1,5 @@
 /*
+src/composables/useErrorHandler.js
 Composable xử lý lỗi
 Centralize error handling logic và provide consistent error messages
 */
@@ -62,6 +63,9 @@ export function useErrorHandler() {
       },
       upload: {
         'defaultError': 'postFailed'
+      },
+      loadPosts: {
+        'defaultError': 'loadPostsFailed'
       }
     }
 

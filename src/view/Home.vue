@@ -1,9 +1,10 @@
 <!--
-View trang chủ - Refactored
+src/view/Home.vue
+View trang chủ
 Logic: 
-- Loại bỏ currentLanguage props truyền qua components
-- Đơn giản hóa language toggle logic
-- Theme initialization đã được xử lý trong useTheme composable
+- Nhận showScrollWarning từ HomeMain component
+- Truyền scrollTooFast prop xuống Footer component
+- Xử lý chuyển đổi ngôn ngữ thông qua useLanguage
 -->
 <template>
   <div class="home">
@@ -14,14 +15,15 @@ Logic:
     </div>
     <div class="body">
       <HomeLeft />
-      <HomeMain />
+      <HomeMain @scroll-warning="handleScrollWarning" />
       <HomeRight />
     </div>
-    <Footer />
+    <Footer :scrollTooFast="scrollWarning" />
   </div>
 </template>
 
 <script>
+import { ref } from 'vue'
 import NavLeft from '@/components/NavLeft.vue'
 import NavMid from '@/components/NavMid.vue'
 import NavRight from '@/components/NavRight.vue'
@@ -47,9 +49,17 @@ export default {
   },
   setup() {
     const { toggleLanguage } = useLanguage()
+    const scrollWarning = ref(false)
+
+    // Handle scroll warning từ HomeMain
+    const handleScrollWarning = (isWarning) => {
+      scrollWarning.value = isWarning
+    }
 
     return {
-      toggleLanguage
+      toggleLanguage,
+      scrollWarning,
+      handleScrollWarning
     }
   }
 }
