@@ -1,8 +1,11 @@
 // Firebase configuration và authentication setup
 // Cấu hình Firebase Auth cho Google, Facebook login và email registration
+// Cấu hình Firestore để lưu posts và Storage để upload media
 
 import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
+import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: "AIzaSyAr4nGRhlqXyoHG7dZtqcbj-IN2Xcr0LqM",
@@ -20,34 +23,11 @@ const app = initializeApp(firebaseConfig)
 // Initialize Firebase Authentication and get a reference to the service
 export const auth = getAuth(app)
 
+// Initialize Firestore Database
+export const db = getFirestore(app)
+
+// Initialize Firebase Storage
+export const storage = getStorage(app)
+
 // Đảm bảo auth domain được cấu hình đúng
 export default app
-
-/* 
-HƯỚNG DẪN CẤU HÌNH FACEBOOK:
-
-1. Tạo Facebook App:
-   - Vào https://developers.facebook.com
-   - Tạo app mới
-   - Thêm Facebook Login product
-
-2. Cấu hình Facebook App:
-   - Valid OAuth Redirect URIs: https://your-project.firebaseapp.com/__/auth/handler
-   - App Domains: your-project.firebaseapp.com
-   - Site URL: https://your-project.firebaseapp.com
-
-3. Cấu hình Firebase:
-   - Vào Firebase Console > Authentication > Sign-in method
-   - Bật Facebook
-   - Nhập App ID và App Secret từ Facebook App
-   - Copy OAuth redirect URI vào Facebook App settings
-
-4. Authorized domains trong Firebase:
-   - Thêm domain localhost cho development
-   - Thêm production domain
-
-5. Kiểm tra:
-   - App ID và App Secret đúng
-   - OAuth redirect URI khớp
-   - App đang ở chế độ Live (không phải Development)
-*/

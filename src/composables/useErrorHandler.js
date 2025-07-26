@@ -10,6 +10,7 @@ export function useErrorHandler() {
   // Map Firebase error codes to message keys
   const getErrorMessageKey = (errorCode) => {
     const errorMap = {
+      // Authentication errors
       'MISSING_FIELDS': 'fillAllFields',
       'PASSWORD_MISMATCH': 'passwordMismatch',
       'WEAK_PASSWORD': 'weakPassword',
@@ -23,47 +24,72 @@ export function useErrorHandler() {
       'auth/popup-blocked': 'popupBlocked',
       'auth/account-exists-with-different-credential': 'accountExistsWithDifferentCredential',
       'auth/auth-domain-config-required': 'authDomainConfigRequired',
-      'auth/operation-not-allowed': 'operationNotAllowed'
+      'auth/operation-not-allowed': 'operationNotAllowed',
+      
+      // Create Post errors
+      'FILE_TOO_LARGE': 'fileTooLarge',
+      'INVALID_FILE_TYPE': 'invalidFileType',
+      'MISSING_CAPTION': 'missingCaption',
+      'NOT_AUTHENTICATED': 'notAuthenticated',
+      'MISSING_FILE_OR_USER': 'postFailed',
+      'MISSING_POST_DATA': 'postFailed',
+      'MISSING_REQUIRED_FIELDS': 'postFailed'
     }
 
-    return errorMap[errorCode] || 'loginFailed'
+    return errorMap[errorCode] || 'defaultError'
   }
 
-  // Handle authentication errors
-  const handleAuthError = (error, context = 'login') => {
-    let messageKey = getErrorMessageKey(error.code || error.message)
-    
-    // Context-specific error handling
-    if (context === 'signup') {
-      if (messageKey === 'loginFailed') {
-        messageKey = 'signupFailed'
-      }
-    } else if (context === 'google') {
-      if (messageKey === 'loginFailed') {
-        messageKey = 'googleLoginFailed'
-      }
-    } else if (context === 'facebook') {
-      if (messageKey === 'loginFailed') {
-        messageKey = 'facebookLoginFailed'
-      }
-    } else if (context === 'reset') {
-      if (messageKey === 'loginFailed') {
-        messageKey = 'resetEmailFailed'
-      }
-    } else if (context === 'logout') {
-      if (messageKey === 'loginFailed') {
-        messageKey = 'logoutFailed'
+  // Get context-specific error message
+  const getContextErrorMessage = (messageKey, context) => {
+    const contextMap = {
+      signup: {
+        'defaultError': 'signupFailed'
+      },
+      google: {
+        'defaultError': 'googleLoginFailed'
+      },
+      facebook: {
+        'defaultError': 'facebookLoginFailed'
+      },
+      reset: {
+        'defaultError': 'resetEmailFailed'
+      },
+      logout: {
+        'defaultError': 'logoutFailed'
+      },
+      post: {
+        'defaultError': 'postFailed'
+      },
+      upload: {
+        'defaultError': 'postFailed'
       }
     }
 
-    const message = getText(messageKey)
+    if (contextMap[context] && contextMap[context][messageKey]) {
+      return contextMap[context][messageKey]
+    }
+
+    if (messageKey === 'defaultError') {
+      return 'loginFailed'
+    }
+
+    return messageKey
+  }
+
+  // Handle errors
+  const handleError = (error, context = 'login') => {
+    const errorCode = error.code || error.message || 'defaultError'
+    const messageKey = getErrorMessageKey(errorCode)
+    const finalMessageKey = getContextErrorMessage(messageKey, context)
+    const message = getText(finalMessageKey)
+    
     console.error(`${context} error:`, error)
     return message
   }
 
   // Show error alert
   const showError = (error, context = 'login') => {
-    const message = handleAuthError(error, context)
+    const message = handleError(error, context)
     alert(message)
   }
 
@@ -73,7 +99,8 @@ export function useErrorHandler() {
       login: 'loginSuccess',
       signup: 'signupSuccess',
       logout: 'logoutSuccess',
-      reset: 'resetEmailSent'
+      reset: 'resetEmailSent',
+      post: 'postSuccess'
     }
     
     const messageKey = successKeys[context] || 'loginSuccess'
@@ -82,7 +109,7 @@ export function useErrorHandler() {
   }
 
   return {
-    handleAuthError,
+    handleError,
     showError,
     showSuccess,
     getErrorMessageKey

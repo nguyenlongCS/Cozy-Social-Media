@@ -1,12 +1,13 @@
 <!--
-Component sidebar bên trái - Refactored
-Logic: 
-- Loại bỏ props và watch logic phức tạp không cần thiết
-- Đơn giản hóa component chỉ sử dụng useLanguage trực tiếp
+Component sidebar bên trái
+Logic:
+- Kiểm tra authentication khi click "Tạo Bài Đăng"
+- Hiển thị thông báo yêu cầu đăng nhập nếu chưa login
+- Navigate đến CreatePost nếu đã đăng nhập
 -->
 <template>
   <div class="menu">
-    <button class="btn">
+    <button class="btn" @click="handleCreatePost">
       {{ getText('createPost') }}
     </button>
     <button class="btn">
@@ -19,15 +20,34 @@ Logic:
 </template>
 
 <script>
+import { useRouter } from 'vue-router'
 import { useLanguage } from '@/composables/useLanguage'
+import { useAuth } from '@/composables/useAuth'
+import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
   name: 'Menu',
   setup() {
+    const router = useRouter()
     const { getText } = useLanguage()
+    const { user } = useAuth()
+    const { showError } = useErrorHandler()
+
+    // Handle create post navigation
+    const handleCreatePost = () => {
+      if (!user.value) {
+        // Hiển thị thông báo yêu cầu đăng nhập
+        showError({ message: 'NOT_AUTHENTICATED' }, 'post')
+        return
+      }
+      
+      // Navigate to create post page nếu đã đăng nhập
+      router.push('/createpost')
+    }
 
     return {
-      getText
+      getText,
+      handleCreatePost
     }
   }
 }

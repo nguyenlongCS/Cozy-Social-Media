@@ -1,21 +1,36 @@
 <!--
 Component navigation giữa header
-Chứa 3 button: profile, home, message
-Logic: Ẩn các thành phần khi đang ở trang login
+Chứa 5 button: profile, friends, home, mess, notification
+Logic: 
+- Ẩn các thành phần khi đang ở trang login
+- Home button navigate về trang chủ (/)
 -->
 <template>
   <div class="nav-mid">
     <button v-if="!isLoginPage" class="profile-button btn"></button>
     <button v-if="!isLoginPage" class="friends-button btn"></button>
-    <button v-if="!isLoginPage" class="home-button btn"></button>
+    <button v-if="!isLoginPage" class="home-button btn" @click="goToHome"></button>
     <button v-if="!isLoginPage" class="mess-button btn"></button>
     <button v-if="!isLoginPage" class="notification-button btn"></button>
   </div>
 </template>
 
 <script>
+import { useRouter } from 'vue-router'
+
 export default {
   name: 'NavMid',
+  setup() {
+    const router = useRouter()
+
+    const goToHome = () => {
+      router.push('/')
+    }
+
+    return {
+      goToHome
+    }
+  },
   computed: {
     isLoginPage() {
       return this.$route.name === 'Login'
