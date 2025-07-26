@@ -21,7 +21,7 @@ import {
 import app from '@/firebase/config'
 
 // Initialize Firestore và Storage
-const db = getFirestore(app)
+const db = getFirestore(app, 'social-media-db')
 const storage = getStorage(app)
 
 export function useFirestore() {
