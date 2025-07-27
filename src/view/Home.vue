@@ -1,8 +1,9 @@
 <!--
 src/view/Home.vue
-View trang chủ
+View trang chủ - Updated
 Logic: 
 - Nhận showScrollWarning từ HomeMain component
+- Nhận currentPost từ HomeMain để pass sang HomeRight
 - Truyền scrollTooFast prop xuống Footer component
 - Xử lý chuyển đổi ngôn ngữ thông qua useLanguage
 -->
@@ -15,8 +16,11 @@ Logic:
     </div>
     <div class="body">
       <HomeLeft />
-      <HomeMain @scroll-warning="handleScrollWarning" />
-      <HomeRight />
+      <HomeMain 
+        @scroll-warning="handleScrollWarning" 
+        @current-post-changed="handleCurrentPostChanged"
+      />
+      <HomeRight :post="currentPost" />
     </div>
     <Footer :scrollTooFast="scrollWarning" />
   </div>
@@ -50,16 +54,24 @@ export default {
   setup() {
     const { toggleLanguage } = useLanguage()
     const scrollWarning = ref(false)
+    const currentPost = ref({})
 
     // Handle scroll warning từ HomeMain
     const handleScrollWarning = (isWarning) => {
       scrollWarning.value = isWarning
     }
 
+    // Handle current post change từ HomeMain
+    const handleCurrentPostChanged = (post) => {
+      currentPost.value = post
+    }
+
     return {
       toggleLanguage,
       scrollWarning,
-      handleScrollWarning
+      currentPost,
+      handleScrollWarning,
+      handleCurrentPostChanged
     }
   }
 }

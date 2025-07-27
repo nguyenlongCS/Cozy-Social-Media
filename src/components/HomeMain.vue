@@ -1,10 +1,11 @@
 <!--
-src/components/HomeMain.vue
+src/components/HomeMain.vue - Updated
 Component Feed content - Load và hiển thị posts từ Firestore
 Logic:
 - Load posts từ Firestore khi component mount
 - Chỉ hiển thị 1 bài viết tại một thời điểm
 - Cuộn để chuyển sang bài viết tiếp theo (wheel event)
+- Emit currentPost khi thay đổi để HomeRight có thể hiển thị chi tiết
 - Vị trí hiển thị giống như content cố định mẫu ban đầu
 - Không có thanh cuộn hiển thị
 - Preload media cho bài tiếp theo để tránh lag khi cuộn
@@ -92,8 +93,8 @@ import { useErrorHandler } from '@/composables/useErrorHandler'
 import { useAuth } from '@/composables/useAuth'
 
 export default {
-  name: 'Feed',
-  emits: ['scroll-warning'],
+  name: 'HomeMain',
+  emits: ['scroll-warning', 'current-post-changed'],
   setup(props, { emit }) {
     const { getPosts, isLoading } = useFirestore()
     const { getText, currentLanguage } = useLanguage()
@@ -191,6 +192,11 @@ export default {
       const prevIndex = newIndex === 0 ? totalPosts - 1 : newIndex - 1
       preloadMedia(prevIndex)
     })
+
+    // Watch currentPost để emit khi thay đổi
+    watch(currentPost, (newPost) => {
+      emit('current-post-changed', newPost)
+    }, { immediate: true, deep: true })
 
     // Format timestamp cho hiển thị
     const formatTimestamp = (timestamp) => {

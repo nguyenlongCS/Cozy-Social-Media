@@ -1,7 +1,8 @@
 /*
-src/composables/useLanguage.js
+src/composables/useLanguage.js - Updated
 Composable quản lý ngôn ngữ
 Centralize logic chuyển đổi ngôn ngữ và provide text translations
+Added: Comments and Likes related text
 */
 import { ref } from 'vue'
 
@@ -68,6 +69,22 @@ const translations = {
     noPosts: 'Chưa có bài viết nào',
     textPost: 'Bài viết văn bản',
     
+    // Post details - HomeRight
+    caption: 'Chú thích',
+    noCaption: 'Không có chú thích',
+    likes: 'lượt thích',
+    comments: 'Bình luận',
+    noComments: 'Chưa có bình luận nào',
+    writeComment: 'Viết bình luận...',
+    loginToComment: 'Đăng nhập để bình luận',
+    selectPost: 'Chọn bài viết để xem chi tiết',
+    
+    // Time formats
+    justNow: 'Vừa xong',
+    minutesAgo: ' phút trước',
+    hoursAgo: ' giờ trước',
+    daysAgo: ' ngày trước',
+    
     // Footer messages
     scrollToNext: 'Cuộn để xem bài viết tiếp theo',
     scrollTooFast: 'Thao tác cuộn quá nhanh',
@@ -109,6 +126,11 @@ const translations = {
     missingCaption: 'Vui lòng nhập chú thích!',
     notAuthenticated: 'Vui lòng đăng nhập!',
     
+    // Error Messages - Comments and Likes
+    likeFailed: 'Thích bài viết thất bại!',
+    commentFailed: 'Thêm bình luận thất bại!',
+    loadCommentsFailed: 'Tải bình luận thất bại!',
+    
     // Error Messages - Load Posts
     loadPostsFailed: 'Tải bài viết thất bại!',
     
@@ -148,6 +170,22 @@ const translations = {
     loading: 'Loading...',
     noPosts: 'No posts yet',
     textPost: 'Text post',
+    
+    // Post details - HomeRight
+    caption: 'Caption',
+    noCaption: 'No caption',
+    likes: 'likes',
+    comments: 'Comments',
+    noComments: 'No comments yet',
+    writeComment: 'Write a comment...',
+    loginToComment: 'Login to comment',
+    selectPost: 'Select a post to view details',
+    
+    // Time formats
+    justNow: 'Just now',
+    minutesAgo: 'm ago',
+    hoursAgo: 'h ago',
+    daysAgo: 'd ago',
     
     // Footer messages
     scrollToNext: 'Scroll to see next post',
@@ -189,6 +227,11 @@ const translations = {
     invalidFileType: 'Invalid file type! Only images/videos allowed.',
     missingCaption: 'Please enter a caption!',
     notAuthenticated: 'Please login first!',
+    
+    // Error Messages - Comments and Likes
+    likeFailed: 'Failed to like post!',
+    commentFailed: 'Failed to add comment!',
+    loadCommentsFailed: 'Failed to load comments!',
     
     // Error Messages - Load Posts
     loadPostsFailed: 'Failed to load posts!',

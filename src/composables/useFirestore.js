@@ -1,16 +1,21 @@
 /*
+src/composables/useFirestore.js - Updated
 Composable quản lý Firestore và Storage
 Centralize logic tương tác với Firebase Firestore để lưu posts và Firebase Storage để upload media
+Added: Comments and Likes functionality
 */
 import { ref } from 'vue'
 import { 
   getFirestore, 
   collection, 
   addDoc, 
-  getDocs, 
+  getDocs,
+  doc,
+  updateDoc,
   orderBy,
   query,
-  limit
+  limit,
+  where
 } from 'firebase/firestore'
 import { 
   getStorage, 
@@ -86,7 +91,9 @@ export function useFirestore() {
       const docRef = await addDoc(postsCollection, {
         ...postData,
         createdAt: postData.createdAt || new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        likes: postData.likes || 0,
+        likedBy: [] // Array để track users đã like
       })
 
       return {
@@ -133,11 +140,115 @@ export function useFirestore() {
     }
   }
 
+  // Update likes cho một post
+  const updatePostLikes = async (postId, newLikeCount, userId, isLiking) => {
+    if (!postId || !userId) {
+      throw new Error('MISSING_POST_OR_USER_ID')
+    }
+
+    try {
+      const postRef = doc(db, 'posts', postId)
+      
+      // Lấy current likedBy array
+      const currentDoc = await getDocs(query(collection(db, 'posts'), where('__name__', '==', postId)))
+      let likedBy = []
+      
+      if (!currentDoc.empty) {
+        likedBy = currentDoc.docs[0].data().likedBy || []
+      }
+
+      // Update likedBy array
+      if (isLiking) {
+        if (!likedBy.includes(userId)) {
+          likedBy.push(userId)
+        }
+      } else {
+        likedBy = likedBy.filter(id => id !== userId)
+      }
+
+      // Update document
+      await updateDoc(postRef, {
+        likes: newLikeCount,
+        likedBy: likedBy,
+        updatedAt: new Date()
+      })
+
+      return { success: true, likes: newLikeCount }
+    } catch (err) {
+      error.value = err
+      throw err
+    }
+  }
+
+  // Thêm comment cho một post
+  const addComment = async (commentData) => {
+    if (!commentData || !commentData.postId || !commentData.text || !commentData.authorId) {
+      throw new Error('MISSING_COMMENT_DATA')
+    }
+
+    isLoading.value = true
+    error.value = null
+
+    try {
+      // Add comment to 'comments' collection
+      const commentsCollection = collection(db, 'comments')
+      const docRef = await addDoc(commentsCollection, {
+        ...commentData,
+        createdAt: commentData.createdAt || new Date()
+      })
+
+      return {
+        id: docRef.id,
+        ...commentData
+      }
+    } catch (err) {
+      error.value = err
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Lấy comments cho một post
+  const getPostComments = async (postId) => {
+    if (!postId) {
+      return [] // Return empty array thay vì throw error
+    }
+
+    try {
+      const commentsCollection = collection(db, 'comments')
+      const q = query(
+        commentsCollection,
+        where('postId', '==', postId),
+        orderBy('createdAt', 'asc') // Comments cũ trước, mới sau
+      )
+      
+      const querySnapshot = await getDocs(q)
+      const comments = []
+      
+      querySnapshot.forEach((doc) => {
+        comments.push({
+          id: doc.id,
+          ...doc.data()
+        })
+      })
+
+      return comments
+    } catch (err) {
+      console.error('Error loading comments:', err)
+      // Return empty array instead of throwing error
+      return []
+    }
+  }
+
   return {
     isLoading,
     error,
     uploadMedia,
     createPost,
-    getPosts
+    getPosts,
+    updatePostLikes,
+    addComment,
+    getPostComments
   }
 }

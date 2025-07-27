@@ -1,7 +1,8 @@
 /*
-src/composables/useErrorHandler.js
+src/composables/useErrorHandler.js - Updated
 Composable xử lý lỗi
 Centralize error handling logic và provide consistent error messages
+Added: Comments and Likes error codes
 */
 import { useLanguage } from './useLanguage'
 
@@ -34,7 +35,16 @@ export function useErrorHandler() {
       'NOT_AUTHENTICATED': 'notAuthenticated',
       'MISSING_FILE_OR_USER': 'postFailed',
       'MISSING_POST_DATA': 'postFailed',
-      'MISSING_REQUIRED_FIELDS': 'postFailed'
+      'MISSING_REQUIRED_FIELDS': 'postFailed',
+      
+      // Comments and Likes errors
+      'MISSING_POST_OR_USER_ID': 'likeFailed',
+      'MISSING_COMMENT_DATA': 'commentFailed',
+      'MISSING_POST_ID': 'loadCommentsFailed',
+      
+      // Firebase permission errors
+      'permission-denied': 'notAuthenticated',
+      'unauthenticated': 'notAuthenticated'
     }
 
     return errorMap[errorCode] || 'defaultError'
@@ -66,6 +76,15 @@ export function useErrorHandler() {
       },
       loadPosts: {
         'defaultError': 'loadPostsFailed'
+      },
+      like: {
+        'defaultError': 'likeFailed'
+      },
+      comment: {
+        'defaultError': 'commentFailed'
+      },
+      loadComments: {
+        'defaultError': 'loadCommentsFailed'
       }
     }
 
