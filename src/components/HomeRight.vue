@@ -1,11 +1,12 @@
 <!--
-src/components/HomeRight.vue - Refactored
+src/components/HomeRight.vue - Updated with Emoji Picker
 Component sidebar bên phải - Chi tiết bài post
 Logic:
 - Hiển thị caption, likes, comments của post hiện tại
 - Chức năng like/unlike post thông qua Firestore
 - Load và hiển thị comments với time format
-- Form thêm comment mới với emoji picker
+- Form thêm comment mới với emoji picker dropdown (thay vì random)
+- Emoji picker hiển thị danh sách emoji để user chọn
 - Chỉ hoạt động khi user đã đăng nhập
 -->
 <template>
@@ -66,13 +67,30 @@ Logic:
             maxlength="200"
           >
           <div class="comment-actions">
-            <button 
-              class="emoji-btn"
-              @click="handleAddEmoji"
-              :disabled="isLoading"
-            >
-              <div class="emoji-icon">😊</div>
-            </button>
+            <div class="emoji-container">
+              <button 
+                class="emoji-btn"
+                @click="toggleEmojiPicker"
+                :disabled="isLoading"
+              >
+                <div class="emoji-icon">😊</div>
+              </button>
+              
+              <!-- Emoji Picker Dropdown -->
+              <div v-if="showEmojiPicker" class="emoji-picker">
+                <div class="emoji-grid">
+                  <button 
+                    v-for="emoji in emojiList" 
+                    :key="emoji"
+                    class="emoji-option"
+                    @click="selectEmoji(emoji)"
+                  >
+                    {{ emoji }}
+                  </button>
+                </div>
+              </div>
+            </div>
+            
             <button 
               class="send-btn"
               @click="handleAddComment"
@@ -95,7 +113,7 @@ Logic:
 </template>
 
 <script>
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useLanguage } from '@/composables/useLanguage'
 import { useFirestore } from '@/composables/useFirestore'
@@ -121,6 +139,14 @@ export default {
     const isLoading = ref(false)
     const isLoadingComments = ref(false)
     const userLikes = ref(new Set())
+    const showEmojiPicker = ref(false)
+
+    // Emoji list for picker
+    const emojiList = [
+      '😊', '😂', '❤️', '😍', '👍', '👏', '🔥', '💯', 
+      '😎', '🤔', '😮', '😢', '😡', '🥰', '🤗', '🎉',
+      '💪', '👌', '✨', '🌟', '💖', '💕', '🙏', '👀'
+    ]
 
     // Computed properties
     const isLikedByUser = computed(() => {
@@ -244,6 +270,7 @@ export default {
         console.log('Comment saved successfully:', savedComment)
         
         newComment.value = ''
+        showEmojiPicker.value = false // Đóng emoji picker sau khi comment
         await loadComments()
 
       } catch (error) {
@@ -254,10 +281,23 @@ export default {
       }
     }
 
-    const handleAddEmoji = () => {
-      const emojis = ['😊', '👍', '❤️', '😍', '😂', '🔥', '💯', '👏']
-      const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)]
-      newComment.value += randomEmoji
+    // Toggle emoji picker visibility
+    const toggleEmojiPicker = () => {
+      showEmojiPicker.value = !showEmojiPicker.value
+    }
+
+    // Select emoji và thêm vào comment input
+    const selectEmoji = (emoji) => {
+      newComment.value += emoji
+      showEmojiPicker.value = false // Đóng picker sau khi chọn
+    }
+
+    // Close emoji picker khi click outside
+    const handleClickOutside = (event) => {
+      const emojiContainer = event.target.closest('.emoji-container')
+      if (!emojiContainer && showEmojiPicker.value) {
+        showEmojiPicker.value = false
+      }
     }
 
     // Watchers
@@ -268,7 +308,18 @@ export default {
       } else {
         comments.value = []
       }
+      // Đóng emoji picker khi chuyển post
+      showEmojiPicker.value = false
     }, { immediate: true, deep: true })
+
+    // Lifecycle hooks
+    onMounted(() => {
+      document.addEventListener('click', handleClickOutside)
+    })
+
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside)
+    })
 
     return {
       user,
@@ -277,11 +328,14 @@ export default {
       isLoading,
       isLoadingComments,
       isLikedByUser,
+      showEmojiPicker,
+      emojiList,
       getText,
       formatCommentTime,
       handleLike,
       handleAddComment,
-      handleAddEmoji
+      toggleEmojiPicker,
+      selectEmoji
     }
   }
 }
@@ -481,6 +535,11 @@ export default {
   gap: 0.5rem;
 }
 
+/* Emoji Container với Relative Positioning */
+.emoji-container {
+  position: relative;
+}
+
 .emoji-btn, .send-btn {
   width: 1.75rem;
   height: 1.75rem;
@@ -514,6 +573,63 @@ export default {
   height: 1rem;
   background: url('@/icons/send.png') center/cover;
   filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
+}
+
+/* Emoji Picker Dropdown */
+.emoji-picker {
+  position: absolute;
+  bottom: 2.25rem; /* Hiển thị phía trên emoji button */
+  right: 0;
+  width: 12rem;
+  max-height: 8rem;
+  background: #2B2D42;
+  border: 1px solid rgba(255, 235, 124, 0.3);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  overflow: hidden;
+}
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.125rem;
+  padding: 0.5rem;
+  max-height: 7rem;
+  overflow-y: auto;
+}
+
+.emoji-grid::-webkit-scrollbar {
+  width: 0.25rem;
+}
+
+.emoji-grid::-webkit-scrollbar-track {
+  background: rgba(255, 235, 124, 0.1);
+  border-radius: 0.125rem;
+}
+
+.emoji-grid::-webkit-scrollbar-thumb {
+  background: rgba(255, 235, 124, 0.3);
+  border-radius: 0.125rem;
+}
+
+.emoji-option {
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: transparent;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.emoji-option:hover {
+  background: rgba(255, 235, 124, 0.2);
+  transform: scale(1.1);
 }
 
 .login-prompt {
