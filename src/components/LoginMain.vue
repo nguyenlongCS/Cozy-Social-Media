@@ -1,18 +1,12 @@
 <!--
-Component form đăng nhập/đăng ký - Refactored
-Logic: 
-- Loại bỏ props và watch logic phức tạp
-- Đơn giản hóa validation logic
-- Gộp chung xử lý remember me
+src/components/LoginMain.vue - Refactored
+Component form đăng nhập/đăng ký
+Logic:
 - Toggle giữa tab Login và SignUp
-- Form Login: email, password với nút ẩn/hiện mật khẩu, kết nối Firebase Auth
-- Form SignUp: email, password, confirm password với nút ẩn/hiện mật khẩu, kết nối Firebase Auth
-- Validate confirm password khớp với password
-- Hỗ trợ chuyển đổi ngôn ngữ (vi/en)
-- Firebase authentication cho email/password login và registration
-- Chức năng Remember Me: lưu email vào localStorage khi được chọn
-- Tự động load email đã lưu khi component được mount
-- Xóa email khỏi localStorage khi không chọn Remember Me
+- Form validation và xử lý submit
+- Remember me functionality với localStorage
+- Password visibility toggle
+- Firebase authentication integration
 -->
 <template>
   <div class="loginform">
@@ -63,7 +57,6 @@ Logic:
         </button>
       </div>
       
-      <!-- Remember me and Forgot password -->
       <div class="form-options">
         <label class="remember-me">
           <input 
@@ -173,21 +166,11 @@ export default {
       confirmPassword: ''
     })
 
-    // Load remembered email khi component mount
-    onMounted(() => {
-      const { email, remember } = loadRememberedEmail()
-      if (email && remember) {
-        loginForm.value.email = email
-        loginForm.value.rememberMe = true
-      }
-    })
-
-    // Handle remember me change
+    // Methods
     const handleRememberMeChange = () => {
       saveRememberedEmail(loginForm.value.email, loginForm.value.rememberMe)
     }
 
-    // Handle login
     const handleLogin = async () => {
       try {
         saveRememberedEmail(loginForm.value.email, loginForm.value.rememberMe)
@@ -199,7 +182,6 @@ export default {
       }
     }
 
-    // Handle forgot password
     const handleForgotPassword = async () => {
       if (!loginForm.value.email) {
         showError({ message: 'MISSING_EMAIL' }, 'reset')
@@ -214,7 +196,6 @@ export default {
       }
     }
 
-    // Handle signup
     const handleSignup = async () => {
       try {
         await signupWithEmail(
@@ -225,7 +206,7 @@ export default {
         
         showSuccess('signup')
         
-        // Reset form và chuyển về tab login
+        // Reset form and switch to login tab
         activeTab.value = 'login'
         signupForm.value = {
           email: '',
@@ -236,6 +217,15 @@ export default {
         showError(error, 'signup')
       }
     }
+
+    // Lifecycle
+    onMounted(() => {
+      const { email, remember } = loadRememberedEmail()
+      if (email && remember) {
+        loginForm.value.email = email
+        loginForm.value.rememberMe = true
+      }
+    })
 
     return {
       activeTab,
@@ -335,7 +325,6 @@ export default {
   color: rgba(255, 235, 124, 0.6);
 }
 
-/* Override autofill styles để giữ màu sắc nhất quán */
 .form-input:-webkit-autofill,
 .form-input:-webkit-autofill:hover,
 .form-input:-webkit-autofill:focus,
@@ -347,7 +336,6 @@ export default {
   transition: background-color 5000s ease-in-out 0s;
 }
 
-/* Firefox autofill override */
 .form-input:-moz-autofill {
   background-color: #2B2D42 !important;
   color: var(--theme-color) !important;

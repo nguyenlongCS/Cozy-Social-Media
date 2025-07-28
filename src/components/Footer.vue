@@ -1,11 +1,7 @@
 <!--
-src/components/Footer.vue
+src/components/Footer.vue - Refactored
 Component footer
-Hiển thị hướng dẫn cuộn và thông báo cuộn quá nhanh
-Logic:
-- Hiển thị "Cuộn để xem bài viết tiếp theo" 
-- Nhận props scrollTooFast để hiển thị cảnh báo
-- Chuyển đổi ngôn ngữ thông qua useLanguage
+Logic: Hiển thị hướng dẫn cuộn và warning khi cuộn quá nhanh
 -->
 <template>
   <div class="footer">

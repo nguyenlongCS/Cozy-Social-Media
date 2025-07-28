@@ -1,6 +1,6 @@
 <!--
-Component logo sidebar bên trái trang login - Refactored
-Logic: Loại bỏ props không sử dụng
+src/components/LoginLeft.vue - Refactored
+Component sidebar bên trái trang login
 -->
 <template>
   <div class="logo">
@@ -9,7 +9,7 @@ Logic: Loại bỏ props không sử dụng
 
 <script>
 export default {
-  name: 'Logo'
+  name: 'LoginLeft'
 }
 </script>
 

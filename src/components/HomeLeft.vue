@@ -1,9 +1,7 @@
 <!--
-Component sidebar bên trái
-Logic:
-- Kiểm tra authentication khi click "Tạo Bài Đăng"
-- Hiển thị thông báo yêu cầu đăng nhập nếu chưa login
-- Navigate đến CreatePost nếu đã đăng nhập
+src/components/HomeLeft.vue - Refactored
+Component sidebar bên trái trang chủ
+Logic: Menu buttons với authentication check cho Create Post
 -->
 <template>
   <div class="menu">
@@ -26,22 +24,19 @@ import { useAuth } from '@/composables/useAuth'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
-  name: 'Menu',
+  name: 'HomeLeft',
   setup() {
     const router = useRouter()
     const { getText } = useLanguage()
     const { user } = useAuth()
     const { showError } = useErrorHandler()
 
-    // Handle create post navigation
     const handleCreatePost = () => {
       if (!user.value) {
-        // Hiển thị thông báo yêu cầu đăng nhập
         showError({ message: 'NOT_AUTHENTICATED' }, 'post')
         return
       }
       
-      // Navigate to create post page nếu đã đăng nhập
       router.push('/createpost')
     }
 

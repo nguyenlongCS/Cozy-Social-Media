@@ -1,14 +1,12 @@
 <!--
-src/components/CreatePost.vue
+src/components/CreatePost.vue - Refactored
 Component CreatePost - Tạo bài đăng mới
 Logic:
-- Giao diện giống HomeMain.vue nhưng có thể chọn file và nhập caption
-- Preview media được chọn trong media-area với object-fit: contain để không bị tràn
-- Actions buttons giống HomeMain.vue (chỉ icon, không text)
-- Sử dụng Firebase Storage để upload media và Firestore để lưu bài đăng
-- Hỗ trợ đa ngôn ngữ cho UI text
-- Bài đăng được lưu vào collection 'posts' để hiển thị cho mọi người
-- Fixed: Media preview không được vượt quá kích thước media-area
+- Form tạo bài đăng với preview media và input caption
+- Upload file và lưu bài đăng thông qua useFirestore
+- Validation file size và type
+- Chuyển về trang chủ sau khi đăng thành công
+- Hiển thị thông báo lỗi/thành công thông qua useErrorHandler
 -->
 <template>
   <div class="create-post">
@@ -19,11 +17,11 @@ Logic:
     <div class="timestamp">{{ getCurrentTime() }}</div>
     
     <div class="media-area" @click="triggerFileInput">
-      <div v-if="!selectedFile && !previewUrl" class="upload-placeholder">
+      <div v-if="!selectedFile" class="upload-placeholder">
         <div class="plus-icon"></div>
         <span>{{ getText('addMedia') }}</span>
       </div>
-      <div v-else-if="previewUrl" class="media-preview">
+      <div v-else class="media-preview">
         <img v-if="isImage" :src="previewUrl" alt="Preview" class="preview-media">
         <video v-else-if="isVideo" :src="previewUrl" controls class="preview-media"></video>
         <button class="remove-media" @click.stop="removeMedia">×</button>
@@ -77,26 +75,25 @@ export default {
     const fileInput = ref(null)
     const isUploading = ref(false)
 
-    // Computed
-    const canPost = computed(() => 
-      caption.value.trim().length > 0 && user.value
-    )
+    // Computed properties
+    const canPost = computed(() => {
+      return caption.value.trim().length > 0 && user.value
+    })
 
-    const isImage = computed(() => 
-      selectedFile.value && selectedFile.value.type.startsWith('image/')
-    )
+    const isImage = computed(() => {
+      return selectedFile.value && selectedFile.value.type.startsWith('image/')
+    })
     
-    const isVideo = computed(() => 
-      selectedFile.value && selectedFile.value.type.startsWith('video/')
-    )
+    const isVideo = computed(() => {
+      return selectedFile.value && selectedFile.value.type.startsWith('video/')
+    })
 
-    // Get user display name
+    // Methods
     const getUserDisplayName = () => {
       if (!user.value) return getText('guest')
       return user.value.displayName || user.value.email || getText('user')
     }
 
-    // Get current time
     const getCurrentTime = () => {
       const now = new Date()
       const hours = now.getHours().toString().padStart(2, '0')
@@ -107,14 +104,12 @@ export default {
       return `${hours}:${minutes}, ${day}/${month}/${year}`
     }
 
-    // Trigger file input
     const triggerFileInput = () => {
       if (fileInput.value) {
         fileInput.value.click()
       }
     }
 
-    // Handle file selection
     const handleFileSelect = (event) => {
       const file = event.target.files[0]
       if (!file) return
@@ -140,7 +135,6 @@ export default {
       previewUrl.value = URL.createObjectURL(file)
     }
 
-    // Remove selected media
     const removeMedia = () => {
       if (previewUrl.value) {
         URL.revokeObjectURL(previewUrl.value)
@@ -152,14 +146,12 @@ export default {
       }
     }
 
-    // Handle cancel
     const handleCancel = () => {
       caption.value = ''
       removeMedia()
       router.push('/')
     }
 
-    // Handle post creation
     const handlePost = async () => {
       if (!user.value) {
         showError({ message: 'NOT_AUTHENTICATED' }, 'post')
@@ -202,7 +194,7 @@ export default {
 
         showSuccess('post')
         
-        // Reset form và navigate về home
+        // Reset form and navigate home
         caption.value = ''
         removeMedia()
         router.push('/')
@@ -332,7 +324,6 @@ export default {
 }
 
 .preview-media {
-  /* FIXED: Đảm bảo media không vượt quá kích thước container */
   max-width: 90%;
   max-height: 90%;
   width: auto;

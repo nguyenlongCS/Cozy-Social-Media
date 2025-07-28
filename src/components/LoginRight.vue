@@ -1,8 +1,7 @@
 <!--
-Component sidebar bên phải trang login - Refactored
-Logic: 
-- Loại bỏ props và watch logic phức tạp
-- Đơn giản hóa social login handlers
+src/components/LoginRight.vue - Refactored
+Component sidebar bên phải trang login
+Logic: Social login buttons với Google và Facebook
 -->
 <template>
   <div class="social">
@@ -29,14 +28,13 @@ import { useLanguage } from '@/composables/useLanguage'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
-  name: 'Social',
+  name: 'LoginRight',
   setup() {
     const router = useRouter()
     const { loginWithGoogle, loginWithFacebook, isLoading } = useAuth()
     const { getText } = useLanguage()
     const { showError } = useErrorHandler()
 
-    // Handle Google login
     const handleGoogleLogin = async () => {
       try {
         const user = await loginWithGoogle()
@@ -47,7 +45,6 @@ export default {
       }
     }
     
-    // Handle Facebook login
     const handleFacebookLogin = async () => {
       try {
         const user = await loginWithFacebook()

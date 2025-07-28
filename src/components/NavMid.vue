@@ -1,9 +1,7 @@
 <!--
+src/components/NavMid.vue - Refactored
 Component navigation giữa header
-Chứa 5 button: profile, friends, home, mess, notification
-Logic: 
-- Ẩn các thành phần khi đang ở trang login
-- Home button navigate về trang chủ (/)
+Logic: Hiển thị 5 navigation buttons khi không ở trang login
 -->
 <template>
   <div class="nav-mid">
@@ -16,24 +14,24 @@ Logic:
 </template>
 
 <script>
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 
 export default {
   name: 'NavMid',
   setup() {
     const router = useRouter()
+    const route = useRoute()
+
+    const isLoginPage = computed(() => route.name === 'Login')
 
     const goToHome = () => {
       router.push('/')
     }
 
     return {
+      isLoginPage,
       goToHome
-    }
-  },
-  computed: {
-    isLoginPage() {
-      return this.$route.name === 'Login'
     }
   }
 }

@@ -1,31 +1,23 @@
 <!--
-src/components/HomeRight.vue
-Component sidebar bên phải hiển thị chi tiết bài post
-Comment Logic:
-- Load comments khi component nhận post từ HomeMain
-- Hiển thị danh sách comments với authorName, text, createdAt
-- Form nhập comment mới với validation
-- Real-time update comments sau khi thêm
-- Format thời gian hiển thị (vừa xong, x phút trước, x giờ trước, x ngày trước)
+src/components/HomeRight.vue - Refactored
+Component sidebar bên phải - Chi tiết bài post
 Logic:
-- Nhận currentPost từ HomeMain thông qua props
-- Hiển thị caption, số lượt like, danh sách comments
-- Thanh nhập comment với button thả emoji
-- Sử dụng Firestore để lưu và load comments
-- Sử dụng Firestore để update số lượt like
-- Chỉ hiển thị khi có bài post, ẩn khi không có
+- Hiển thị caption, likes, comments của post hiện tại
+- Chức năng like/unlike post thông qua Firestore
+- Load và hiển thị comments với time format
+- Form thêm comment mới với emoji picker
+- Chỉ hoạt động khi user đã đăng nhập
 -->
 <template>
   <div class="right">
-    <!-- Hiển thị khi có post -->
     <div v-if="post && post.id" class="post-details">
-      <!-- Caption -->
+      <!-- Caption section -->
       <div class="caption-section">
         <h3 class="section-title">{{ getText('caption') }}</h3>
         <p class="caption-text">{{ post.caption || getText('noCaption') }}</p>
       </div>
 
-      <!-- Likes -->
+      <!-- Likes section -->
       <div class="likes-section">
         <div class="likes-info">
           <button 
@@ -40,11 +32,10 @@ Logic:
         </div>
       </div>
 
-      <!-- Comments -->
+      <!-- Comments section -->
       <div class="comments-section">
         <h3 class="section-title">{{ getText('comments') }} ({{ comments.length }})</h3>
         
-        <!-- Comments list -->
         <div class="comments-list">
           <div v-if="isLoadingComments" class="loading-comments">
             {{ getText('loading') }}...
@@ -64,7 +55,7 @@ Logic:
           </div>
         </div>
 
-        <!-- Add comment -->
+        <!-- Add comment form -->
         <div v-if="user" class="add-comment">
           <input 
             type="text"
@@ -97,7 +88,6 @@ Logic:
       </div>
     </div>
 
-    <!-- Hiển thị khi không có post -->
     <div v-else class="no-post">
       {{ getText('selectPost') }}
     </div>
@@ -130,14 +120,14 @@ export default {
     const newComment = ref('')
     const isLoading = ref(false)
     const isLoadingComments = ref(false)
-    const userLikes = ref(new Set()) // Track which posts user has liked
+    const userLikes = ref(new Set())
 
-    // Computed
+    // Computed properties
     const isLikedByUser = computed(() => {
       return user.value && userLikes.value.has(props.post.id)
     })
 
-    // Format comment timestamp
+    // Methods
     const formatCommentTime = (timestamp) => {
       if (!timestamp) return ''
       
@@ -155,7 +145,10 @@ export default {
       
       if (diffInHours < 1) {
         const diffInMinutes = Math.floor((now - date) / (1000 * 60))
-        return diffInMinutes <= 1 ? getText('justNow') : `${diffInMinutes}${getText('minutesAgo')}`
+        if (diffInMinutes <= 1) {
+          return getText('justNow')
+        }
+        return `${diffInMinutes}${getText('minutesAgo')}`
       } else if (diffInHours < 24) {
         return `${diffInHours}${getText('hoursAgo')}`
       } else {
@@ -164,7 +157,6 @@ export default {
       }
     }
 
-    // Load comments for current post
     const loadComments = async () => {
       if (!props.post.id) {
         comments.value = []
@@ -180,21 +172,17 @@ export default {
         console.log('Loaded comments:', postComments)
       } catch (error) {
         console.error('Error loading comments:', error)
-        // Chỉ hiển thị error nếu không phải lỗi authentication
         if (error.code !== 'permission-denied' && error.code !== 'unauthenticated') {
           showError(error, 'loadComments')
         }
-        // Set empty array nếu có lỗi
         comments.value = []
       } finally {
         isLoadingComments.value = false
       }
     }
 
-    // Handle like/unlike post
     const handleLike = async () => {
       if (!user.value || !props.post.id) {
-        // Không hiển thị error nếu user chưa đăng nhập
         return
       }
 
@@ -213,7 +201,6 @@ export default {
           userLikes.value.add(props.post.id)
         }
         
-        // Update post likes in parent component (emit event)
         props.post.likes = newLikeCount
 
         // Update in Firestore
@@ -234,14 +221,8 @@ export default {
       }
     }
 
-    // Handle add comment
     const handleAddComment = async () => {
-      if (!user.value || !props.post.id) {
-        // Không hiển thị error nếu user chưa đăng nhập
-        return
-      }
-
-      if (!newComment.value.trim()) {
+      if (!user.value || !props.post.id || !newComment.value.trim()) {
         return
       }
 
@@ -259,14 +240,10 @@ export default {
 
         console.log('Comment data:', commentData)
         
-        // Lưu comment vào Firestore
         const savedComment = await addComment(commentData)
         console.log('Comment saved successfully:', savedComment)
         
-        // Clear input
         newComment.value = ''
-        
-        // Reload comments sau khi lưu thành công
         await loadComments()
 
       } catch (error) {
@@ -277,14 +254,13 @@ export default {
       }
     }
 
-    // Handle add emoji
     const handleAddEmoji = () => {
       const emojis = ['😊', '👍', '❤️', '😍', '😂', '🔥', '💯', '👏']
       const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)]
       newComment.value += randomEmoji
     }
 
-    // Watch for post changes to load comments
+    // Watchers
     watch(() => props.post, (newPost) => {
       console.log('Post changed:', newPost)
       if (newPost && newPost.id) {
@@ -292,7 +268,7 @@ export default {
       } else {
         comments.value = []
       }
-    }, { immediate: true, deep: true }) // Load ngay khi component mount
+    }, { immediate: true, deep: true })
 
     return {
       user,
@@ -305,8 +281,7 @@ export default {
       formatCommentTime,
       handleLike,
       handleAddComment,
-      handleAddEmoji,
-      loadComments
+      handleAddEmoji
     }
   }
 }

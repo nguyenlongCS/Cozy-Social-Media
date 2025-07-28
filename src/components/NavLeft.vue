@@ -1,8 +1,7 @@
 <!--
-Component navigation bên trái header - Refactored
-Logic: 
-- Loại bỏ prop currentLanguage không cần thiết
-- Đơn giản hóa logic ẩn/hiện elements
+src/components/NavLeft.vue - Refactored
+Component navigation bên trái header
+Logic: Hiển thị user icon và search input khi không ở trang login
 -->
 <template>
   <div class="nav-left">

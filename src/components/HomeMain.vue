@@ -1,29 +1,27 @@
 <!--
-src/components/HomeMain.vue - Updated
-Component Feed content - Load và hiển thị posts từ Firestore
+src/components/HomeMain.vue - Refactored
+Component Feed chính - Hiển thị posts từ Firestore
 Logic:
-- Load posts từ Firestore khi component mount
-- Chỉ hiển thị 1 bài viết tại một thời điểm
-- Cuộn để chuyển sang bài viết tiếp theo (wheel event)
-- Emit currentPost khi thay đổi để HomeRight có thể hiển thị chi tiết
-- Vị trí hiển thị giống như content cố định mẫu ban đầu
-- Không có thanh cuộn hiển thị
-- Preload media cho bài tiếp theo để tránh lag khi cuộn
+- Load posts từ Firestore và hiển thị từng bài một
+- Cuộn wheel để chuyển bài với throttle và warning
+- Preload media cho bài tiếp theo để tránh lag
+- Emit currentPost để HomeRight hiển thị chi tiết
+- Format timestamp và display name với (me/tôi) cho current user
 -->
 <template>
   <div class="feed">
     <!-- Loading state -->
-    <div v-if="isLoading" class="loading-content">
+    <div v-if="isLoading" class="content-container">
       <div class="user-info">
         <div class="avatar"></div>
-        <span class="name">{{ getText('loading') || 'Đang tải...' }}</span>
+        <span class="name">{{ getText('loading') }}</span>
       </div>
       <div class="timestamp">--:--</div>
       <div class="media-area">
-        <div class="loading-text">{{ getText('loading') || 'Đang tải...' }}</div>
+        <div class="loading-text">{{ getText('loading') }}</div>
       </div>
       <div class="bottom-bar">
-        <span class="caption">{{ getText('loading') || 'Đang tải...' }}</span>
+        <span class="caption">{{ getText('loading') }}</span>
         <div class="actions">
           <button class="like"></button>
           <button class="options-menu"></button>
@@ -32,17 +30,17 @@ Logic:
     </div>
 
     <!-- Empty state -->
-    <div v-else-if="posts.length === 0" class="empty-content">
+    <div v-else-if="posts.length === 0" class="content-container">
       <div class="user-info">
         <div class="avatar"></div>
-        <span class="name">{{ getText('noPosts') || 'Chưa có bài viết' }}</span>
+        <span class="name">{{ getText('noPosts') }}</span>
       </div>
       <div class="timestamp">--:--</div>
       <div class="media-area">
-        <div class="empty-text">{{ getText('noPosts') || 'Chưa có bài viết nào' }}</div>
+        <div class="empty-text">{{ getText('noPosts') }}</div>
       </div>
       <div class="bottom-bar">
-        <span class="caption">{{ getText('noPosts') || 'Chưa có bài viết nào' }}</span>
+        <span class="caption">{{ getText('noPosts') }}</span>
         <div class="actions">
           <button class="like"></button>
           <button class="options-menu"></button>
@@ -51,14 +49,13 @@ Logic:
     </div>
 
     <!-- Current post -->
-    <div v-else class="post-content" @wheel="handleWheel">
+    <div v-else class="content-container" @wheel="handleWheel">
       <div class="user-info">
         <div class="avatar"></div>
         <span class="name">{{ getDisplayName(currentPost) }}</span>
       </div>
       <div class="timestamp">{{ formatTimestamp(currentPost.createdAt) }}</div>
       
-      <!-- Media area -->
       <div class="media-area">
         <img v-if="currentPost.mediaType === 'image'" 
              :src="currentPost.mediaUrl" 
@@ -70,7 +67,7 @@ Logic:
                class="post-media">
         </video>
         <div v-else class="no-media">
-          {{ getText('textPost') || 'Bài viết văn bản' }}
+          {{ getText('textPost') }}
         </div>
       </div>
       
@@ -101,25 +98,24 @@ export default {
     const { showError } = useErrorHandler()
     const { user } = useAuth()
     
+    // Reactive data
     const posts = ref([])
     const currentIndex = ref(0)
-    const preloadedMedia = ref(new Map()) // Cache cho media đã preload
-    const lastScrollTime = ref(0) // Thời gian cuộn gần nhất
-    const scrollCooldown = 300 // Cooldown 300ms giữa các lần cuộn
-    const showScrollWarning = ref(false) // Hiển thị cảnh báo cuộn nhanh
+    const preloadedMedia = ref(new Map())
+    const lastScrollTime = ref(0)
+    const scrollCooldown = 300
 
-    // Current post được hiển thị
+    // Computed properties
     const currentPost = computed(() => {
       return posts.value[currentIndex.value] || {}
     })
 
-    // Get display name với (me/tôi) cho current user
+    // Methods
     const getDisplayName = (post) => {
       if (!post.authorName) return getText('user')
       
       const authorName = post.authorName
       
-      // Kiểm tra nếu đây là bài của user hiện tại
       if (user.value && post.authorId === user.value.uid) {
         const meText = currentLanguage.value === 'vi' ? 'tôi' : 'me'
         return `${authorName} (${meText})`
@@ -128,18 +124,16 @@ export default {
       return authorName
     }
 
-    // Load posts từ Firestore
     const loadPosts = async () => {
       try {
-        const fetchedPosts = await getPosts(10) // Lấy 10 posts mới nhất
+        const fetchedPosts = await getPosts(10)
         posts.value = fetchedPosts
         console.log('Posts loaded:', fetchedPosts.length)
         
-        // Preload media cho bài đầu tiên và bài tiếp theo
         if (fetchedPosts.length > 0) {
-          preloadMedia(0) // Bài hiện tại
+          preloadMedia(0)
           if (fetchedPosts.length > 1) {
-            preloadMedia(1) // Bài tiếp theo
+            preloadMedia(1)
           }
         }
       } catch (error) {
@@ -148,11 +142,10 @@ export default {
       }
     }
 
-    // Preload media cho một bài cụ thể
     const preloadMedia = (index) => {
       const post = posts.value[index]
       if (!post || !post.mediaUrl || preloadedMedia.value.has(post.id)) {
-        return // Không có media hoặc đã preload rồi
+        return
       }
 
       if (post.mediaType === 'image') {
@@ -179,32 +172,11 @@ export default {
       }
     }
 
-    // Watch currentIndex để preload media cho bài tiếp theo và trước đó
-    watch(currentIndex, (newIndex) => {
-      const totalPosts = posts.value.length
-      if (totalPosts === 0) return
-
-      // Preload bài tiếp theo
-      const nextIndex = (newIndex + 1) % totalPosts
-      preloadMedia(nextIndex)
-
-      // Preload bài trước đó
-      const prevIndex = newIndex === 0 ? totalPosts - 1 : newIndex - 1
-      preloadMedia(prevIndex)
-    })
-
-    // Watch currentPost để emit khi thay đổi
-    watch(currentPost, (newPost) => {
-      emit('current-post-changed', newPost)
-    }, { immediate: true, deep: true })
-
-    // Format timestamp cho hiển thị
     const formatTimestamp = (timestamp) => {
       if (!timestamp) return '--:--'
       
       let date
       if (timestamp.toDate) {
-        // Firestore Timestamp
         date = timestamp.toDate()
       } else if (timestamp instanceof Date) {
         date = timestamp
@@ -221,7 +193,6 @@ export default {
       return `${hours}:${minutes}, ${day}/${month}/${year}`
     }
 
-    // Handle wheel scroll để chuyển bài viết với throttle
     const handleWheel = (event) => {
       if (posts.value.length <= 1) return
       
@@ -230,33 +201,42 @@ export default {
       const currentTime = Date.now()
       const timeSinceLastScroll = currentTime - lastScrollTime.value
       
-      // Kiểm tra scroll quá nhanh
       if (timeSinceLastScroll < scrollCooldown) {
-        // Hiển thị cảnh báo scroll quá nhanh
-        showScrollWarning.value = true
         emit('scroll-warning', true)
         setTimeout(() => {
-          showScrollWarning.value = false
           emit('scroll-warning', false)
-        }, 2000) // Ẩn sau 2 giây
+        }, 2000)
         return
       }
       
-      // Update thời gian cuộn gần nhất
       lastScrollTime.value = currentTime
       
       if (event.deltaY > 0) {
-        // Scroll down - next post
         currentIndex.value = (currentIndex.value + 1) % posts.value.length
       } else {
-        // Scroll up - previous post
         currentIndex.value = currentIndex.value === 0 
           ? posts.value.length - 1 
           : currentIndex.value - 1
       }
     }
 
-    // Load posts khi component mount
+    // Watchers
+    watch(currentIndex, (newIndex) => {
+      const totalPosts = posts.value.length
+      if (totalPosts === 0) return
+
+      const nextIndex = (newIndex + 1) % totalPosts
+      preloadMedia(nextIndex)
+
+      const prevIndex = newIndex === 0 ? totalPosts - 1 : newIndex - 1
+      preloadMedia(prevIndex)
+    })
+
+    watch(currentPost, (newPost) => {
+      emit('current-post-changed', newPost)
+    }, { immediate: true, deep: true })
+
+    // Lifecycle
     onMounted(() => {
       loadPosts()
     })
@@ -265,12 +245,10 @@ export default {
       posts,
       currentPost,
       isLoading,
-      showScrollWarning,
       getText,
       getDisplayName,
       formatTimestamp,
-      handleWheel,
-      loadPosts
+      handleWheel
     }
   }
 }
@@ -292,7 +270,7 @@ export default {
   box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
 }
 
-.loading-content, .empty-content, .post-content {
+.content-container {
   width: 100%;
   height: 100%;
   position: relative;

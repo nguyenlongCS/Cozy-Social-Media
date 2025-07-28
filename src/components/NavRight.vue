@@ -1,9 +1,7 @@
 <!--
-Component navigation bên phải header - Refactored
-Logic: 
-- Loại bỏ prop currentLanguage và watch logic phức tạp
-- Đơn giản hóa auth button logic bằng cách sử dụng if-else thay vì computed phức tạp
-- Gộp chung handleAuthAction logic để dễ hiểu hơn
+src/components/NavRight.vue - Refactored
+Component navigation bên phải header
+Logic: Theme selector, language toggle, và auth button
 -->
 <template>
   <div class="nav-right">
@@ -39,7 +37,7 @@ export default {
     const { changeTheme } = useTheme()
     const { showError } = useErrorHandler()
 
-    // Đơn giản hóa auth button text logic
+    // Methods
     const getAuthButtonText = () => {
       if (isLoading.value) {
         return '...'
@@ -60,7 +58,6 @@ export default {
       emit('toggle-language')
     }
 
-    // Gộp chung auth action logic
     const handleAuthAction = async () => {
       if (route.name === 'Login') {
         router.push('/')
