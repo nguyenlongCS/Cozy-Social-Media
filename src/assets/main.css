@@ -1,6 +1,12 @@
-/* 
+/*
+src/assets/main.css - Updated
 CSS chung cho toàn bộ ứng dụng
 Chứa root variables và base styles
+Logic: 
+- Sử dụng 100vh để đảm bảo chiều cao full viewport
+- Ngăn việc thu nhỏ web khi cuộn bằng min-height
+- Giữ nguyên tỉ lệ hiện tại với max-width constraint
+- Responsive layout với flexbox
 */
 :root {
     --theme-color: #ffeb7c;
@@ -15,33 +21,40 @@ Chứa root variables và base styles
 body {
     font-family: 'Roboto', sans-serif;
     background: #2B2D42;
+    min-height: 100vh; /* Đảm bảo body không bao giờ nhỏ hơn viewport */
+    width: 100vw; /* Đảm bảo body sử dụng full viewport width */
+    overflow-x: auto; /* Cho phép scroll ngang nếu cần */
 }
 
 .home {
-  width: 100%;
-  max-width: 80rem;
-  height: 39.4375rem;
-  display: flex;
-  flex-direction: column;
-  background: #2B2D42;
+    width: 100vw; /* Sử dụng full viewport width */
+    height: 100vh; /* Sử dụng full viewport height */
+    min-height: 39.4375rem; /* Minimum height để không thu nhỏ quá mức */
+    display: flex;
+    flex-direction: column;
+    background: #2B2D42;
 }
 
 .header {
-  width: 100%;
-  height: 3.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 0.125rem 0.3125rem rgba(0, 0, 0, 0.2);
-  background: #2B2D42;
+    width: 100%;
+    height: 3.5rem;
+    min-height: 3.5rem; /* Ngăn header bị thu nhỏ */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 0.125rem 0.3125rem rgba(0, 0, 0, 0.2);
+    background: #2B2D42;
+    flex-shrink: 0; /* Ngăn header bị co lại */
 }
 
 .body {
-  width: 100%;
-  height: 32.44rem;
-  display: flex;
-  justify-content: space-between;
-  background: #2B2D42;
+    width: 100%;
+    flex: 1; /* Chiếm toàn bộ không gian còn lại */
+    min-height: 0; /* Cho phép flex item co lại nếu cần */
+    display: flex;
+    justify-content: space-between;
+    background: #2B2D42;
+    padding: 0 1rem; /* Thêm padding để tạo responsive spacing */
 }
 
 .btn {
