@@ -310,7 +310,7 @@ export default {
 .plus-icon {
   width: 3rem;
   height: 3rem;
-  background: url('src/icons/plus.png') center/cover;
+  background: url('@/icons/plus.png') center/cover;
 }
 
 .media-preview {
@@ -400,11 +400,11 @@ export default {
 }
 
 .cancel-btn {
-  background: url('src/icons/cancel.png') center/cover var(--theme-color);
+  background: url('@/icons/cancel.png') center/cover var(--theme-color);
 }
 
 .post-btn {
-  background: url('src/icons/post.png') center/cover var(--theme-color);
+  background: url('@/icons/post.png') center/cover var(--theme-color);
 }
 
 .cancel-btn:hover:not(:disabled), .post-btn:hover:not(:disabled) {

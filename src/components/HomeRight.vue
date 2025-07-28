@@ -201,7 +201,7 @@ export default {
           userLikes.value.add(props.post.id)
         }
         
-        props.post.likes = newLikeCount
+        emit('update-post-likes', { postId: props.post.id, likes: newLikeCount })
 
         // Update in Firestore
         await updatePostLikes(props.post.id, newLikeCount, user.value.uid, !isCurrentlyLiked)
@@ -372,7 +372,7 @@ export default {
 .like-icon {
   width: 1.25rem;
   height: 1.25rem;
-  background: url('src/icons/like.png') center/cover;
+  background: url('@/icons/like.png') center/cover;
   filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
 }
 
@@ -512,7 +512,7 @@ export default {
 .send-icon {
   width: 1rem;
   height: 1rem;
-  background: url('src/icons/send.png') center/cover;
+  background: url('@/icons/send.png') center/cover;
   filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
 }
 

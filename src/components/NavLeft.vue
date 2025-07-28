@@ -52,7 +52,7 @@ export default {
 .icon-user {
   width: 1.875rem;
   height: 1.875rem;
-  background: url('src/icons/user.png') center/cover var(--theme-color);
+  background: url('@/icons/user.png') center/cover var(--theme-color);
   border: 0.125rem solid #000;
   border-radius: 50%;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
@@ -61,7 +61,7 @@ export default {
 .search {
   width: 11.25rem;
   height: 1.875rem;
-  background: var(--theme-color) url('src/icons/search.png') 0.3125rem center/1.25rem no-repeat;
+  background: var(--theme-color) url('@/icons/search.png') 0.3125rem center/1.25rem no-repeat;
   border: 0.125rem solid #000;
   border-radius: 0.9375rem;
   padding: 0 0.625rem 0 1.875rem;

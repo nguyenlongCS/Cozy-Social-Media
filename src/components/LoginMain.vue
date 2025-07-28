@@ -140,7 +140,7 @@ import { useLanguage } from '@/composables/useLanguage'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
-  name: 'Loginform',
+  name: 'LoginForm',
   setup() {
     const router = useRouter()
     const { loginWithEmail, signupWithEmail, resetPassword, isLoading } = useAuth()
@@ -363,12 +363,12 @@ export default {
 }
 
 .show-icon {
-  background: url('src/icons/show.png') center/cover;
+  background: url('@/icons/show.png') center/cover;
   filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
 }
 
 .hide-icon {
-  background: url('src/icons/hide.png') center/cover;
+  background: url('@/icons/hide.png') center/cover;
   filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
 }
 

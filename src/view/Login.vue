@@ -35,7 +35,7 @@ import { useLanguage } from '@/composables/useLanguage'
 import '@/firebase/config'
 
 export default {
-  name: 'Login',
+  name: 'LoginPage',
   components: {
     NavLeft,
     NavMid,

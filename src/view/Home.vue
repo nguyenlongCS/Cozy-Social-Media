@@ -41,7 +41,7 @@ import { useLanguage } from '@/composables/useLanguage'
 import '@/firebase/config'
 
 export default {
-  name: 'Home',
+  name: 'HomePage',
   components: {
     NavLeft,
     NavMid,

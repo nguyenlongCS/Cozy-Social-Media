@@ -18,7 +18,7 @@ Logic: Hiển thị hướng dẫn cuộn và warning khi cuộn quá nhanh
 import { useLanguage } from '@/composables/useLanguage'
 
 export default {
-  name: 'Footer',
+  name: 'AppFooter',
   props: {
     scrollTooFast: {
       type: Boolean,

@@ -395,7 +395,7 @@ export default {
 .avatar {
   width: 1.875rem;
   height: 1.875rem;
-  background: url('src/icons/user.png') center/cover var(--theme-color);
+  background: url('@/icons/user.png') center/cover var(--theme-color);
   border: 0.125rem solid var(--theme-color);
   border-radius: 50%;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
@@ -489,7 +489,7 @@ export default {
 }
 
 .like {
-  background: url('src/icons/like.png') center/cover var(--theme-color);
+  background: url('@/icons/like.png') center/cover var(--theme-color);
 }
 
 .like.liked {
@@ -498,7 +498,7 @@ export default {
 }
 
 .options-menu {
-  background: url('src/icons/options.png') center/cover var(--theme-color);
+  background: url('@/icons/options.png') center/cover var(--theme-color);
 }
 
 .like:hover:not(:disabled), .options-menu:hover {

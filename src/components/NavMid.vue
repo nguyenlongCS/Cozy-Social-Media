@@ -56,23 +56,23 @@ export default {
 }
 
 .home-button {
-  background: url('src/icons/home.png') center/cover var(--theme-color);
+  background: url('@/icons/home.png') center/cover var(--theme-color);
 }
 
 .friends-button {
-  background: url('src/icons/friends.png') center/cover var(--theme-color);
+  background: url('@/icons/friends.png') center/cover var(--theme-color);
 }
 
 .profile-button {
-  background: url('src/icons/profile.png') center/cover var(--theme-color);
+  background: url('@/icons/profile.png') center/cover var(--theme-color);
 }
 
 .mess-button {
-  background: url('src/icons/mess.png') center/cover var(--theme-color);
+  background: url('@/icons/mess.png') center/cover var(--theme-color);
 }
 
 .notification-button {
-  background: url('src/icons/notification.png') center/cover var(--theme-color);
+  background: url('@/icons/notification.png') center/cover var(--theme-color);
 }
 
 .home-button:hover, .profile-button:hover, .mess-button:hover, .friends-button:hover, .notification-button:hover {
