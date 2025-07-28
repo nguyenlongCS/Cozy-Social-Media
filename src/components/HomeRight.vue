@@ -1,6 +1,12 @@
 <!--
 src/components/HomeRight.vue
 Component sidebar bên phải hiển thị chi tiết bài post
+Comment Logic:
+- Load comments khi component nhận post từ HomeMain
+- Hiển thị danh sách comments với authorName, text, createdAt
+- Form nhập comment mới với validation
+- Real-time update comments sau khi thêm
+- Format thời gian hiển thị (vừa xong, x phút trước, x giờ trước, x ngày trước)
 Logic:
 - Nhận currentPost từ HomeMain thông qua props
 - Hiển thị caption, số lượt like, danh sách comments
@@ -40,10 +46,14 @@ Logic:
         
         <!-- Comments list -->
         <div class="comments-list">
-          <div v-if="comments.length === 0" class="no-comments">
+          <div v-if="isLoadingComments" class="loading-comments">
+            {{ getText('loading') }}...
+          </div>
+          <div v-else-if="comments.length === 0" class="no-comments">
             {{ getText('noComments') }}
           </div>
           <div 
+            v-else
             v-for="comment in comments" 
             :key="comment.id"
             class="comment-item"
@@ -119,6 +129,7 @@ export default {
     const comments = ref([])
     const newComment = ref('')
     const isLoading = ref(false)
+    const isLoadingComments = ref(false)
     const userLikes = ref(new Set()) // Track which posts user has liked
 
     // Computed
@@ -160,9 +171,13 @@ export default {
         return
       }
 
+      isLoadingComments.value = true
+      console.log('Loading comments for post:', props.post.id)
+
       try {
         const postComments = await getPostComments(props.post.id)
         comments.value = postComments
+        console.log('Loaded comments:', postComments)
       } catch (error) {
         console.error('Error loading comments:', error)
         // Chỉ hiển thị error nếu không phải lỗi authentication
@@ -171,6 +186,8 @@ export default {
         }
         // Set empty array nếu có lỗi
         comments.value = []
+      } finally {
+        isLoadingComments.value = false
       }
     }
 
@@ -229,6 +246,7 @@ export default {
       }
 
       isLoading.value = true
+      console.log('Adding comment for post:', props.post.id)
 
       try {
         const commentData = {
@@ -239,20 +257,17 @@ export default {
           createdAt: new Date()
         }
 
-        await addComment(commentData)
+        console.log('Comment data:', commentData)
         
-        // Add comment to local list optimistically
-        comments.value.push({
-          id: Date.now().toString(), // Temporary ID
-          ...commentData
-        })
-
+        // Lưu comment vào Firestore
+        const savedComment = await addComment(commentData)
+        console.log('Comment saved successfully:', savedComment)
+        
+        // Clear input
         newComment.value = ''
         
-        // Reload comments to get actual IDs
-        setTimeout(() => {
-          loadComments()
-        }, 500)
+        // Reload comments sau khi lưu thành công
+        await loadComments()
 
       } catch (error) {
         console.error('Error adding comment:', error)
@@ -270,19 +285,21 @@ export default {
     }
 
     // Watch for post changes to load comments
-    watch(() => props.post.id, (newPostId) => {
-      if (newPostId) {
+    watch(() => props.post, (newPost) => {
+      console.log('Post changed:', newPost)
+      if (newPost && newPost.id) {
         loadComments()
       } else {
         comments.value = []
       }
-    }, { immediate: false }) // Không load ngay lập tức
+    }, { immediate: true, deep: true }) // Load ngay khi component mount
 
     return {
       user,
       comments,
       newComment,
       isLoading,
+      isLoadingComments,
       isLikedByUser,
       getText,
       formatCommentTime,
@@ -421,7 +438,7 @@ export default {
   border-radius: 0.125rem;
 }
 
-.no-comments {
+.loading-comments, .no-comments {
   color: rgba(255, 235, 124, 0.6);
   font-size: 0.75rem;
   text-align: center;

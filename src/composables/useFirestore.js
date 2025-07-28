@@ -1,6 +1,10 @@
 /*
 src/composables/useFirestore.js - Updated
 Composable quản lý Firestore và Storage
+Comment Logic:
+- addComment: Lưu comment vào collection 'comments' với đầy đủ data (authorId, authorName, createdAt, postId, text)
+- getPostComments: Load comments theo postId, sắp xếp theo thời gian tạo
+- updatePostLikes: Cập nhật số lượt like và track users đã like
 Centralize logic tương tác với Firebase Firestore để lưu posts và Firebase Storage để upload media
 Added: Comments and Likes functionality
 */
@@ -197,12 +201,16 @@ export function useFirestore() {
         createdAt: commentData.createdAt || new Date()
       })
 
+      console.log('Comment added to Firestore with ID:', docRef.id)
+
+      // Return complete comment data with ID
       return {
         id: docRef.id,
         ...commentData
       }
     } catch (err) {
       error.value = err
+      console.error('Error in addComment:', err)
       throw err
     } finally {
       isLoading.value = false
@@ -216,23 +224,35 @@ export function useFirestore() {
     }
 
     try {
+      console.log('Fetching comments for postId:', postId)
+      
       const commentsCollection = collection(db, 'comments')
+      // Tạm thời chỉ dùng where, bỏ orderBy để tránh cần index
       const q = query(
         commentsCollection,
-        where('postId', '==', postId),
-        orderBy('createdAt', 'asc') // Comments cũ trước, mới sau
+        where('postId', '==', postId)
       )
       
       const querySnapshot = await getDocs(q)
       const comments = []
       
       querySnapshot.forEach((doc) => {
-        comments.push({
+        const commentData = {
           id: doc.id,
           ...doc.data()
-        })
+        }
+        comments.push(commentData)
+        console.log('Comment loaded:', commentData)
       })
 
+      // Sort comments theo createdAt trong code thay vì Firestore query
+      comments.sort((a, b) => {
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
+        return dateA - dateB // Comments cũ trước, mới sau
+      })
+
+      console.log('Total comments loaded:', comments.length)
       return comments
     } catch (err) {
       console.error('Error loading comments:', err)
