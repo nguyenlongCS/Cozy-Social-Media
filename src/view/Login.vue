@@ -17,7 +17,7 @@ Logic:
       <LoginMain />
       <LoginRight />
     </div>
-    <Footer />
+    <!-- <Footer /> -->
   </div>
 </template>
 
@@ -28,7 +28,7 @@ import NavRight from '@/components/NavRight.vue'
 import LoginLeft from '@/components/LoginLeft.vue'
 import LoginMain from '@/components/LoginMain.vue'
 import LoginRight from '@/components/LoginRight.vue'
-import Footer from '@/components/Footer.vue'
+// import Footer from '@/components/Footer.vue'
 import { useLanguage } from '@/composables/useLanguage'
 
 // Import Firebase để đảm bảo được khởi tạo
@@ -42,8 +42,8 @@ export default {
     NavRight,
     LoginLeft,
     LoginMain,
-    LoginRight,
-    Footer
+    LoginRight
+    // Footer
   },
   setup() {
     const { toggleLanguage } = useLanguage()
