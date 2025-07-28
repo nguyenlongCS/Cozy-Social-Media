@@ -1,12 +1,14 @@
 <!--
-src/components/HomeMain.vue - Refactored
-Component Feed chính - Hiển thị posts từ Firestore
+src/components/HomeMain.vue - Updated
+Component Feed chính - Hiển thị posts từ Firestore với chức năng like
 Logic:
 - Load posts từ Firestore và hiển thị từng bài một
 - Cuộn wheel để chuyển bài với throttle và warning
 - Preload media cho bài tiếp theo để tránh lag
 - Emit currentPost để HomeRight hiển thị chi tiết
 - Format timestamp và display name với (me/tôi) cho current user
+- Xử lý like/unlike post thông qua useFirestore
+- Mỗi user chỉ được like 1 lần per post
 -->
 <template>
   <div class="feed">
@@ -74,7 +76,12 @@ Logic:
       <div class="bottom-bar">
         <span class="caption">{{ currentPost.caption }}</span>
         <div class="actions">
-          <button class="like"></button>
+          <button 
+            class="like" 
+            @click="handleLike"
+            :disabled="isLiking"
+            :class="{ liked: isLikedByUser }"
+          ></button>
           <button class="options-menu"></button>
         </div>
       </div>
@@ -93,7 +100,7 @@ export default {
   name: 'HomeMain',
   emits: ['scroll-warning', 'current-post-changed'],
   setup(props, { emit }) {
-    const { getPosts, isLoading } = useFirestore()
+    const { getPosts, updatePostLikes, isLoading } = useFirestore()
     const { getText, currentLanguage } = useLanguage()
     const { showError } = useErrorHandler()
     const { user } = useAuth()
@@ -104,10 +111,17 @@ export default {
     const preloadedMedia = ref(new Map())
     const lastScrollTime = ref(0)
     const scrollCooldown = 300
+    const isLiking = ref(false)
+    const userLikes = ref(new Set()) // Track posts liked by current user
 
     // Computed properties
     const currentPost = computed(() => {
       return posts.value[currentIndex.value] || {}
+    })
+
+    const isLikedByUser = computed(() => {
+      if (!user.value || !currentPost.value.id) return false
+      return userLikes.value.has(currentPost.value.id)
     })
 
     // Methods
@@ -130,6 +144,15 @@ export default {
         posts.value = fetchedPosts
         console.log('Posts loaded:', fetchedPosts.length)
         
+        // Initialize user likes tracking từ post data
+        if (user.value) {
+          fetchedPosts.forEach(post => {
+            if (post.likedBy && post.likedBy.includes(user.value.uid)) {
+              userLikes.value.add(post.id)
+            }
+          })
+        }
+        
         if (fetchedPosts.length > 0) {
           preloadMedia(0)
           if (fetchedPosts.length > 1) {
@@ -139,6 +162,67 @@ export default {
       } catch (error) {
         console.error('Error loading posts:', error)
         showError(error, 'loadPosts')
+      }
+    }
+
+    const handleLike = async () => {
+      if (!user.value) {
+        showError({ message: 'NOT_AUTHENTICATED' }, 'like')
+        return
+      }
+
+      if (!currentPost.value.id || isLiking.value) {
+        return
+      }
+
+      isLiking.value = true
+
+      try {
+        const isCurrentlyLiked = isLikedByUser.value
+        const newLikeCount = isCurrentlyLiked 
+          ? (currentPost.value.likes || 0) - 1 
+          : (currentPost.value.likes || 0) + 1
+
+        // Update UI optimistically
+        if (isCurrentlyLiked) {
+          userLikes.value.delete(currentPost.value.id)
+        } else {
+          userLikes.value.add(currentPost.value.id)
+        }
+        
+        // Update local post data
+        const postIndex = posts.value.findIndex(p => p.id === currentPost.value.id)
+        if (postIndex !== -1) {
+          posts.value[postIndex].likes = newLikeCount
+          if (isCurrentlyLiked) {
+            posts.value[postIndex].likedBy = (posts.value[postIndex].likedBy || [])
+              .filter(id => id !== user.value.uid)  
+          } else {
+            posts.value[postIndex].likedBy = [...(posts.value[postIndex].likedBy || []), user.value.uid]
+          }
+        }
+
+        // Update in Firestore
+        await updatePostLikes(currentPost.value.id, newLikeCount, user.value.uid, !isCurrentlyLiked)
+
+        console.log('Like updated successfully:', {
+          postId: currentPost.value.id,
+          newLikeCount,
+          isLiked: !isCurrentlyLiked
+        })
+
+      } catch (error) {
+        console.error('Error updating like:', error)
+        showError(error, 'like')
+        
+        // Revert optimistic update on error
+        if (isLikedByUser.value) {
+          userLikes.value.delete(currentPost.value.id)
+        } else {
+          userLikes.value.add(currentPost.value.id)
+        }
+      } finally {
+        isLiking.value = false
       }
     }
 
@@ -236,6 +320,22 @@ export default {
       emit('current-post-changed', newPost)
     }, { immediate: true, deep: true })
 
+    // Watch user changes để update likes tracking
+    watch(user, (newUser) => {
+      if (newUser) {
+        // Re-initialize likes tracking khi user đăng nhập
+        userLikes.value.clear()
+        posts.value.forEach(post => {
+          if (post.likedBy && post.likedBy.includes(newUser.uid)) {
+            userLikes.value.add(post.id)
+          }
+        })
+      } else {
+        // Clear likes tracking khi user đăng xuất
+        userLikes.value.clear()
+      }
+    })
+
     // Lifecycle
     onMounted(() => {
       loadPosts()
@@ -245,10 +345,13 @@ export default {
       posts,
       currentPost,
       isLoading,
+      isLiking,
+      isLikedByUser,
       getText,
       getDisplayName,
       formatTimestamp,
-      handleWheel
+      handleWheel,
+      handleLike
     }
   }
 }
@@ -389,13 +492,24 @@ export default {
   background: url('src/icons/like.png') center/cover var(--theme-color);
 }
 
+.like.liked {
+  background-color: #ff4757; /* Red color khi đã like */
+  transform: scale(1.05);
+}
+
 .options-menu {
   background: url('src/icons/options.png') center/cover var(--theme-color);
 }
 
-.like:hover, .options-menu:hover {
+.like:hover:not(:disabled), .options-menu:hover {
   transform: scale(1.1);
   box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.4);
   background-color: #2B2D42;
+}
+
+.like:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 </style>

@@ -1,12 +1,14 @@
 /*
 src/composables/useFirestore.js - Updated
-Composable quản lý Firestore và Storage
+Composable quản lý Firestore và Storage với chức năng like hoàn chỉnh
+Like Logic:
+- updatePostLikes: Cập nhật số lượt like và track users đã like trong array likedBy
+- Mỗi user chỉ được like 1 lần per post (kiểm tra userId trong likedBy array)
+- Like/Unlike toggle logic với atomic Firestore operations
 Comment Logic:
-- addComment: Lưu comment vào collection 'comments' với đầy đủ data (authorId, authorName, createdAt, postId, text)
+- addComment: Lưu comment vào collection 'comments' với đầy đủ data
 - getPostComments: Load comments theo postId, sắp xếp theo thời gian tạo
-- updatePostLikes: Cập nhật số lượt like và track users đã like
 Centralize logic tương tác với Firebase Firestore để lưu posts và Firebase Storage để upload media
-Added: Comments and Likes functionality
 */
 import { ref } from 'vue'
 import { 
@@ -16,10 +18,13 @@ import {
   getDocs,
   doc,
   updateDoc,
+  getDoc,
   orderBy,
   query,
   limit,
-  where
+  where,
+  arrayUnion,
+  arrayRemove
 } from 'firebase/firestore'
 import { 
   getStorage, 
@@ -144,41 +149,69 @@ export function useFirestore() {
     }
   }
 
-  // Update likes cho một post
+  // Update likes cho một post với logic like/unlike hoàn chỉnh
   const updatePostLikes = async (postId, newLikeCount, userId, isLiking) => {
     if (!postId || !userId) {
       throw new Error('MISSING_POST_OR_USER_ID')
     }
 
     try {
+      console.log('Updating post likes:', {
+        postId,
+        newLikeCount,
+        userId,
+        isLiking
+      })
+
       const postRef = doc(db, 'posts', postId)
       
-      // Lấy current likedBy array
-      const currentDoc = await getDocs(query(collection(db, 'posts'), where('__name__', '==', postId)))
-      let likedBy = []
+      // Kiểm tra post hiện tại để đảm bảo data consistency
+      const postDoc = await getDoc(postRef)
+      if (!postDoc.exists()) {
+        throw new Error('POST_NOT_FOUND')
+      }
+
+      const postData = postDoc.data()
+      const currentLikedBy = postData.likedBy || []
       
-      if (!currentDoc.empty) {
-        likedBy = currentDoc.docs[0].data().likedBy || []
+      // Kiểm tra trạng thái like hiện tại để tránh duplicate
+      const isCurrentlyLiked = currentLikedBy.includes(userId)
+      
+      if (isLiking && isCurrentlyLiked) {
+        console.log('User already liked this post')
+        return { success: true, likes: postData.likes || 0 }
+      }
+      
+      if (!isLiking && !isCurrentlyLiked) {
+        console.log('User has not liked this post yet')
+        return { success: true, likes: postData.likes || 0 }
       }
 
-      // Update likedBy array
-      if (isLiking) {
-        if (!likedBy.includes(userId)) {
-          likedBy.push(userId)
-        }
-      } else {
-        likedBy = likedBy.filter(id => id !== userId)
-      }
-
-      // Update document
-      await updateDoc(postRef, {
+      // Chuẩn bị update data
+      const updateData = {
         likes: newLikeCount,
-        likedBy: likedBy,
         updatedAt: new Date()
+      }
+
+      // Sử dụng Firestore array operations để đảm bảo atomic operations
+      if (isLiking) {
+        updateData.likedBy = arrayUnion(userId)
+      } else {
+        updateData.likedBy = arrayRemove(userId)
+      }
+
+      // Thực hiện update
+      await updateDoc(postRef, updateData)
+
+      console.log('Post likes updated successfully:', {
+        postId,
+        newLikeCount,
+        isLiking
       })
 
       return { success: true, likes: newLikeCount }
     } catch (err) {
+      console.error('Error updating post likes:', err)
       error.value = err
       throw err
     }
