@@ -1,7 +1,11 @@
 /*
+src/composables/useAuth.js - Updated with Users Sync
 Composable quản lý authentication
-Centralize logic đăng nhập, đăng ký, đăng xuất và theo dõi trạng thái user
-Sử dụng chung cho tất cả components liên quan đến auth
+Logic:
+- Centralize logic đăng nhập, đăng ký, đăng xuất và theo dõi trạng thái user
+- Tự động sync user data vào Firestore collection "users" sau khi login thành công
+- Integration với useUsers composable để quản lý user data
+- Sử dụng chung cho tất cả components liên quan đến auth
 */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { 
@@ -15,18 +19,36 @@ import {
   onAuthStateChanged 
 } from 'firebase/auth'
 import { auth } from '@/firebase/config'
+import { useUsers } from './useUsers'
 
 export function useAuth() {
   const user = ref(null)
   const isLoading = ref(false)
   const error = ref(null)
+  const { syncUserToFirestore } = useUsers()
   let unsubscribe = null
+
+  // Helper function để sync user sau khi authentication thành công
+  const handleSuccessfulAuth = async (firebaseUser) => {
+    // Sync user data vào Firestore collection "users" nhưng không chờ kết quả
+    syncUserToFirestore(firebaseUser).catch(syncError => {
+      console.error('Error syncing user to Firestore:', syncError)
+    })
+    
+    return firebaseUser
+  }
 
   // Khởi tạo listener theo dõi trạng thái auth
   const initAuthListener = () => {
     unsubscribe = onAuthStateChanged(auth, (authUser) => {
+      const wasLoggedIn = !!user.value
       user.value = authUser
       console.log('Auth state changed:', authUser ? 'Logged in' : 'Logged out')
+      
+      // Sync user nếu user mới đăng nhập hoặc refresh page với existing session
+      if (authUser && !wasLoggedIn) {
+        handleSuccessfulAuth(authUser)
+      }
     })
   }
 
@@ -41,7 +63,8 @@ export function useAuth() {
     
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      return userCredential.user
+      const syncedUser = handleSuccessfulAuth(userCredential.user)
+      return syncedUser
     } catch (err) {
       error.value = err
       throw err
@@ -69,7 +92,8 @@ export function useAuth() {
     
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      return userCredential.user
+      const syncedUser = handleSuccessfulAuth(userCredential.user)
+      return syncedUser
     } catch (err) {
       error.value = err
       throw err
@@ -89,7 +113,8 @@ export function useAuth() {
       provider.addScope('profile')
       
       const result = await signInWithPopup(auth, provider)
-      return result.user
+      const syncedUser = handleSuccessfulAuth(result.user)
+      return syncedUser
     } catch (err) {
       error.value = err
       throw err
@@ -112,7 +137,8 @@ export function useAuth() {
       })
       
       const result = await signInWithPopup(auth, provider)
-      return result.user
+      const syncedUser = handleSuccessfulAuth(result.user)
+      return syncedUser
     } catch (err) {
       error.value = err
       throw err
@@ -171,6 +197,13 @@ export function useAuth() {
     cleanup()
   })
 
+  // Force sync current user to Firestore (for debugging)
+  const forceSyncCurrentUser = async () => {
+    if (user.value) {
+      await syncUserToFirestore(user.value)
+    }
+  }
+
   return {
     user,
     isLoading,
@@ -182,6 +215,7 @@ export function useAuth() {
     resetPassword,
     logout,
     initAuthListener,
-    cleanup
+    cleanup,
+    forceSyncCurrentUser
   }
 }

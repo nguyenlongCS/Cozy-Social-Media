@@ -1,0 +1,146 @@
+/*
+firestore.rules - Firestore Security Rules
+Logic bảo mật cho collections:
+- users: Chỉ user được phép đọc/ghi document của chính mình
+- posts: Authenticated users có thể đọc tất cả, tạo post mới, update likes
+- comments: Authenticated users có thể đọc tất cả, tạo comment mới
+- Ngăn chặn truy cập trái phép và đảm bảo data integrity
+*/
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - Chỉ user có thể truy cập document của chính mình
+    match /users/{userId} {
+      // Chỉ cho phép user đọc/ghi document của chính mình
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Validate dữ liệu khi tạo/update user
+      allow create: if request.auth != null 
+        && request.auth.uid == userId
+        && validateUserData(request.resource.data);
+      
+      allow update: if request.auth != null 
+        && request.auth.uid == userId
+        && validateUserUpdate(resource.data, request.resource.data);
+    }
+    
+    // Posts collection
+    match /posts/{postId} {
+      // Tất cả authenticated users có thể đọc posts
+      allow read: if request.auth != null;
+      
+      // Chỉ author có thể tạo post với authorId = uid của mình
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.authorId
+        && validatePostData(request.resource.data);
+      
+      // Chỉ author có thể update post của mình (trừ likes)
+      allow update: if request.auth != null 
+        && (
+          // Author có thể update post content
+          (request.auth.uid == resource.data.authorId && validatePostUpdate(resource.data, request.resource.data))
+          ||
+          // Bất kỳ user nào cũng có thể update likes
+          (onlyLikesChanged(resource.data, request.resource.data) && validateLikeUpdate(resource.data, request.resource.data))
+        );
+      
+      // Chỉ author có thể delete post
+      allow delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+    }
+    
+    // Comments collection
+    match /comments/{commentId} {
+      // Tất cả authenticated users có thể đọc comments
+      allow read: if request.auth != null;
+      
+      // Chỉ author có thể tạo comment với authorId = uid của mình
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.authorId
+        && validateCommentData(request.resource.data);
+      
+      // Chỉ author có thể update/delete comment của mình
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+    }
+    
+    // Validation functions
+    
+    // Validate user data structure
+    function validateUserData(data) {
+      return data.keys().hasAll(['UserID', 'Email', 'Provider', 'Created', 'SignedIn']) 
+        && data.UserID is string
+        && data.Email is string
+        && data.Provider is string
+        && data.Created is timestamp
+        && data.SignedIn is timestamp;
+    }
+    
+    // Validate user update - chỉ cho phép update một số fields
+    function validateUserUpdate(existingData, newData) {
+      return newData.keys().hasAll(['UserID', 'Email', 'Provider', 'Created', 'SignedIn'])
+        && newData.UserID == existingData.UserID  // UserID không được thay đổi
+        && newData.Email == existingData.Email    // Email không được thay đổi
+        && newData.Provider == existingData.Provider  // Provider không được thay đổi
+        && newData.Created == existingData.Created;   // Created không được thay đổi
+    }
+    
+    // Validate post data structure
+    function validatePostData(data) {
+      return data.keys().hasAll(['caption', 'authorId', 'createdAt', 'likes', 'likedBy'])
+        && data.caption is string
+        && data.authorId is string
+        && data.createdAt is timestamp
+        && data.likes is number
+        && data.likedBy is list;
+    }
+    
+    // Validate post update - ngăn chặn thay đổi authorId, createdAt
+    function validatePostUpdate(existingData, newData) {
+      return newData.authorId == existingData.authorId
+        && newData.createdAt == existingData.createdAt;
+    }
+    
+    // Check if only likes-related fields changed
+    function onlyLikesChanged(existingData, newData) {
+      return newData.caption == existingData.caption
+        && newData.authorId == existingData.authorId
+        && newData.createdAt == existingData.createdAt
+        && (newData.mediaUrl == existingData.mediaUrl || (!('mediaUrl' in existingData) && !('mediaUrl' in newData)))
+        && (newData.mediaType == existingData.mediaType || (!('mediaType' in existingData) && !('mediaType' in newData)));
+    }
+    
+    // Validate like update logic
+    function validateLikeUpdate(existingData, newData) {
+      let existingLikes = existingData.likes;
+      let newLikes = newData.likes;
+      let existingLikedBy = existingData.likedBy;
+      let newLikedBy = newData.likedBy;
+      let userId = request.auth.uid;
+      
+      return (
+        // Like case: user thêm vào likedBy array và likes tăng 1
+        (newLikes == existingLikes + 1 
+         && newLikedBy.size() == existingLikedBy.size() + 1 
+         && userId in newLikedBy 
+         && !(userId in existingLikedBy))
+        ||
+        // Unlike case: user bị xóa khỏi likedBy array và likes giảm 1  
+        (newLikes == existingLikes - 1 
+         && newLikedBy.size() == existingLikedBy.size() - 1 
+         && !(userId in newLikedBy) 
+         && userId in existingLikedBy)
+      );
+    }
+    
+    // Validate comment data structure
+    function validateCommentData(data) {
+      return data.keys().hasAll(['postId', 'text', 'authorId', 'createdAt'])
+        && data.postId is string
+        && data.text is string
+        && data.authorId is string
+        && data.createdAt is timestamp;
+    }
+  }
+}

@@ -1,14 +1,12 @@
 /*
-src/composables/useFirestore.js - Updated
-Composable quản lý Firestore và Storage với chức năng like hoàn chỉnh
-Like Logic:
-- updatePostLikes: Cập nhật số lượt like và track users đã like trong array likedBy
-- Mỗi user chỉ được like 1 lần per post (kiểm tra userId trong likedBy array)
-- Like/Unlike toggle logic với atomic Firestore operations
-Comment Logic:
-- addComment: Lưu comment vào collection 'comments' với đầy đủ data
-- getPostComments: Load comments theo postId, sắp xếp theo thời gian tạo
-Centralize logic tương tác với Firebase Firestore để lưu posts và Firebase Storage để upload media
+src/composables/useFirestore.js - Updated with Users Integration
+Composable quản lý Firestore và Storage với tích hợp users collection
+Logic:
+- Posts: Tự động populate author info từ users collection
+- Likes: Track users đã like với references đến users collection
+- Comments: Populate comment author info từ users collection
+- Users: Integration với useUsers composable cho user data consistency
+- Centralize logic tương tác với Firebase Firestore và Storage
 */
 import { ref } from 'vue'
 import { 
@@ -33,6 +31,7 @@ import {
   getDownloadURL
 } from 'firebase/storage'
 import app from '@/firebase/config'
+import { useUsers } from './useUsers'
 
 // Initialize Firestore và Storage
 const db = getFirestore(app, 'social-media-db')
@@ -41,6 +40,30 @@ const storage = getStorage(app)
 export function useFirestore() {
   const isLoading = ref(false)
   const error = ref(null)
+  const { getUserById } = useUsers()
+
+  // Helper function để populate author info từ users collection
+  const populateAuthorInfo = async (authorId) => {
+    try {
+      const userData = await getUserById(authorId)
+      if (userData) {
+        return {
+          authorName: userData.UserName || userData.Email || 'Unknown User',
+          authorEmail: userData.Email,
+          authorAvatar: userData.Avatar
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching author info:', err)
+    }
+    
+    // Fallback nếu không tìm thấy user trong collection
+    return {
+      authorName: 'Unknown User',
+      authorEmail: null,
+      authorAvatar: null
+    }
+  }
 
   // Upload media file vào Firebase Storage
   const uploadMedia = async (file, userId) => {
@@ -80,7 +103,7 @@ export function useFirestore() {
     }
   }
 
-  // Tạo post mới trong Firestore
+  // Tạo post mới trong Firestore với author info từ users collection
   const createPost = async (postData) => {
     if (!postData) {
       throw new Error('MISSING_POST_DATA')
@@ -95,19 +118,34 @@ export function useFirestore() {
         throw new Error('MISSING_REQUIRED_FIELDS')
       }
 
+      // Get author info từ users collection
+      const authorInfo = await populateAuthorInfo(postData.authorId)
+
       // Add post to Firestore collection 'posts'
       const postsCollection = collection(db, 'posts')
-      const docRef = await addDoc(postsCollection, {
+      const postToSave = {
         ...postData,
+        // Override author info với data từ users collection
+        authorName: authorInfo.authorName,
+        authorEmail: authorInfo.authorEmail,
+        authorAvatar: authorInfo.authorAvatar,
         createdAt: postData.createdAt || new Date(),
         updatedAt: new Date(),
         likes: postData.likes || 0,
         likedBy: [] // Array để track users đã like
+      }
+
+      const docRef = await addDoc(postsCollection, postToSave)
+
+      console.log('Post created with author info:', {
+        postId: docRef.id,
+        authorId: postData.authorId,
+        authorName: authorInfo.authorName
       })
 
       return {
         id: docRef.id,
-        ...postData
+        ...postToSave
       }
     } catch (err) {
       error.value = err
@@ -117,7 +155,7 @@ export function useFirestore() {
     }
   }
 
-  // Lấy danh sách posts từ Firestore (để hiển thị feed)
+  // Lấy danh sách posts từ Firestore với populated author info
   const getPosts = async (limitCount = 10) => {
     isLoading.value = true
     error.value = null
@@ -133,12 +171,23 @@ export function useFirestore() {
       const querySnapshot = await getDocs(q)
       const posts = []
       
-      querySnapshot.forEach((doc) => {
+      // Process posts và populate author info nếu cần
+      for (const docSnap of querySnapshot.docs) {
+        const postData = docSnap.data()
+        
+        // Nếu post chưa có đầy đủ author info, populate từ users collection
+        if (!postData.authorName && postData.authorId) {
+          const authorInfo = await populateAuthorInfo(postData.authorId)
+          postData.authorName = authorInfo.authorName
+          postData.authorEmail = authorInfo.authorEmail
+          postData.authorAvatar = authorInfo.authorAvatar
+        }
+        
         posts.push({
-          id: doc.id,
-          ...doc.data()
+          id: docSnap.id,
+          ...postData
         })
-      })
+      }
 
       return posts
     } catch (err) {
@@ -217,7 +266,7 @@ export function useFirestore() {
     }
   }
 
-  // Thêm comment cho một post
+  // Thêm comment cho một post với populated author info
   const addComment = async (commentData) => {
     if (!commentData || !commentData.postId || !commentData.text || !commentData.authorId) {
       throw new Error('MISSING_COMMENT_DATA')
@@ -227,19 +276,32 @@ export function useFirestore() {
     error.value = null
 
     try {
-      // Add comment to 'comments' collection
-      const commentsCollection = collection(db, 'comments')
-      const docRef = await addDoc(commentsCollection, {
-        ...commentData,
-        createdAt: commentData.createdAt || new Date()
-      })
+      // Get author info từ users collection
+      const authorInfo = await populateAuthorInfo(commentData.authorId)
 
-      console.log('Comment added to Firestore with ID:', docRef.id)
+      // Add comment to 'comments' collection với populated author info
+      const commentsCollection = collection(db, 'comments')
+      const commentToSave = {
+        ...commentData,
+        // Override author info với data từ users collection
+        authorName: authorInfo.authorName,
+        authorEmail: authorInfo.authorEmail,
+        authorAvatar: authorInfo.authorAvatar,
+        createdAt: commentData.createdAt || new Date()
+      }
+
+      const docRef = await addDoc(commentsCollection, commentToSave)
+
+      console.log('Comment added to Firestore with populated author info:', {
+        commentId: docRef.id,
+        authorId: commentData.authorId,
+        authorName: authorInfo.authorName
+      })
 
       // Return complete comment data with ID
       return {
         id: docRef.id,
-        ...commentData
+        ...commentToSave
       }
     } catch (err) {
       error.value = err
@@ -250,7 +312,7 @@ export function useFirestore() {
     }
   }
 
-  // Lấy comments cho một post
+  // Lấy comments cho một post với populated author info
   const getPostComments = async (postId) => {
     if (!postId) {
       return [] // Return empty array thay vì throw error
@@ -260,7 +322,6 @@ export function useFirestore() {
       console.log('Fetching comments for postId:', postId)
       
       const commentsCollection = collection(db, 'comments')
-      // Tạm thời chỉ dùng where, bỏ orderBy để tránh cần index
       const q = query(
         commentsCollection,
         where('postId', '==', postId)
@@ -269,14 +330,26 @@ export function useFirestore() {
       const querySnapshot = await getDocs(q)
       const comments = []
       
-      querySnapshot.forEach((doc) => {
-        const commentData = {
-          id: doc.id,
-          ...doc.data()
+      // Process comments và populate author info nếu cần
+      for (const docSnap of querySnapshot.docs) {
+        const commentData = docSnap.data()
+        
+        // Nếu comment chưa có đầy đủ author info, populate từ users collection
+        if (!commentData.authorName && commentData.authorId) {
+          const authorInfo = await populateAuthorInfo(commentData.authorId)
+          commentData.authorName = authorInfo.authorName
+          commentData.authorEmail = authorInfo.authorEmail
+          commentData.authorAvatar = authorInfo.authorAvatar
         }
-        comments.push(commentData)
-        console.log('Comment loaded:', commentData)
-      })
+        
+        const processedComment = {
+          id: docSnap.id,
+          ...commentData
+        }
+        
+        comments.push(processedComment)
+        console.log('Comment loaded with author info:', processedComment)
+      }
 
       // Sort comments theo createdAt trong code thay vì Firestore query
       comments.sort((a, b) => {
@@ -285,7 +358,7 @@ export function useFirestore() {
         return dateA - dateB // Comments cũ trước, mới sau
       })
 
-      console.log('Total comments loaded:', comments.length)
+      console.log('Total comments loaded with author info:', comments.length)
       return comments
     } catch (err) {
       console.error('Error loading comments:', err)
