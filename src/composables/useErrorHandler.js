@@ -1,8 +1,8 @@
 /*
-src/composables/useErrorHandler.js - Updated
+src/composables/useErrorHandler.js - Updated với Profile Errors
 Composable xử lý lỗi
 Centralize error handling logic và provide consistent error messages
-Added: Comments and Likes error codes
+Added: Profile related error codes
 */
 import { useLanguage } from './useLanguage'
 
@@ -37,10 +37,19 @@ export function useErrorHandler() {
       'MISSING_POST_DATA': 'postFailed',
       'MISSING_REQUIRED_FIELDS': 'postFailed',
       
+      // Profile errors
+      'AVATAR_TOO_LARGE': 'avatarTooLarge',
+      'INVALID_AVATAR_TYPE': 'invalidAvatarType',
+      'NO_USER_PROVIDED': 'profileUpdateFailed',
+      'NO_USER_ID_PROVIDED': 'profileUpdateFailed',
+      'MISSING_USER_OR_PROFILE_DATA': 'profileUpdateFailed',
+      
       // Comments and Likes errors
       'MISSING_POST_OR_USER_ID': 'likeFailed',
       'MISSING_COMMENT_DATA': 'commentFailed',
       'MISSING_POST_ID': 'loadCommentsFailed',
+      'ALREADY_LIKED': 'alreadyLikedPost',
+      'NOT_LIKED': 'likeFailed',
       
       // Firebase permission errors
       'permission-denied': 'notAuthenticated',
@@ -85,6 +94,9 @@ export function useErrorHandler() {
       },
       loadComments: {
         'defaultError': 'loadCommentsFailed'
+      },
+      profile: {
+        'defaultError': 'profileUpdateFailed'
       }
     }
 
@@ -123,7 +135,8 @@ export function useErrorHandler() {
       signup: 'signupSuccess',
       logout: 'logoutSuccess',
       reset: 'resetEmailSent',
-      post: 'postSuccess'
+      post: 'postSuccess',
+      profile: 'profileSuccess'
     }
     
     const messageKey = successKeys[context] || 'loginSuccess'

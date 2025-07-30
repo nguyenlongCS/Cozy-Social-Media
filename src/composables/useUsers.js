@@ -1,12 +1,11 @@
 /*
-src/composables/useUsers.js
+src/composables/useUsers.js - Fixed Sync Logic
 Composable quản lý users collection trên Firestore
 Logic:
-- Sync user data từ Firebase Auth vào Firestore collection "users"
-- Tạo/cập nhật user document khi đăng nhập thành công
-- Mapping các field từ Firebase Auth sang Firestore với đầy đủ thông tin
-- Handle các provider khác nhau (email, google, facebook)
-- Cung cấp methods để query user data từ Firestore
+- FIX: Sử dụng merge: true để không ghi đè toàn bộ document
+- Chỉ sync các field cơ bản từ Firebase Auth
+- Không ghi đè UserName, Bio, Gender đã được user cập nhật
+- Smart sync: kiểm tra existing data trước khi sync
 */
 import { ref } from 'vue'
 import { 
@@ -31,26 +30,39 @@ export function useUsers() {
   const isLoading = ref(false)
   const error = ref(null)
 
-  // Sync user từ Firebase Auth vào Firestore collection "users"
+  // Smart sync user từ Firebase Auth vào Firestore collection "users"
   const syncUserToFirestore = async (firebaseUser) => {
     if (!firebaseUser) {
       throw new Error('NO_USER_PROVIDED')
     }
 
     try {
-      // Xác định provider từ providerData
-      let provider = 'email'
-      if (firebaseUser.providerData && firebaseUser.providerData.length > 0) {
-        const providerId = firebaseUser.providerData[0].providerId
-        if (providerId === 'google.com') {
-          provider = 'google'
-        } else if (providerId === 'facebook.com') {
-          provider = 'facebook'
+      // Kiểm tra xem user đã tồn tại chưa
+      const userRef = doc(db, 'users', firebaseUser.uid)
+      const existingDoc = await getDoc(userRef)
+
+      if (existingDoc.exists()) {
+        const existingData = existingDoc.data()
+        console.log('User already exists in Firestore:', firebaseUser.uid)
+        
+        // Chỉ update SignedIn timestamp và các field auth cơ bản
+        const updateData = {
+          SignedIn: new Date(),
+          Email: firebaseUser.email || existingData.Email,
+          Avatar: firebaseUser.photoURL || existingData.Avatar
         }
+        
+        // Chỉ update nếu có thay đổi thật sự
+        await setDoc(userRef, updateData, { merge: true })
+        console.log('Updated sign-in time and auth fields only')
+        
+        return existingData
       }
 
-      // Chuẩn bị user data để lưu vào Firestore
-      const userData = {
+      // User chưa tồn tại - tạo mới với full data
+      const provider = getProviderFromFirebaseUser(firebaseUser)
+      
+      const newUserData = {
         UserID: firebaseUser.uid,
         UserName: firebaseUser.displayName || 'NoName',
         Email: firebaseUser.email || null,
@@ -62,18 +74,25 @@ export function useUsers() {
         Gender: null
       }
 
-      // Sử dụng merge: true để không ghi đè dữ liệu có sẵn
-      const userRef = doc(db, 'users', firebaseUser.uid)
-      await setDoc(userRef, userData, { merge: true })
-
-      console.log('User synced to Firestore:', firebaseUser.uid)
-      return userData
+      await setDoc(userRef, newUserData)
+      console.log('Created new user in Firestore:', firebaseUser.uid)
+      return newUserData
 
     } catch (err) {
       console.error('Error syncing user to Firestore:', err)
       // Không throw error để không làm fail login process
       return null
     }
+  }
+
+  // Helper function để xác định provider
+  const getProviderFromFirebaseUser = (firebaseUser) => {
+    if (firebaseUser.providerData && firebaseUser.providerData.length > 0) {
+      const providerId = firebaseUser.providerData[0].providerId
+      if (providerId === 'google.com') return 'google'
+      if (providerId === 'facebook.com') return 'facebook'
+    }
+    return 'email'
   }
 
   // Get user by ID từ Firestore
@@ -90,13 +109,17 @@ export function useUsers() {
       const userDoc = await getDoc(userRef)
 
       if (!userDoc.exists()) {
+        console.log('User not found in Firestore:', userId)
         return null
       }
 
-      return {
+      const userData = {
         id: userDoc.id,
         ...userDoc.data()
       }
+
+      console.log('User loaded from Firestore:', userData)
+      return userData
     } catch (err) {
       console.error('Error getting user by ID:', err)
       error.value = err
@@ -171,7 +194,7 @@ export function useUsers() {
     }
   }
 
-  // Update user profile (Bio, Gender, etc.)
+  // Update user profile - CHỈ update fields user muốn thay đổi
   const updateUserProfile = async (userId, profileData) => {
     if (!userId || !profileData) {
       throw new Error('MISSING_USER_OR_PROFILE_DATA')
@@ -182,14 +205,18 @@ export function useUsers() {
 
     try {
       const userRef = doc(db, 'users', userId)
+      
+      // Chuẩn bị update data với timestamp
       const updateData = {
         ...profileData,
         UpdatedAt: new Date()
       }
 
-      await updateDoc(userRef, updateData)
-      console.log('User profile updated:', userId)
+      // Sử dụng merge: true để chỉ update fields được chỉ định
+      await setDoc(userRef, updateData, { merge: true })
+      console.log('User profile updated successfully:', userId, updateData)
 
+      // Return updated user data
       return await getUserById(userId)
     } catch (err) {
       console.error('Error updating user profile:', err)

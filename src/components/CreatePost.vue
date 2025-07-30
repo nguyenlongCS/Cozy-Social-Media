@@ -1,5 +1,5 @@
 <!--
-src/components/CreatePost.vue - Refactored
+src/components/CreatePost.vue - Updated với Me/Tôi Display
 Component CreatePost - Tạo bài đăng mới
 Logic:
 - Form tạo bài đăng với preview media và input caption
@@ -7,12 +7,13 @@ Logic:
 - Validation file size và type
 - Chuyển về trang chủ sau khi đăng thành công
 - Hiển thị thông báo lỗi/thành công thông qua useErrorHandler
+- Hiển thị "Me/Tôi" thay vì getUserDisplayName() cho current user
 -->
 <template>
   <div class="create-post">
     <div class="user-info">
       <div class="avatar"></div>
-      <span class="name">{{ getUserDisplayName() }}</span>
+      <span class="name">{{ getCurrentUserDisplayName() }}</span>
     </div>
     <div class="timestamp">{{ getCurrentTime() }}</div>
     
@@ -63,7 +64,7 @@ export default {
   name: 'CreatePost',
   setup() {
     const router = useRouter()
-    const { getText } = useLanguage()
+    const { getText, currentLanguage } = useLanguage()
     const { user } = useAuth()
     const { createPost, uploadMedia } = useFirestore()
     const { showError, showSuccess } = useErrorHandler()
@@ -89,9 +90,12 @@ export default {
     })
 
     // Methods
-    const getUserDisplayName = () => {
+    const getCurrentUserDisplayName = () => {
       if (!user.value) return getText('guest')
-      return user.value.displayName || user.value.email || getText('user')
+      
+      // Hiển thị "Me/Tôi" cho current user
+      const meText = currentLanguage.value === 'vi' ? 'Tôi' : 'Me'
+      return meText
     }
 
     const getCurrentTime = () => {
@@ -180,7 +184,7 @@ export default {
         const postData = {
           caption: caption.value.trim(),
           authorId: user.value.uid,
-          authorName: getUserDisplayName(),
+          authorName: getCurrentUserDisplayName(),
           authorEmail: user.value.email,
           mediaUrl,
           mediaType,
@@ -217,7 +221,7 @@ export default {
       isImage,
       isVideo,
       getText,
-      getUserDisplayName,
+      getCurrentUserDisplayName,
       getCurrentTime,
       triggerFileInput,
       handleFileSelect,

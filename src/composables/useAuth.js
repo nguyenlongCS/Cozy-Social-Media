@@ -1,11 +1,11 @@
 /*
-src/composables/useAuth.js - Updated with Users Sync
+src/composables/useAuth.js - Fixed User Sync Issue
 Composable quản lý authentication
 Logic:
 - Centralize logic đăng nhập, đăng ký, đăng xuất và theo dõi trạng thái user
-- Tự động sync user data vào Firestore collection "users" sau khi login thành công
-- Integration với useUsers composable để quản lý user data
-- Sử dụng chung cho tất cả components liên quan đến auth
+- FIX: Không tự động sync/overwrite user data khi auth state change
+- Chỉ sync user data khi đăng nhập lần đầu hoặc đăng ký mới
+- Tránh ghi đè thông tin user đã cập nhật trên Firestore
 */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { 
@@ -28,12 +28,21 @@ export function useAuth() {
   const { syncUserToFirestore } = useUsers()
   let unsubscribe = null
 
+  // Track nếu đây là login session mới để quyết định có sync hay không
+  let isNewLoginSession = false
+
   // Helper function để sync user sau khi authentication thành công
-  const handleSuccessfulAuth = async (firebaseUser) => {
-    // Sync user data vào Firestore collection "users" nhưng không chờ kết quả
-    syncUserToFirestore(firebaseUser).catch(syncError => {
-      console.error('Error syncing user to Firestore:', syncError)
-    })
+  const handleSuccessfulAuth = async (firebaseUser, forceSync = false) => {
+    // Chỉ sync nếu đây là login mới hoặc được force
+    if (forceSync || isNewLoginSession) {
+      try {
+        await syncUserToFirestore(firebaseUser)
+        console.log('User synced to Firestore (new login):', firebaseUser.uid)
+      } catch (syncError) {
+        console.error('Error syncing user to Firestore:', syncError)
+      }
+      isNewLoginSession = false // Reset flag
+    }
     
     return firebaseUser
   }
@@ -41,13 +50,24 @@ export function useAuth() {
   // Khởi tạo listener theo dõi trạng thái auth
   const initAuthListener = () => {
     unsubscribe = onAuthStateChanged(auth, (authUser) => {
-      const wasLoggedIn = !!user.value
+      const wasLoggedOut = !user.value
       user.value = authUser
-      console.log('Auth state changed:', authUser ? 'Logged in' : 'Logged out')
       
-      // Sync user nếu user mới đăng nhập hoặc refresh page với existing session
-      if (authUser && !wasLoggedIn) {
-        handleSuccessfulAuth(authUser)
+      if (authUser) {
+        console.log('Auth state changed: User logged in', authUser.uid)
+        
+        // Chỉ sync nếu đây là session mới (từ logged out → logged in)
+        // Không sync nếu chỉ là page refresh với existing session
+        if (wasLoggedOut) {
+          console.log('New login session detected')
+          isNewLoginSession = true
+          handleSuccessfulAuth(authUser)
+        } else {
+          console.log('Existing session maintained - no sync needed')
+        }
+      } else {
+        console.log('Auth state changed: User logged out')
+        isNewLoginSession = false
       }
     })
   }
@@ -60,13 +80,15 @@ export function useAuth() {
 
     isLoading.value = true
     error.value = null
+    isNewLoginSession = true // Đánh dấu đây là login session mới
     
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      const syncedUser = handleSuccessfulAuth(userCredential.user)
-      return syncedUser
+      // handleSuccessfulAuth sẽ được gọi trong onAuthStateChanged
+      return userCredential.user
     } catch (err) {
       error.value = err
+      isNewLoginSession = false
       throw err
     } finally {
       isLoading.value = false
@@ -89,13 +111,16 @@ export function useAuth() {
 
     isLoading.value = true
     error.value = null
+    isNewLoginSession = true // Đánh dấu đây là signup session mới
     
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      const syncedUser = handleSuccessfulAuth(userCredential.user)
-      return syncedUser
+      // Force sync cho user mới đăng ký
+      await handleSuccessfulAuth(userCredential.user, true)
+      return userCredential.user
     } catch (err) {
       error.value = err
+      isNewLoginSession = false
       throw err
     } finally {
       isLoading.value = false
@@ -106,6 +131,7 @@ export function useAuth() {
   const loginWithGoogle = async () => {
     isLoading.value = true
     error.value = null
+    isNewLoginSession = true // Đánh dấu đây là login session mới
     
     try {
       const provider = new GoogleAuthProvider()
@@ -113,10 +139,12 @@ export function useAuth() {
       provider.addScope('profile')
       
       const result = await signInWithPopup(auth, provider)
-      const syncedUser = handleSuccessfulAuth(result.user)
-      return syncedUser
+      // Force sync cho Google login (có thể là user mới)
+      await handleSuccessfulAuth(result.user, true)
+      return result.user
     } catch (err) {
       error.value = err
+      isNewLoginSession = false
       throw err
     } finally {
       isLoading.value = false
@@ -127,6 +155,7 @@ export function useAuth() {
   const loginWithFacebook = async () => {
     isLoading.value = true
     error.value = null
+    isNewLoginSession = true // Đánh dấu đây là login session mới
     
     try {
       const provider = new FacebookAuthProvider()
@@ -137,10 +166,12 @@ export function useAuth() {
       })
       
       const result = await signInWithPopup(auth, provider)
-      const syncedUser = handleSuccessfulAuth(result.user)
-      return syncedUser
+      // Force sync cho Facebook login (có thể là user mới)
+      await handleSuccessfulAuth(result.user, true)
+      return result.user
     } catch (err) {
       error.value = err
+      isNewLoginSession = false
       throw err
     } finally {
       isLoading.value = false
@@ -173,6 +204,7 @@ export function useAuth() {
     
     try {
       await signOut(auth)
+      isNewLoginSession = false
     } catch (err) {
       error.value = err
       throw err

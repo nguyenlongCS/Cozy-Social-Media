@@ -1,11 +1,12 @@
 <!--
-src/components/NavMid.vue - Refactored
+src/components/NavMid.vue - Updated với Profile Navigation
 Component navigation giữa header
 Logic: Hiển thị 5 navigation buttons khi không ở trang login
+Thêm navigation đến trang profile khi click profile-button
 -->
 <template>
   <div class="nav-mid">
-    <button v-if="!isLoginPage" class="profile-button btn"></button>
+    <button v-if="!isLoginPage" class="profile-button btn" @click="goToProfile"></button>
     <button v-if="!isLoginPage" class="friends-button btn"></button>
     <button v-if="!isLoginPage" class="home-button btn" @click="goToHome"></button>
     <button v-if="!isLoginPage" class="mess-button btn"></button>
@@ -29,9 +30,14 @@ export default {
       router.push('/')
     }
 
+    const goToProfile = () => {
+      router.push('/profile')
+    }
+
     return {
       isLoginPage,
-      goToHome
+      goToHome,
+      goToProfile
     }
   }
 }

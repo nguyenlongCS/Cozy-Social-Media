@@ -1,11 +1,12 @@
 <!--
-src/components/HomeRight.vue - Updated với Structure mới
+src/components/HomeRight.vue - Updated với Comment Avatars
 Component sidebar bên phải - Chi tiết bài post
 Logic:
 - Hiển thị Caption, likes, comments của post hiện tại với fields mới
 - Chức năng like/unlike post thông qua togglePostLike
 - Load và hiển thị comments với structure mới (CommentID, PostID, UserID, UserName, etc.)
 - Form thêm comment mới với emoji picker dropdown
+- Hiển thị avatar bên trái comment-author cho mỗi comment
 - Sử dụng fields mới: PostID, UserName, Avatar, Caption, Created, Content
 -->
 <template>
@@ -44,9 +45,14 @@ Logic:
             :key="comment.CommentID"
             class="comment-item"
           >
-            <div class="comment-author">{{ comment.UserName }}</div>
+            <div class="comment-header">
+              <div class="comment-avatar" :style="{ backgroundImage: comment.Avatar ? `url(${comment.Avatar})` : '' }"></div>
+              <div class="comment-meta">
+                <div class="comment-author">{{ comment.UserName }}</div>
+                <div class="comment-time">{{ formatCommentTime(comment.Created) }}</div>
+              </div>
+            </div>
             <div class="comment-text">{{ comment.Content }}</div>
-            <div class="comment-time">{{ formatCommentTime(comment.Created) }}</div>
           </div>
         </div>
 
@@ -412,24 +418,48 @@ export default {
   border-left: 2px solid rgba(255, 235, 124, 0.3);
 }
 
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.comment-avatar {
+  width: 1.5rem;
+  height: 1.5rem;
+  background: url('@/icons/user.png') center/cover var(--theme-color);
+  border: 0.125rem solid rgba(255, 235, 124, 0.3);
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  flex-shrink: 0;
+}
+
+.comment-meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
 .comment-author {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--theme-color);
-  margin-bottom: 0.25rem;
+}
+
+.comment-time {
+  font-size: 0.625rem;
+  color: rgba(255, 235, 124, 0.6);
 }
 
 .comment-text {
   font-size: 0.75rem;
   line-height: 1.3;
   color: rgba(255, 235, 124, 0.9);
-  margin-bottom: 0.25rem;
   word-wrap: break-word;
-}
-
-.comment-time {
-  font-size: 0.625rem;
-  color: rgba(255, 235, 124, 0.6);
+  margin-left: 2rem; /* Indent text để align với avatar */
 }
 
 .add-comment {
