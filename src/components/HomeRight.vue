@@ -1,34 +1,28 @@
 <!--
-src/components/HomeRight.vue - Updated with Emoji Picker
+src/components/HomeRight.vue - Updated với Structure mới
 Component sidebar bên phải - Chi tiết bài post
 Logic:
-- Hiển thị caption, likes, comments của post hiện tại
-- Chức năng like/unlike post thông qua Firestore
-- Load và hiển thị comments với time format
-- Form thêm comment mới với emoji picker dropdown (thay vì random)
-- Emoji picker hiển thị danh sách emoji để user chọn
-- Chỉ hoạt động khi user đã đăng nhập
+- Hiển thị Caption, likes, comments của post hiện tại với fields mới
+- Chức năng like/unlike post thông qua togglePostLike
+- Load và hiển thị comments với structure mới (CommentID, PostID, UserID, UserName, etc.)
+- Form thêm comment mới với emoji picker dropdown
+- Sử dụng fields mới: PostID, UserName, Avatar, Caption, Created, Content
 -->
 <template>
   <div class="right">
-    <div v-if="post && post.id" class="post-details">
+    <div v-if="post && post.PostID" class="post-details">
       <!-- Caption section -->
       <div class="caption-section">
         <h3 class="section-title">{{ getText('caption') }}</h3>
-        <p class="caption-text">{{ post.caption || getText('noCaption') }}</p>
+        <p class="caption-text">{{ post.Caption || getText('noCaption') }}</p>
       </div>
 
-      <!-- Likes section -->
+      <!-- Likes section - READ ONLY -->
       <div class="likes-section">
         <div class="likes-info">
-          <button 
-            class="like-btn" 
-            @click="handleLike" 
-            :disabled="isLoading"
-            :class="{ liked: isLikedByUser }"
-          >
+          <div class="like-display">
             <div class="like-icon"></div>
-          </button>
+          </div>
           <span class="likes-count">{{ post.likes || 0 }} {{ getText('likes') }}</span>
         </div>
       </div>
@@ -47,12 +41,12 @@ Logic:
           <div 
             v-else
             v-for="comment in comments" 
-            :key="comment.id"
+            :key="comment.CommentID"
             class="comment-item"
           >
-            <div class="comment-author">{{ comment.authorName }}</div>
-            <div class="comment-text">{{ comment.text }}</div>
-            <div class="comment-time">{{ formatCommentTime(comment.createdAt) }}</div>
+            <div class="comment-author">{{ comment.UserName }}</div>
+            <div class="comment-text">{{ comment.Content }}</div>
+            <div class="comment-time">{{ formatCommentTime(comment.Created) }}</div>
           </div>
         </div>
 
@@ -113,7 +107,7 @@ Logic:
 </template>
 
 <script>
-import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useLanguage } from '@/composables/useLanguage'
 import { useFirestore } from '@/composables/useFirestore'
@@ -130,15 +124,14 @@ export default {
   setup(props) {
     const { user } = useAuth()
     const { getText } = useLanguage()
-    const { updatePostLikes, addComment, getPostComments } = useFirestore()
+    const { addComment, getPostComments } = useFirestore()
     const { showError } = useErrorHandler()
 
-    // Reactive data
+    // Reactive data - Loại bỏ like-related states
     const comments = ref([])
     const newComment = ref('')
     const isLoading = ref(false)
     const isLoadingComments = ref(false)
-    const userLikes = ref(new Set())
     const showEmojiPicker = ref(false)
 
     // Emoji list for picker
@@ -148,12 +141,7 @@ export default {
       '💪', '👌', '✨', '🌟', '💖', '💕', '🙏', '👀'
     ]
 
-    // Computed properties
-    const isLikedByUser = computed(() => {
-      return user.value && userLikes.value.has(props.post.id)
-    })
-
-    // Methods
+    // Methods - Loại bỏ handleLike
     const formatCommentTime = (timestamp) => {
       if (!timestamp) return ''
       
@@ -184,16 +172,16 @@ export default {
     }
 
     const loadComments = async () => {
-      if (!props.post.id) {
+      if (!props.post.PostID) {
         comments.value = []
         return
       }
 
       isLoadingComments.value = true
-      console.log('Loading comments for post:', props.post.id)
+      console.log('Loading comments for PostID:', props.post.PostID)
 
       try {
-        const postComments = await getPostComments(props.post.id)
+        const postComments = await getPostComments(props.post.PostID)
         comments.value = postComments
         console.log('Loaded comments:', postComments)
       } catch (error) {
@@ -207,60 +195,19 @@ export default {
       }
     }
 
-    const handleLike = async () => {
-      if (!user.value || !props.post.id) {
-        return
-      }
-
-      isLoading.value = true
-
-      try {
-        const isCurrentlyLiked = isLikedByUser.value
-        const newLikeCount = isCurrentlyLiked 
-          ? (props.post.likes || 0) - 1 
-          : (props.post.likes || 0) + 1
-
-        // Update UI optimistically
-        if (isCurrentlyLiked) {
-          userLikes.value.delete(props.post.id)
-        } else {
-          userLikes.value.add(props.post.id)
-        }
-        
-        emit('update-post-likes', { postId: props.post.id, likes: newLikeCount })
-
-        // Update in Firestore
-        await updatePostLikes(props.post.id, newLikeCount, user.value.uid, !isCurrentlyLiked)
-
-      } catch (error) {
-        console.error('Error updating like:', error)
-        showError(error, 'like')
-        
-        // Revert optimistic update on error
-        if (isLikedByUser.value) {
-          userLikes.value.delete(props.post.id)
-        } else {
-          userLikes.value.add(props.post.id)
-        }
-      } finally {
-        isLoading.value = false
-      }
-    }
-
     const handleAddComment = async () => {
-      if (!user.value || !props.post.id || !newComment.value.trim()) {
+      if (!user.value || !props.post.PostID || !newComment.value.trim()) {
         return
       }
 
       isLoading.value = true
-      console.log('Adding comment for post:', props.post.id)
+      console.log('Adding comment for PostID:', props.post.PostID)
 
       try {
         const commentData = {
-          postId: props.post.id,
+          postId: props.post.PostID,
           text: newComment.value.trim(),
           authorId: user.value.uid,
-          authorName: user.value.displayName || user.value.email || getText('user'),
           createdAt: new Date()
         }
 
@@ -303,7 +250,7 @@ export default {
     // Watchers
     watch(() => props.post, (newPost) => {
       console.log('Post changed:', newPost)
-      if (newPost && newPost.id) {
+      if (newPost && newPost.PostID) {
         loadComments()
       } else {
         comments.value = []
@@ -327,12 +274,10 @@ export default {
       newComment,
       isLoading,
       isLoadingComments,
-      isLikedByUser,
       showEmojiPicker,
       emojiList,
       getText,
       formatCommentTime,
-      handleLike,
       handleAddComment,
       toggleEmojiPicker,
       selectEmoji
@@ -401,26 +346,15 @@ export default {
   gap: 0.5rem;
 }
 
-.like-btn {
+.like-display {
   width: 1.5rem;
   height: 1.5rem;
   border: none;
   border-radius: 50%;
   background: transparent;
-  cursor: pointer;
-  transition: transform 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-.like-btn:hover:not(:disabled) {
-  transform: scale(1.1);
-}
-
-.like-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 
 .like-icon {
@@ -428,10 +362,6 @@ export default {
   height: 1.25rem;
   background: url('@/icons/like.png') center/cover;
   filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
-}
-
-.like-btn.liked .like-icon {
-  filter: brightness(0) saturate(100%) invert(27%) sepia(96%) saturate(7471%) hue-rotate(358deg) brightness(102%) contrast(117%);
 }
 
 .likes-count {

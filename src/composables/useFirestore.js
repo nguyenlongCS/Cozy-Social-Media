@@ -17,12 +17,11 @@ import {
   doc,
   updateDoc,
   getDoc,
+  deleteDoc,
   orderBy,
   query,
   limit,
-  where,
-  arrayUnion,
-  arrayRemove
+  where
 } from 'firebase/firestore'
 import { 
   getStorage, 
@@ -42,26 +41,24 @@ export function useFirestore() {
   const error = ref(null)
   const { getUserById } = useUsers()
 
-  // Helper function để populate author info từ users collection
-  const populateAuthorInfo = async (authorId) => {
+  // Helper function để populate user info từ users collection
+  const populateUserInfo = async (userId) => {
     try {
-      const userData = await getUserById(authorId)
+      const userData = await getUserById(userId)
       if (userData) {
         return {
-          authorName: userData.UserName || userData.Email || 'Unknown User',
-          authorEmail: userData.Email,
-          authorAvatar: userData.Avatar
+          UserName: userData.UserName || 'Unknown User',
+          Avatar: userData.Avatar || null
         }
       }
     } catch (err) {
-      console.error('Error fetching author info:', err)
+      console.error('Error fetching user info:', err)
     }
     
     // Fallback nếu không tìm thấy user trong collection
     return {
-      authorName: 'Unknown User',
-      authorEmail: null,
-      authorAvatar: null
+      UserName: 'Unknown User',
+      Avatar: null
     }
   }
 
@@ -103,7 +100,7 @@ export function useFirestore() {
     }
   }
 
-  // Tạo post mới trong Firestore với author info từ users collection
+  // Tạo post mới trong Firestore với user info từ users collection
   const createPost = async (postData) => {
     if (!postData) {
       throw new Error('MISSING_POST_DATA')
@@ -118,33 +115,34 @@ export function useFirestore() {
         throw new Error('MISSING_REQUIRED_FIELDS')
       }
 
-      // Get author info từ users collection
-      const authorInfo = await populateAuthorInfo(postData.authorId)
+      // Get user info từ users collection
+      const userInfo = await populateUserInfo(postData.authorId)
 
       // Add post to Firestore collection 'posts'
       const postsCollection = collection(db, 'posts')
       const postToSave = {
-        ...postData,
-        // Override author info với data từ users collection
-        authorName: authorInfo.authorName,
-        authorEmail: authorInfo.authorEmail,
-        authorAvatar: authorInfo.authorAvatar,
-        createdAt: postData.createdAt || new Date(),
-        updatedAt: new Date(),
-        likes: postData.likes || 0,
-        likedBy: [] // Array để track users đã like
+        // PostID sẽ được auto-generated bởi Firestore
+        UserID: postData.authorId,
+        UserName: userInfo.UserName,
+        Avatar: userInfo.Avatar,
+        Caption: postData.caption.trim(),
+        Created: postData.createdAt || new Date(),
+        MediaType: postData.mediaType || null,
+        MediaURL: postData.mediaUrl || null,
+        likes: 0,
+        comments: 0
       }
 
       const docRef = await addDoc(postsCollection, postToSave)
 
-      console.log('Post created with author info:', {
-        postId: docRef.id,
-        authorId: postData.authorId,
-        authorName: authorInfo.authorName
+      console.log('Post created with user info:', {
+        PostID: docRef.id,
+        UserID: postData.authorId,
+        UserName: userInfo.UserName
       })
 
       return {
-        id: docRef.id,
+        PostID: docRef.id,
         ...postToSave
       }
     } catch (err) {
@@ -155,7 +153,7 @@ export function useFirestore() {
     }
   }
 
-  // Lấy danh sách posts từ Firestore với populated author info
+  // Lấy danh sách posts từ Firestore với populated user info
   const getPosts = async (limitCount = 10) => {
     isLoading.value = true
     error.value = null
@@ -164,27 +162,26 @@ export function useFirestore() {
       const postsCollection = collection(db, 'posts')
       const q = query(
         postsCollection, 
-        orderBy('createdAt', 'desc'), 
+        orderBy('Created', 'desc'), 
         limit(limitCount)
       )
       
       const querySnapshot = await getDocs(q)
       const posts = []
       
-      // Process posts và populate author info nếu cần
+      // Process posts và populate user info nếu cần
       for (const docSnap of querySnapshot.docs) {
         const postData = docSnap.data()
         
-        // Nếu post chưa có đầy đủ author info, populate từ users collection
-        if (!postData.authorName && postData.authorId) {
-          const authorInfo = await populateAuthorInfo(postData.authorId)
-          postData.authorName = authorInfo.authorName
-          postData.authorEmail = authorInfo.authorEmail
-          postData.authorAvatar = authorInfo.authorAvatar
+        // Nếu post chưa có đầy đủ user info, populate từ users collection
+        if (!postData.UserName && postData.UserID) {
+          const userInfo = await populateUserInfo(postData.UserID)
+          postData.UserName = userInfo.UserName
+          postData.Avatar = userInfo.Avatar
         }
         
         posts.push({
-          id: docSnap.id,
+          PostID: docSnap.id,
           ...postData
         })
       }
@@ -198,75 +195,151 @@ export function useFirestore() {
     }
   }
 
-  // Update likes cho một post với logic like/unlike hoàn chỉnh
-  const updatePostLikes = async (postId, newLikeCount, userId, isLiking) => {
+  // Check if user has liked a post
+  const checkUserLikedPost = async (postId, userId) => {
+    try {
+      const likesCollection = collection(db, 'likes')
+      const existingLikeQuery = query(
+        likesCollection,
+        where('PostID', '==', postId),
+        where('UserID', '==', userId),
+        limit(1)
+      )
+      
+      const existingLikeSnapshot = await getDocs(existingLikeQuery)
+      return !existingLikeSnapshot.empty
+    } catch (err) {
+      console.error('Error checking user like:', err)
+      return false
+    }
+  }
+
+  // Get all posts user has liked (for UI state management)
+  const getUserLikedPosts = async (userId) => {
+    try {
+      const likesCollection = collection(db, 'likes')
+      const userLikesQuery = query(
+        likesCollection,
+        where('UserID', '==', userId)
+      )
+      
+      const userLikesSnapshot = await getDocs(userLikesQuery)
+      const likedPostIds = []
+      
+      userLikesSnapshot.forEach((doc) => {
+        likedPostIds.push(doc.data().PostID)
+      })
+      
+      return likedPostIds
+    } catch (err) {
+      console.error('Error getting user liked posts:', err)
+      return []
+    }
+  }
+  // Add like vào likes collection và update post likes count
+  const addLike = async (postId, userId) => {
     if (!postId || !userId) {
       throw new Error('MISSING_POST_OR_USER_ID')
     }
 
     try {
-      console.log('Updating post likes:', {
-        postId,
-        newLikeCount,
-        userId,
-        isLiking
-      })
-
-      const postRef = doc(db, 'posts', postId)
-      
-      // Kiểm tra post hiện tại để đảm bảo data consistency
-      const postDoc = await getDoc(postRef)
-      if (!postDoc.exists()) {
-        throw new Error('POST_NOT_FOUND')
+      // Check if user already liked this post - STRICT CHECK
+      const alreadyLiked = await checkUserLikedPost(postId, userId)
+      if (alreadyLiked) {
+        console.log('User already liked this post - cannot like again')
+        return { success: false, alreadyLiked: true, message: 'ALREADY_LIKED' }
       }
 
-      const postData = postDoc.data()
-      const currentLikedBy = postData.likedBy || []
-      
-      // Kiểm tra trạng thái like hiện tại để tránh duplicate
-      const isCurrentlyLiked = currentLikedBy.includes(userId)
-      
-      if (isLiking && isCurrentlyLiked) {
-        console.log('User already liked this post')
-        return { success: true, likes: postData.likes || 0 }
-      }
-      
-      if (!isLiking && !isCurrentlyLiked) {
-        console.log('User has not liked this post yet')
-        return { success: true, likes: postData.likes || 0 }
+      // Get user info
+      const userInfo = await populateUserInfo(userId)
+
+      // Add like to likes collection
+      const likeData = {
+        // LikeID sẽ được auto-generated bởi Firestore
+        PostID: postId,
+        UserID: userId,
+        UserName: userInfo.UserName,
+        Avatar: userInfo.Avatar,
+        Created: new Date()
       }
 
-      // Chuẩn bị update data
-      const updateData = {
-        likes: newLikeCount,
-        updatedAt: new Date()
-      }
+      await addDoc(collection(db, 'likes'), likeData)
 
-      // Sử dụng Firestore array operations để đảm bảo atomic operations
-      if (isLiking) {
-        updateData.likedBy = arrayUnion(userId)
-      } else {
-        updateData.likedBy = arrayRemove(userId)
-      }
+      // Update post likes count
+      await updatePostLikesCount(postId, 1)
 
-      // Thực hiện update
-      await updateDoc(postRef, updateData)
+      console.log('Like added successfully:', { postId, userId })
+      return { success: true, alreadyLiked: false }
 
-      console.log('Post likes updated successfully:', {
-        postId,
-        newLikeCount,
-        isLiking
-      })
-
-      return { success: true, likes: newLikeCount }
     } catch (err) {
-      console.error('Error updating post likes:', err)
-      error.value = err
+      console.error('Error adding like:', err)
       throw err
     }
   }
 
-  // Thêm comment cho một post với populated author info
+  // Remove like từ likes collection và update post likes count  
+  const removeLike = async (postId, userId) => {
+    if (!postId || !userId) {
+      throw new Error('MISSING_POST_OR_USER_ID')
+    }
+
+    try {
+      // Find existing like
+      const likesCollection = collection(db, 'likes')
+      const existingLikeQuery = query(
+        likesCollection,
+        where('PostID', '==', postId),
+        where('UserID', '==', userId),
+        limit(1)
+      )
+      
+      const existingLikeSnapshot = await getDocs(existingLikeQuery)
+      if (existingLikeSnapshot.empty) {
+        console.log('User has not liked this post')
+        return { success: false, wasNotLiked: true, message: 'NOT_LIKED' }
+      }
+
+      // Delete like document
+      const likeDoc = existingLikeSnapshot.docs[0]
+      await deleteDoc(doc(db, 'likes', likeDoc.id))
+
+      // Update post likes count
+      await updatePostLikesCount(postId, -1)
+
+      console.log('Like removed successfully:', { postId, userId })
+      return { success: true, wasNotLiked: false }
+
+    } catch (err) {
+      console.error('Error removing like:', err)
+      throw err
+    }
+  }
+
+  // Helper function để update likes count trong posts
+  const updatePostLikesCount = async (postId, increment) => {
+    const postRef = doc(db, 'posts', postId)
+    const postDoc = await getDoc(postRef)
+    
+    if (postDoc.exists()) {
+      const currentLikes = postDoc.data().likes || 0
+      const newLikes = Math.max(0, currentLikes + increment)
+      await updateDoc(postRef, { likes: newLikes })
+    }
+  }
+  const togglePostLike = async (postId, userId) => {
+    // Check current like status
+    const isLiked = await checkUserLikedPost(postId, userId)
+
+    if (isLiked) {
+      // User đã like -> unlike
+      return await removeLike(postId, userId)
+    } else {
+      // User chưa like -> like (chỉ được 1 lần)
+      return await addLike(postId, userId)
+    }
+  }
+
+  // Thêm comment cho một post với user info từ users collection
   const addComment = async (commentData) => {
     if (!commentData || !commentData.postId || !commentData.text || !commentData.authorId) {
       throw new Error('MISSING_COMMENT_DATA')
@@ -276,31 +349,36 @@ export function useFirestore() {
     error.value = null
 
     try {
-      // Get author info từ users collection
-      const authorInfo = await populateAuthorInfo(commentData.authorId)
+      // Get user info từ users collection
+      const userInfo = await populateUserInfo(commentData.authorId)
 
-      // Add comment to 'comments' collection với populated author info
+      // Add comment to 'comments' collection
       const commentsCollection = collection(db, 'comments')
       const commentToSave = {
-        ...commentData,
-        // Override author info với data từ users collection
-        authorName: authorInfo.authorName,
-        authorEmail: authorInfo.authorEmail,
-        authorAvatar: authorInfo.authorAvatar,
-        createdAt: commentData.createdAt || new Date()
+        // CommentID sẽ được auto-generated bởi Firestore
+        PostID: commentData.postId,
+        UserID: commentData.authorId,
+        UserName: userInfo.UserName,
+        Avatar: userInfo.Avatar,
+        Created: commentData.createdAt || new Date(),
+        Content: commentData.text.trim()
       }
 
       const docRef = await addDoc(commentsCollection, commentToSave)
 
-      console.log('Comment added to Firestore with populated author info:', {
-        commentId: docRef.id,
-        authorId: commentData.authorId,
-        authorName: authorInfo.authorName
+      // Update post comments count
+      await updatePostCommentsCount(commentData.postId, 1)
+
+      console.log('Comment added with user info:', {
+        CommentID: docRef.id,
+        PostID: commentData.postId,
+        UserID: commentData.authorId,
+        UserName: userInfo.UserName
       })
 
       // Return complete comment data with ID
       return {
-        id: docRef.id,
+        CommentID: docRef.id,
         ...commentToSave
       }
     } catch (err) {
@@ -312,53 +390,64 @@ export function useFirestore() {
     }
   }
 
-  // Lấy comments cho một post với populated author info
+  // Helper function để update comments count trong posts
+  const updatePostCommentsCount = async (postId, increment) => {
+    const postRef = doc(db, 'posts', postId)
+    const postDoc = await getDoc(postRef)
+    
+    if (postDoc.exists()) {
+      const currentComments = postDoc.data().comments || 0
+      const newComments = Math.max(0, currentComments + increment)
+      await updateDoc(postRef, { comments: newComments })
+    }
+  }
+
+  // Lấy comments cho một post với user info từ users collection
   const getPostComments = async (postId) => {
     if (!postId) {
       return [] // Return empty array thay vì throw error
     }
 
     try {
-      console.log('Fetching comments for postId:', postId)
+      console.log('Fetching comments for PostID:', postId)
       
       const commentsCollection = collection(db, 'comments')
       const q = query(
         commentsCollection,
-        where('postId', '==', postId)
+        where('PostID', '==', postId)
       )
       
       const querySnapshot = await getDocs(q)
       const comments = []
       
-      // Process comments và populate author info nếu cần
+      // Process comments và populate user info nếu cần
       for (const docSnap of querySnapshot.docs) {
         const commentData = docSnap.data()
         
-        // Nếu comment chưa có đầy đủ author info, populate từ users collection
-        if (!commentData.authorName && commentData.authorId) {
-          const authorInfo = await populateAuthorInfo(commentData.authorId)
-          commentData.authorName = authorInfo.authorName
-          commentData.authorEmail = authorInfo.authorEmail
-          commentData.authorAvatar = authorInfo.authorAvatar
+        // Nếu comment chưa có đầy đủ user info, populate từ users collection
+        if (!commentData.UserName && commentData.UserID) {
+          const userInfo = await populateUserInfo(commentData.UserID)
+          commentData.UserName = userInfo.UserName
+          commentData.Avatar = userInfo.Avatar
         }
         
         const processedComment = {
-          id: docSnap.id,
+          CommentID: docSnap.id,
           ...commentData
         }
         
         comments.push(processedComment)
-        console.log('Comment loaded with author info:', processedComment)
+        console.log('Comment loaded with user info:', processedComment)
       }
 
-      // Sort comments theo createdAt trong code thay vì Firestore query
+      // Sort comments theo Created trong code thay vì Firestore query
       comments.sort((a, b) => {
-        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
-        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
+        const dateA = a.Created?.toDate ? a.Created.toDate() : new Date(a.Created)
+        const dateB = b.Created?.toDate ? b.Created.toDate() : new Date(b.Created)
         return dateA - dateB // Comments cũ trước, mới sau
       })
 
-      console.log('Total comments loaded with author info:', comments.length)
+      console.log('Total comments loaded with user info:', comments.length)
       return comments
     } catch (err) {
       console.error('Error loading comments:', err)
@@ -373,7 +462,11 @@ export function useFirestore() {
     uploadMedia,
     createPost,
     getPosts,
-    updatePostLikes,
+    addLike,
+    removeLike,
+    togglePostLike,
+    checkUserLikedPost,
+    getUserLikedPosts,
     addComment,
     getPostComments
   }

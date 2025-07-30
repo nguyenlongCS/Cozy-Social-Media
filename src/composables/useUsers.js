@@ -31,16 +31,6 @@ export function useUsers() {
   const isLoading = ref(false)
   const error = ref(null)
 
-  // Generate random username 6 characters (letters + numbers)
-  const generateRandomUsername = () => {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
-    let result = ''
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length))
-    }
-    return result
-  }
-
   // Sync user từ Firebase Auth vào Firestore collection "users"
   const syncUserToFirestore = async (firebaseUser) => {
     if (!firebaseUser) {
@@ -62,15 +52,14 @@ export function useUsers() {
       // Chuẩn bị user data để lưu vào Firestore
       const userData = {
         UserID: firebaseUser.uid,
-        UserName: firebaseUser.displayName || generateRandomUsername(),
+        UserName: firebaseUser.displayName || 'NoName',
         Email: firebaseUser.email || null,
         Provider: provider,
         Created: firebaseUser.metadata.creationTime ? new Date(firebaseUser.metadata.creationTime) : new Date(),
         SignedIn: new Date(),
         Avatar: firebaseUser.photoURL || null,
         Bio: null,
-        Gender: null,
-        UpdatedAt: new Date()
+        Gender: null
       }
 
       // Sử dụng merge: true để không ghi đè dữ liệu có sẵn

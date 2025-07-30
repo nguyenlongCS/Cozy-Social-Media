@@ -1,14 +1,14 @@
 <!--
-src/components/HomeMain.vue - Updated
+src/components/HomeMain.vue - Updated với Posts Structure mới
 Component Feed chính - Hiển thị posts từ Firestore với chức năng like
 Logic:
-- Load posts từ Firestore và hiển thị từng bài một
+- Load posts từ Firestore với structure mới (PostID, UserID, UserName, etc.)
 - Cuộn wheel để chuyển bài với throttle và warning
 - Preload media cho bài tiếp theo để tránh lag
 - Emit currentPost để HomeRight hiển thị chi tiết
 - Format timestamp và display name với (me/tôi) cho current user
-- Xử lý like/unlike post thông qua useFirestore
-- Mỗi user chỉ được like 1 lần per post
+- Xử lý like/unlike post thông qua togglePostLike
+- Sử dụng fields mới: PostID, UserName, Avatar, Caption, Created, MediaType, MediaURL
 -->
 <template>
   <div class="feed">
@@ -53,18 +53,18 @@ Logic:
     <!-- Current post -->
     <div v-else class="content-container" @wheel="handleWheel">
       <div class="user-info">
-        <div class="avatar"></div>
+        <div class="avatar" :style="{ backgroundImage: currentPost.Avatar ? `url(${currentPost.Avatar})` : '' }"></div>
         <span class="name">{{ getDisplayName(currentPost) }}</span>
       </div>
-      <div class="timestamp">{{ formatTimestamp(currentPost.createdAt) }}</div>
+      <div class="timestamp">{{ formatTimestamp(currentPost.Created) }}</div>
       
       <div class="media-area">
-        <img v-if="currentPost.mediaType === 'image'" 
-             :src="currentPost.mediaUrl" 
-             :alt="currentPost.caption"
+        <img v-if="currentPost.MediaType === 'image'" 
+             :src="currentPost.MediaURL" 
+             :alt="currentPost.Caption"
              class="post-media">
-        <video v-else-if="currentPost.mediaType === 'video'" 
-               :src="currentPost.mediaUrl" 
+        <video v-else-if="currentPost.MediaType === 'video'" 
+               :src="currentPost.MediaURL" 
                controls
                class="post-media">
         </video>
@@ -74,14 +74,16 @@ Logic:
       </div>
       
       <div class="bottom-bar">
-        <span class="caption">{{ currentPost.caption }}</span>
+        <span class="caption">{{ currentPost.Caption }}</span>
         <div class="actions">
           <button 
             class="like" 
             @click="handleLike"
             :disabled="isLiking"
             :class="{ liked: isLikedByUser }"
-          ></button>
+          >
+            <span class="like-count">{{ currentPost.likes || 0 }}</span>
+          </button>
           <button class="options-menu"></button>
         </div>
       </div>
@@ -100,7 +102,7 @@ export default {
   name: 'HomeMain',
   emits: ['scroll-warning', 'current-post-changed'],
   setup(props, { emit }) {
-    const { getPosts, updatePostLikes, isLoading } = useFirestore()
+    const { getPosts, togglePostLike, getUserLikedPosts, isLoading } = useFirestore()
     const { getText, currentLanguage } = useLanguage()
     const { showError } = useErrorHandler()
     const { user } = useAuth()
@@ -120,22 +122,22 @@ export default {
     })
 
     const isLikedByUser = computed(() => {
-      if (!user.value || !currentPost.value.id) return false
-      return userLikes.value.has(currentPost.value.id)
+      if (!user.value || !currentPost.value.PostID) return false
+      return userLikes.value.has(currentPost.value.PostID)
     })
 
     // Methods
     const getDisplayName = (post) => {
-      if (!post.authorName) return getText('user')
+      if (!post.UserName) return getText('user')
       
-      const authorName = post.authorName
+      const userName = post.UserName
       
-      if (user.value && post.authorId === user.value.uid) {
+      if (user.value && post.UserID === user.value.uid) {
         const meText = currentLanguage.value === 'vi' ? 'tôi' : 'me'
-        return `${authorName} (${meText})`
+        return `${userName} (${meText})`
       }
       
-      return authorName
+      return userName
     }
 
     const loadPosts = async () => {
@@ -144,13 +146,11 @@ export default {
         posts.value = fetchedPosts
         console.log('Posts loaded:', fetchedPosts.length)
         
-        // Initialize user likes tracking từ post data
+        // Load user liked posts if user is logged in
         if (user.value) {
-          fetchedPosts.forEach(post => {
-            if (post.likedBy && post.likedBy.includes(user.value.uid)) {
-              userLikes.value.add(post.id)
-            }
-          })
+          const likedPostIds = await getUserLikedPosts(user.value.uid)
+          userLikes.value = new Set(likedPostIds)
+          console.log('User liked posts loaded:', likedPostIds.length)
         }
         
         if (fetchedPosts.length > 0) {
@@ -171,7 +171,7 @@ export default {
         return
       }
 
-      if (!currentPost.value.id || isLiking.value) {
+      if (!currentPost.value.PostID || isLiking.value) {
         return
       }
 
@@ -179,48 +179,49 @@ export default {
 
       try {
         const isCurrentlyLiked = isLikedByUser.value
-        const newLikeCount = isCurrentlyLiked 
-          ? (currentPost.value.likes || 0) - 1 
-          : (currentPost.value.likes || 0) + 1
+        
+        // Update in Firestore with strict policy
+        const result = await togglePostLike(currentPost.value.PostID, user.value.uid)
+        
+        if (!result.success) {
+          // Handle failed like attempt
+          if (result.message === 'ALREADY_LIKED') {
+            console.log('User already liked this post')
+            // Ensure UI reflects actual state
+            userLikes.value.add(currentPost.value.PostID)
+            // Show user-friendly message
+            showError({ message: 'ALREADY_LIKED_POST' }, 'like')
+          } else if (result.message === 'NOT_LIKED') {
+            console.log('User has not liked this post')
+            userLikes.value.delete(currentPost.value.PostID)
+          }
+          return
+        }
 
-        // Update UI optimistically
+        // Update UI state on successful toggle
         if (isCurrentlyLiked) {
-          userLikes.value.delete(currentPost.value.id)
+          userLikes.value.delete(currentPost.value.PostID)
         } else {
-          userLikes.value.add(currentPost.value.id)
+          userLikes.value.add(currentPost.value.PostID)
         }
         
         // Update local post data
-        const postIndex = posts.value.findIndex(p => p.id === currentPost.value.id)
+        const postIndex = posts.value.findIndex(p => p.PostID === currentPost.value.PostID)
         if (postIndex !== -1) {
-          posts.value[postIndex].likes = newLikeCount
-          if (isCurrentlyLiked) {
-            posts.value[postIndex].likedBy = (posts.value[postIndex].likedBy || [])
-              .filter(id => id !== user.value.uid)  
-          } else {
-            posts.value[postIndex].likedBy = [...(posts.value[postIndex].likedBy || []), user.value.uid]
-          }
+          const newLikeCount = isCurrentlyLiked 
+            ? (posts.value[postIndex].likes || 0) - 1 
+            : (posts.value[postIndex].likes || 0) + 1
+          posts.value[postIndex].likes = Math.max(0, newLikeCount)
         }
 
-        // Update in Firestore
-        await updatePostLikes(currentPost.value.id, newLikeCount, user.value.uid, !isCurrentlyLiked)
-
-        console.log('Like updated successfully:', {
-          postId: currentPost.value.id,
-          newLikeCount,
+        console.log('Like toggled successfully:', {
+          PostID: currentPost.value.PostID,
           isLiked: !isCurrentlyLiked
         })
 
       } catch (error) {
-        console.error('Error updating like:', error)
+        console.error('Error toggling like:', error)
         showError(error, 'like')
-        
-        // Revert optimistic update on error
-        if (isLikedByUser.value) {
-          userLikes.value.delete(currentPost.value.id)
-        } else {
-          userLikes.value.add(currentPost.value.id)
-        }
       } finally {
         isLiking.value = false
       }
@@ -228,31 +229,31 @@ export default {
 
     const preloadMedia = (index) => {
       const post = posts.value[index]
-      if (!post || !post.mediaUrl || preloadedMedia.value.has(post.id)) {
+      if (!post || !post.MediaURL || preloadedMedia.value.has(post.PostID)) {
         return
       }
 
-      if (post.mediaType === 'image') {
+      if (post.MediaType === 'image') {
         const img = new Image()
         img.onload = () => {
-          preloadedMedia.value.set(post.id, true)
-          console.log('Preloaded image for post:', post.id)
+          preloadedMedia.value.set(post.PostID, true)
+          console.log('Preloaded image for post:', post.PostID)
         }
         img.onerror = () => {
-          console.error('Failed to preload image for post:', post.id)
+          console.error('Failed to preload image for post:', post.PostID)
         }
-        img.src = post.mediaUrl
-      } else if (post.mediaType === 'video') {
+        img.src = post.MediaURL
+      } else if (post.MediaType === 'video') {
         const video = document.createElement('video')
         video.onloadeddata = () => {
-          preloadedMedia.value.set(post.id, true)
-          console.log('Preloaded video for post:', post.id)
+          preloadedMedia.value.set(post.PostID, true)
+          console.log('Preloaded video for post:', post.PostID)
         }
         video.onerror = () => {
-          console.error('Failed to preload video for post:', post.id)
+          console.error('Failed to preload video for post:', post.PostID)
         }
         video.preload = 'metadata'
-        video.src = post.mediaUrl
+        video.src = post.MediaURL
       }
     }
 
@@ -320,16 +321,17 @@ export default {
       emit('current-post-changed', newPost)
     }, { immediate: true, deep: true })
 
-    // Watch user changes để update likes tracking
-    watch(user, (newUser) => {
+    // Watch user changes để reload likes tracking
+    watch(user, async (newUser) => {
       if (newUser) {
-        // Re-initialize likes tracking khi user đăng nhập
-        userLikes.value.clear()
-        posts.value.forEach(post => {
-          if (post.likedBy && post.likedBy.includes(newUser.uid)) {
-            userLikes.value.add(post.id)
-          }
-        })
+        // Re-load user liked posts khi user đăng nhập
+        try {
+          const likedPostIds = await getUserLikedPosts(newUser.uid)
+          userLikes.value = new Set(likedPostIds)
+          console.log('User likes reloaded:', likedPostIds.length)
+        } catch (error) {
+          console.error('Error reloading user likes:', error)
+        }
       } else {
         // Clear likes tracking khi user đăng xuất
         userLikes.value.clear()
@@ -399,6 +401,8 @@ export default {
   border: 0.125rem solid var(--theme-color);
   border-radius: 50%;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
+  background-size: cover;
+  background-position: center;
 }
 
 .name {
@@ -486,6 +490,10 @@ export default {
   cursor: pointer;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .like {
@@ -493,8 +501,21 @@ export default {
 }
 
 .like.liked {
-  background-color: #ff4757; /* Red color khi đã like */
+  background-color: #ff4757;
   transform: scale(1.05);
+}
+
+.like-count {
+  position: absolute;
+  bottom: -0.25rem;
+  right: -0.25rem;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 0.5rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.5rem;
+  min-width: 1rem;
+  text-align: center;
 }
 
 .options-menu {
