@@ -1,11 +1,10 @@
 /*
-src/composables/useFirestore.js - Updated with Users Integration
-Composable quản lý Firestore và Storage với tích hợp users collection
+src/composables/useFirestore.js - Updated with Avatar Storage Path
+Composable quản lý Firestore và Storage với avatar bucket organization
 Logic:
-- Posts: Tự động populate author info từ users collection
-- Likes: Track users đã like với references đến users collection
-- Comments: Populate comment author info từ users collection
-- Users: Integration với useUsers composable cho user data consistency
+- Avatar files được lưu vào bucket avatar/
+- Post media files được lưu vào bucket posts/
+- Tự động populate author info từ users collection
 - Centralize logic tương tác với Firebase Firestore và Storage
 */
 import { ref } from 'vue'
@@ -62,7 +61,48 @@ export function useFirestore() {
     }
   }
 
-  // Upload media file vào Firebase Storage
+  // Upload avatar file vào Firebase Storage bucket avatar/
+  const uploadAvatar = async (file, userId) => {
+    if (!file || !userId) {
+      throw new Error('MISSING_FILE_OR_USER')
+    }
+
+    isLoading.value = true
+    error.value = null
+
+    try {
+      // Tạo unique filename cho avatar
+      const timestamp = Date.now()
+      const fileExtension = file.name.split('.').pop()
+      const fileName = `${userId}_${timestamp}.${fileExtension}`
+      
+      // Tạo storage reference trong bucket avatar/
+      const avatarRef = storageRef(storage, `avatar/${fileName}`)
+      
+      // Upload file
+      const snapshot = await uploadBytes(avatarRef, file)
+      
+      // Get download URL
+      const downloadURL = await getDownloadURL(snapshot.ref)
+      
+      console.log('Avatar uploaded to avatar/ bucket:', fileName)
+      
+      return {
+        fileName,
+        downloadURL,
+        size: file.size,
+        type: file.type,
+        bucket: 'avatar'
+      }
+    } catch (err) {
+      error.value = err
+      throw err
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Upload media file vào Firebase Storage bucket posts/
   const uploadMedia = async (file, userId) => {
     if (!file || !userId) {
       throw new Error('MISSING_FILE_OR_USER')
@@ -72,12 +112,12 @@ export function useFirestore() {
     error.value = null
 
     try {
-      // Tạo unique filename
+      // Tạo unique filename cho post media
       const timestamp = Date.now()
       const fileExtension = file.name.split('.').pop()
       const fileName = `${userId}_${timestamp}.${fileExtension}`
       
-      // Tạo storage reference
+      // Tạo storage reference trong bucket posts/
       const mediaRef = storageRef(storage, `posts/${fileName}`)
       
       // Upload file
@@ -86,11 +126,14 @@ export function useFirestore() {
       // Get download URL
       const downloadURL = await getDownloadURL(snapshot.ref)
       
+      console.log('Media uploaded to posts/ bucket:', fileName)
+      
       return {
         fileName,
         downloadURL,
         size: file.size,
-        type: file.type
+        type: file.type,
+        bucket: 'posts'
       }
     } catch (err) {
       error.value = err
@@ -236,6 +279,7 @@ export function useFirestore() {
       return []
     }
   }
+
   // Add like vào likes collection và update post likes count
   const addLike = async (postId, userId) => {
     if (!postId || !userId) {
@@ -326,15 +370,16 @@ export function useFirestore() {
       await updateDoc(postRef, { likes: newLikes })
     }
   }
+
   const togglePostLike = async (postId, userId) => {
     // Check current like status
     const isLiked = await checkUserLikedPost(postId, userId)
 
     if (isLiked) {
-      // User đã like -> unlike
+      // User đã like → unlike
       return await removeLike(postId, userId)
     } else {
-      // User chưa like -> like (chỉ được 1 lần)
+      // User chưa like → like (chỉ được 1 lần)
       return await addLike(postId, userId)
     }
   }
@@ -459,7 +504,8 @@ export function useFirestore() {
   return {
     isLoading,
     error,
-    uploadMedia,
+    uploadAvatar, // New function for avatar uploads
+    uploadMedia,  // Existing function for post media
     createPost,
     getPosts,
     addLike,

@@ -1,11 +1,11 @@
 /*
-src/composables/useAuth.js - Fixed User Sync Issue
-Composable quản lý authentication
+src/composables/useAuth.js - Fixed Avatar Override Issue
+Composable quản lý authentication với fix cho avatar override
 Logic:
-- Centralize logic đăng nhập, đăng ký, đăng xuất và theo dõi trạng thái user
-- FIX: Không tự động sync/overwrite user data khi auth state change
-- Chỉ sync user data khi đăng nhập lần đầu hoặc đăng ký mới
-- Tránh ghi đè thông tin user đã cập nhật trên Firestore
+- FIX: Không ghi đè avatar đã được user tùy chỉnh
+- Chỉ sync avatar từ Firebase Auth khi user chưa có custom avatar
+- Smart avatar handling: ưu tiên custom avatar > Firebase Auth avatar
+- Preserve user customizations khi re-authenticate
 */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { 

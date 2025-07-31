@@ -1,8 +1,8 @@
 /*
-src/composables/useErrorHandler.js - Updated với Profile Errors
-Composable xử lý lỗi
+src/composables/useErrorHandler.js - Updated with Data Sync Error Support
+Composable xử lý lỗi với hỗ trợ sync operations
 Centralize error handling logic và provide consistent error messages
-Added: Profile related error codes
+Added: Data sync related error codes và context handling
 */
 import { useLanguage } from './useLanguage'
 
@@ -43,6 +43,13 @@ export function useErrorHandler() {
       'NO_USER_PROVIDED': 'profileUpdateFailed',
       'NO_USER_ID_PROVIDED': 'profileUpdateFailed',
       'MISSING_USER_OR_PROFILE_DATA': 'profileUpdateFailed',
+      'USER_NOT_FOUND': 'profileUpdateFailed',
+      
+      // Data Sync errors
+      'MISSING_USER_OR_DATA': 'syncFailed',
+      'NO_DATA_TO_SYNC': 'syncSuccess',
+      'NO_DOCUMENTS_TO_SYNC': 'syncSuccess',
+      'SYNC_COMPLETED': 'syncSuccess',
       
       // Comments and Likes errors
       'MISSING_POST_OR_USER_ID': 'likeFailed',
@@ -97,6 +104,10 @@ export function useErrorHandler() {
       },
       profile: {
         'defaultError': 'profileUpdateFailed'
+      },
+      sync: {
+        'defaultError': 'syncFailed',
+        'syncSuccess': 'syncSuccess'
       }
     }
 
@@ -136,7 +147,8 @@ export function useErrorHandler() {
       logout: 'logoutSuccess',
       reset: 'resetEmailSent',
       post: 'postSuccess',
-      profile: 'profileSuccess'
+      profile: 'profileSuccess',
+      sync: 'syncSuccess'
     }
     
     const messageKey = successKeys[context] || 'loginSuccess'
@@ -144,10 +156,30 @@ export function useErrorHandler() {
     alert(message)
   }
 
+  // Show sync status message (success hoặc info)
+  const showSyncStatus = (result, context = 'sync') => {
+    if (result && result.success) {
+      if (result.message === 'NO_DATA_TO_SYNC' || result.message === 'NO_DOCUMENTS_TO_SYNC') {
+        // Không hiển thị message cho trường hợp không có gì để sync
+        console.log('No sync needed:', result.message)
+        return
+      }
+      
+      if (result.message === 'SYNC_COMPLETED') {
+        showSuccess(context)
+        return
+      }
+    }
+    
+    // Default success message
+    showSuccess(context)
+  }
+
   return {
     handleError,
     showError,
     showSuccess,
+    showSyncStatus,
     getErrorMessageKey
   }
 }

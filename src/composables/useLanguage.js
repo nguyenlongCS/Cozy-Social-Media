@@ -1,8 +1,8 @@
 /*
-src/composables/useLanguage.js - Complete Rewrite
-Composable quản lý ngôn ngữ
+src/composables/useLanguage.js - Updated with Data Sync Text
+Composable quản lý ngôn ngữ với text cho data synchronization
 Centralize logic chuyển đổi ngôn ngữ và provide text translations
-Complete translation system cho toàn bộ ứng dụng
+Complete translation system cho toàn bộ ứng dụng bao gồm sync operations
 */
 import { ref } from 'vue'
 
@@ -63,11 +63,13 @@ const translations = {
     post: 'Đăng',
     remove: 'Xóa',
     
-    // ===== USER STATES =====
+    // ===== USER STATES & SYNC =====
     guest: 'Khách',
     user: 'Người dùng',
     loading: 'Đang tải...',
     saving: 'Đang lưu...',
+    syncing: 'Đang đồng bộ...',
+    syncingData: 'Đồng bộ dữ liệu',
     
     // ===== FEED & POSTS =====
     noPosts: 'Chưa có bài viết nào',
@@ -120,6 +122,7 @@ const translations = {
     resetEmailSent: 'Email đặt lại mật khẩu đã được gửi!',
     postSuccess: 'Đăng bài thành công!',
     profileSuccess: 'Cập nhật thông tin thành công!',
+    syncSuccess: 'Đồng bộ dữ liệu thành công!',
     
     // ===== ERROR MESSAGES - AUTHENTICATION =====
     fillAllFields: 'Vui lòng nhập đầy đủ thông tin!',
@@ -163,6 +166,9 @@ const translations = {
     loadCommentsFailed: 'Tải bình luận thất bại!',
     alreadyLikedPost: 'Bạn đã thích bài viết này!',
     
+    // ===== ERROR MESSAGES - SYNC =====
+    syncFailed: 'Đồng bộ dữ liệu thất bại!',
+    
     // ===== DEFAULT & FALLBACK =====
     defaultError: 'Có lỗi xảy ra!',
     unknownError: 'Lỗi không xác định!'
@@ -196,11 +202,13 @@ const translations = {
     post: 'Post',
     remove: 'Remove',
     
-    // ===== USER STATES =====
+    // ===== USER STATES & SYNC =====
     guest: 'Guest',
     user: 'User',
     loading: 'Loading...',
     saving: 'Saving...',
+    syncing: 'Syncing...',
+    syncingData: 'Syncing data',
     
     // ===== FEED & POSTS =====
     noPosts: 'No posts yet',
@@ -253,6 +261,7 @@ const translations = {
     resetEmailSent: 'Password reset email sent!',
     postSuccess: 'Post created successfully!',
     profileSuccess: 'Profile updated successfully!',
+    syncSuccess: 'Data sync completed!',
     
     // ===== ERROR MESSAGES - AUTHENTICATION =====
     fillAllFields: 'Please fill in all fields!',
@@ -295,6 +304,9 @@ const translations = {
     commentFailed: 'Failed to add comment!',
     loadCommentsFailed: 'Failed to load comments!',
     alreadyLikedPost: 'You already liked this post!',
+    
+    // ===== ERROR MESSAGES - SYNC =====
+    syncFailed: 'Data sync failed!',
     
     // ===== DEFAULT & FALLBACK =====
     defaultError: 'An error occurred!',

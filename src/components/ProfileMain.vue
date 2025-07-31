@@ -4,10 +4,10 @@ Component chính cho trang profile - Chỉnh sửa thông tin user
 Logic:
 - Load thông tin user hiện tại từ Firestore users collection
 - Form chỉnh sửa UserName, Bio, Gender với validation
-- Upload avatar mới với preview
-- Save thay đổi vào Firestore thông qua useUsers composable
-- Hiển thị loading states và error handling
-- Avatar picker với file validation
+- Upload avatar mới với preview vào bucket avatar/
+- Save thay đổi vào Firestore và trigger data sync tự động
+- Hiển thị sync progress khi có thay đổi avatar/username
+- Error handling cho cả profile update và sync operations
 -->
 <template>
   <div class="profile-main">
@@ -62,6 +62,17 @@ Logic:
         </div>
       </div>
 
+      <!-- Sync Status Display -->
+      <div v-if="isSyncing" class="sync-status">
+        <div class="sync-indicator">
+          <div class="sync-spinner"></div>
+          <span class="sync-text">{{ getText('syncingData') }}... {{ syncProgress }}%</span>
+        </div>
+        <div class="sync-progress-bar">
+          <div class="sync-progress-fill" :style="{ width: `${syncProgress}%` }"></div>
+        </div>
+      </div>
+
       <div class="profile-form">
         <div class="form-group">
           <label class="form-label">{{ getText('userName') }}</label>
@@ -99,14 +110,14 @@ Logic:
           <button 
             class="save-btn btn"
             @click="handleSave"
-            :disabled="isSaving || !hasChanges"
+            :disabled="isSaving || !hasChanges || isSyncing"
           >
-            {{ isSaving ? getText('saving') : getText('saveChanges') }}
+            {{ getSaveButtonText() }}
           </button>
           <button 
             class="cancel-btn btn"
             @click="handleCancel"
-            :disabled="isSaving"
+            :disabled="isSaving || isSyncing"
           >
             {{ getText('cancel') }}
           </button>
@@ -143,16 +154,18 @@ import { useUsers } from '@/composables/useUsers'
 import { useLanguage } from '@/composables/useLanguage'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import { useFirestore } from '@/composables/useFirestore'
+import { useDataSync } from '@/composables/useDataSync'
 
 export default {
   name: 'ProfileMain',
   setup() {
     const router = useRouter()
     const { user } = useAuth()
-    const { getUserById, updateUserProfile, isLoading } = useUsers()
-    const { uploadMedia } = useFirestore()
+    const { getUserById, updateUserProfile, isLoading, isSyncing } = useUsers()
+    const { uploadAvatar } = useFirestore()
     const { getText } = useLanguage()
     const { showError, showSuccess } = useErrorHandler()
+    const { syncProgress } = useDataSync()
 
     // Reactive data
     const userProfile = ref(null)
@@ -197,16 +210,13 @@ export default {
         
         if (profile) {
           userProfile.value = profile
-          // Initialize form với data hiện tại
           editForm.value = {
             UserName: profile.UserName || '',
             Bio: profile.Bio || '',
             Gender: profile.Gender || ''
           }
-          // Save original để compare changes
           originalForm.value = { ...editForm.value }
         } else {
-          // User chưa có profile trong Firestore, tạo từ auth data
           userProfile.value = {
             id: user.value.uid,
             UserID: user.value.uid,
@@ -215,6 +225,7 @@ export default {
             Provider: 'email',
             Created: new Date(),
             Avatar: user.value.photoURL,
+            HasCustomAvatar: false,
             Bio: null,
             Gender: null
           }
@@ -265,13 +276,11 @@ export default {
       const file = event.target.files[0]
       if (!file) return
 
-      // Validate file size (max 5MB for avatar)
       if (file.size > 5 * 1024 * 1024) {
         showError({ message: 'AVATAR_TOO_LARGE' }, 'upload')
         return
       }
 
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         showError({ message: 'INVALID_AVATAR_TYPE' }, 'upload')
         return
@@ -279,7 +288,6 @@ export default {
 
       avatarFile.value = file
       
-      // Create preview URL
       if (avatarPreview.value) {
         URL.revokeObjectURL(avatarPreview.value)
       }
@@ -297,6 +305,12 @@ export default {
       }
     }
 
+    const getSaveButtonText = () => {
+      if (isSaving.value) return getText('saving')
+      if (isSyncing.value) return getText('syncing')
+      return getText('saveChanges')
+    }
+
     const handleSave = async () => {
       if (!user.value || !hasChanges.value) return
 
@@ -309,21 +323,15 @@ export default {
           Gender: editForm.value.Gender || null
         }
 
-        // Upload avatar if selected
         if (avatarFile.value) {
-          const uploadResult = await uploadMedia(avatarFile.value, user.value.uid)
+          const uploadResult = await uploadAvatar(avatarFile.value, user.value.uid)
           updateData.Avatar = uploadResult.downloadURL
         }
 
-        // Update profile in Firestore
         await updateUserProfile(user.value.uid, updateData)
 
         showSuccess('profile')
-        
-        // Reload profile data
         await loadUserProfile()
-        
-        // Clear avatar selection
         removeAvatar()
 
       } catch (error) {
@@ -335,7 +343,6 @@ export default {
     }
 
     const handleCancel = () => {
-      // Reset form to original values
       editForm.value = { ...originalForm.value }
       removeAvatar()
     }
@@ -361,6 +368,8 @@ export default {
       error,
       isLoading,
       isSaving,
+      isSyncing,
+      syncProgress,
       hasChanges,
       avatarFile,
       avatarPreview,
@@ -368,6 +377,7 @@ export default {
       getText,
       getProviderText,
       formatDate,
+      getSaveButtonText,
       triggerAvatarInput,
       handleAvatarSelect,
       removeAvatar,
@@ -517,6 +527,56 @@ export default {
   margin: 0;
 }
 
+.sync-status {
+  background: rgba(255, 235, 124, 0.1);
+  border: 1px solid rgba(255, 235, 124, 0.3);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sync-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.sync-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 235, 124, 0.3);
+  border-top: 2px solid var(--theme-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.sync-text {
+  font-size: 0.75rem;
+  color: var(--theme-color);
+  font-weight: 500;
+}
+
+.sync-progress-bar {
+  width: 100%;
+  height: 0.25rem;
+  background: rgba(255, 235, 124, 0.2);
+  border-radius: 0.125rem;
+  overflow: hidden;
+}
+
+.sync-progress-fill {
+  height: 100%;
+  background: var(--theme-color);
+  transition: width 0.3s ease;
+  border-radius: 0.125rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .profile-form {
   flex: 1;
   display: flex;
@@ -604,7 +664,6 @@ export default {
   transform: scale(1.05);
 }
 
-/* Loading, Error, and Login Required states */
 .loading-state, .error-state, .login-required {
   justify-content: center;
   align-items: center;

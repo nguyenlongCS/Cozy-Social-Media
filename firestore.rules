@@ -1,7 +1,8 @@
 /*
-firestore.rules - Firestore Security Rules
+firestore.rules - Updated with HasCustomAvatar Support
+Firestore Security Rules với support cho HasCustomAvatar field
 Logic bảo mật cho collections:
-- users: Chỉ user được phép đọc/ghi document của chính mình
+- users: Chỉ user được phép đọc/ghi document của chính mình, support HasCustomAvatar field
 - posts: Authenticated users có thể đọc tất cả, tạo post mới, update likes
 - comments: Authenticated users có thể đọc tất cả, tạo comment mới
 - Ngăn chặn truy cập trái phép và đảm bảo data integrity
@@ -65,16 +66,32 @@ service cloud.firestore {
       allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
     }
     
+    // Likes collection
+    match /likes/{likeId} {
+      // Tất cả authenticated users có thể đọc likes
+      allow read: if request.auth != null;
+      
+      // Chỉ user có thể tạo like với UserID = uid của mình
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.UserID
+        && validateLikeData(request.resource.data);
+      
+      // Chỉ user có thể delete like của mình
+      allow delete: if request.auth != null && request.auth.uid == resource.data.UserID;
+    }
+    
     // Validation functions
     
-    // Validate user data structure
+    // Validate user data structure với HasCustomAvatar support
     function validateUserData(data) {
       return data.keys().hasAll(['UserID', 'Email', 'Provider', 'Created', 'SignedIn']) 
         && data.UserID is string
         && data.Email is string
         && data.Provider is string
         && data.Created is timestamp
-        && data.SignedIn is timestamp;
+        && data.SignedIn is timestamp
+        // HasCustomAvatar là optional field
+        && (!data.keys().hasAny(['HasCustomAvatar']) || data.HasCustomAvatar is bool);
     }
     
     // Validate user update - chỉ cho phép update một số fields
@@ -83,7 +100,9 @@ service cloud.firestore {
         && newData.UserID == existingData.UserID  // UserID không được thay đổi
         && newData.Email == existingData.Email    // Email không được thay đổi
         && newData.Provider == existingData.Provider  // Provider không được thay đổi
-        && newData.Created == existingData.Created;   // Created không được thay đổi
+        && newData.Created == existingData.Created   // Created không được thay đổi
+        // Allow HasCustomAvatar to be updated
+        && (!newData.keys().hasAny(['HasCustomAvatar']) || newData.HasCustomAvatar is bool);
     }
     
     // Validate post data structure
@@ -141,6 +160,14 @@ service cloud.firestore {
         && data.text is string
         && data.authorId is string
         && data.createdAt is timestamp;
+    }
+    
+    // Validate like data structure
+    function validateLikeData(data) {
+      return data.keys().hasAll(['PostID', 'UserID', 'Created'])
+        && data.PostID is string
+        && data.UserID is string
+        && data.Created is timestamp;
     }
   }
 }

@@ -1,9 +1,9 @@
 <!--
-src/components/CreatePost.vue - Updated với Me/Tôi Display
-Component CreatePost - Tạo bài đăng mới
+src/components/CreatePost.vue - Updated for Storage Organization
+Component CreatePost - Tạo bài đăng mới với organized storage
 Logic:
 - Form tạo bài đăng với preview media và input caption
-- Upload file và lưu bài đăng thông qua useFirestore
+- Upload file vào bucket posts/ và lưu bài đăng thông qua useFirestore
 - Validation file size và type
 - Chuyển về trang chủ sau khi đăng thành công
 - Hiển thị thông báo lỗi/thành công thông qua useErrorHandler
@@ -66,7 +66,7 @@ export default {
     const router = useRouter()
     const { getText, currentLanguage } = useLanguage()
     const { user } = useAuth()
-    const { createPost, uploadMedia } = useFirestore()
+    const { createPost, uploadMedia } = useFirestore() // uploadMedia for posts
     const { showError, showSuccess } = useErrorHandler()
 
     // Reactive data
@@ -173,11 +173,13 @@ export default {
         let mediaUrl = null
         let mediaType = null
 
-        // Upload media if selected
+        // Upload media if selected - sử dụng uploadMedia để lưu vào bucket posts/
         if (selectedFile.value) {
+          console.log('Uploading post media to posts/ bucket...')
           const uploadResult = await uploadMedia(selectedFile.value, user.value.uid)
           mediaUrl = uploadResult.downloadURL
           mediaType = selectedFile.value.type.startsWith('image/') ? 'image' : 'video'
+          console.log('Post media uploaded successfully to:', uploadResult.bucket)
         }
 
         // Create post data
