@@ -1,18 +1,21 @@
 <!--
-src/components/CreatePost.vue - Updated for Storage Organization
-Component CreatePost - Tạo bài đăng mới với organized storage
+src/components/CreatePost.vue - Updated with User Avatar
+Component CreatePost - Tạo bài đăng mới với user avatar
 Logic:
 - Form tạo bài đăng với preview media và input caption
 - Upload file vào bucket posts/ và lưu bài đăng thông qua useFirestore
+- Hiển thị avatar của user hiện tại thay vì icon mặc định
+- Load user profile để lấy avatar từ Firestore
 - Validation file size và type
 - Chuyển về trang chủ sau khi đăng thành công
-- Hiển thị thông báo lỗi/thành công thông qua useErrorHandler
-- Hiển thị "Me/Tôi" thay vì getUserDisplayName() cho current user
 -->
 <template>
   <div class="create-post">
     <div class="user-info">
-      <div class="avatar"></div>
+      <div 
+        class="avatar"
+        :style="{ backgroundImage: userAvatar ? `url(${userAvatar})` : '' }"
+      ></div>
       <span class="name">{{ getCurrentUserDisplayName() }}</span>
     </div>
     <div class="timestamp">{{ getCurrentTime() }}</div>
@@ -53,10 +56,11 @@ Logic:
 </template>
 
 <script>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLanguage } from '@/composables/useLanguage'
 import { useAuth } from '@/composables/useAuth'
+import { useUsers } from '@/composables/useUsers'
 import { useFirestore } from '@/composables/useFirestore'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 
@@ -66,7 +70,8 @@ export default {
     const router = useRouter()
     const { getText, currentLanguage } = useLanguage()
     const { user } = useAuth()
-    const { createPost, uploadMedia } = useFirestore() // uploadMedia for posts
+    const { getUserById } = useUsers()
+    const { createPost, uploadMedia } = useFirestore()
     const { showError, showSuccess } = useErrorHandler()
 
     // Reactive data
@@ -75,6 +80,7 @@ export default {
     const previewUrl = ref('')
     const fileInput = ref(null)
     const isUploading = ref(false)
+    const userAvatar = ref('')
 
     // Computed properties
     const canPost = computed(() => {
@@ -106,6 +112,28 @@ export default {
       const month = (now.getMonth() + 1).toString().padStart(2, '0')
       const year = now.getFullYear()
       return `${hours}:${minutes}, ${day}/${month}/${year}`
+    }
+
+    // Load user avatar
+    const loadUserAvatar = async () => {
+      if (!user.value) {
+        userAvatar.value = ''
+        return
+      }
+
+      try {
+        const userProfile = await getUserById(user.value.uid)
+        if (userProfile && userProfile.Avatar) {
+          userAvatar.value = userProfile.Avatar
+        } else {
+          // Fallback to Firebase Auth avatar if no custom avatar
+          userAvatar.value = user.value.photoURL || ''
+        }
+      } catch (error) {
+        console.error('Error loading user avatar:', error)
+        // Fallback to Firebase Auth avatar on error
+        userAvatar.value = user.value.photoURL || ''
+      }
     }
 
     const triggerFileInput = () => {
@@ -175,11 +203,9 @@ export default {
 
         // Upload media if selected - sử dụng uploadMedia để lưu vào bucket posts/
         if (selectedFile.value) {
-          console.log('Uploading post media to posts/ bucket...')
           const uploadResult = await uploadMedia(selectedFile.value, user.value.uid)
           mediaUrl = uploadResult.downloadURL
           mediaType = selectedFile.value.type.startsWith('image/') ? 'image' : 'video'
-          console.log('Post media uploaded successfully to:', uploadResult.bucket)
         }
 
         // Create post data
@@ -213,12 +239,29 @@ export default {
       }
     }
 
+    // Watch user changes
+    watch(user, (newUser) => {
+      if (newUser) {
+        loadUserAvatar()
+      } else {
+        userAvatar.value = ''
+      }
+    }, { immediate: true })
+
+    // Load avatar on mount
+    onMounted(() => {
+      if (user.value) {
+        loadUserAvatar()
+      }
+    })
+
     return {
       caption,
       selectedFile,
       previewUrl,
       fileInput,
       isUploading,
+      userAvatar,
       canPost,
       isImage,
       isVideo,
@@ -263,10 +306,12 @@ export default {
 .avatar {
   width: 1.875rem;
   height: 1.875rem;
-  background: var(--theme-color);
+  background: url('@/icons/user.png') center/cover var(--theme-color);
   border: 0.125rem solid var(--theme-color);
   border-radius: 50%;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
+  background-size: cover;
+  background-position: center;
 }
 
 .name {
