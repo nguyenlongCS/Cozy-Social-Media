@@ -479,12 +479,12 @@ export default {
   opacity: 1;
 }
 
-.camera-icon {
+/* .camera-icon {
   width: 1.25rem;
   height: 1.25rem;
-  /* background: url('@/icons/camera.png') center/cover; */
+  background: url('@/icons/camera.png') center/cover;
   filter: brightness(0) saturate(100%) invert(1);
-}
+} */
 
 .remove-avatar-btn {
   background: rgba(255, 235, 124, 0.1);
