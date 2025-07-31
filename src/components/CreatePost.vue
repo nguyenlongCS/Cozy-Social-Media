@@ -1,8 +1,9 @@
 <!--
-src/components/CreatePost.vue - Updated with User Avatar
-Component CreatePost - Tạo bài đăng mới với user avatar
+src/components/CreatePost.vue - Updated with Expandable Caption Input
+Component CreatePost - Tạo bài đăng mới với expandable caption input
 Logic:
-- Form tạo bài đăng với preview media và input caption
+- Form tạo bài đăng với preview media và expandable caption input
+- Caption input tự động giãn theo nội dung (có thể xuống hàng)
 - Upload file vào bucket posts/ và lưu bài đăng thông qua useFirestore
 - Hiển thị avatar của user hiện tại thay vì icon mặc định
 - Load user profile để lấy avatar từ Firestore
@@ -40,13 +41,15 @@ Logic:
     </div>
 
     <div class="bottom-bar">
-      <input 
-        type="text" 
+      <textarea 
         v-model="caption" 
         :placeholder="getText('writeCaption')" 
         class="caption-input"
         maxlength="500"
-      >
+        rows="1"
+        ref="captionTextarea"
+        @input="adjustTextareaHeight"
+      ></textarea>
       <div class="actions">
         <button class="cancel-btn" @click="handleCancel" :disabled="isUploading"></button>
         <button class="post-btn" @click="handlePost" :disabled="!canPost || isUploading"></button>
@@ -56,7 +59,7 @@ Logic:
 </template>
 
 <script>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useLanguage } from '@/composables/useLanguage'
 import { useAuth } from '@/composables/useAuth'
@@ -79,12 +82,13 @@ export default {
     const selectedFile = ref(null)
     const previewUrl = ref('')
     const fileInput = ref(null)
+    const captionTextarea = ref(null)
     const isUploading = ref(false)
     const userAvatar = ref('')
 
     // Computed properties
     const canPost = computed(() => {
-      return caption.value.trim().length > 0 && user.value
+      return caption.value.trim().length > 0 && user.value && selectedFile.value !== null
     })
 
     const isImage = computed(() => {
@@ -112,6 +116,30 @@ export default {
       const month = (now.getMonth() + 1).toString().padStart(2, '0')
       const year = now.getFullYear()
       return `${hours}:${minutes}, ${day}/${month}/${year}`
+    }
+
+    // Auto-resize textarea theo nội dung
+    const adjustTextareaHeight = async () => {
+      await nextTick()
+      if (captionTextarea.value) {
+        // Reset height để tính toán chính xác
+        captionTextarea.value.style.height = 'auto'
+        
+        // Tính chiều cao cần thiết
+        const scrollHeight = captionTextarea.value.scrollHeight
+        const maxHeight = 100 // Maximum height in pixels (khoảng 4-5 dòng)
+        
+        // Set chiều cao mới, không vượt quá max height
+        const newHeight = Math.min(scrollHeight, maxHeight)
+        captionTextarea.value.style.height = newHeight + 'px'
+        
+        // Enable/disable scrollbar nếu vượt quá max height
+        if (scrollHeight > maxHeight) {
+          captionTextarea.value.style.overflowY = 'auto'
+        } else {
+          captionTextarea.value.style.overflowY = 'hidden'
+        }
+      }
     }
 
     // Load user avatar
@@ -191,7 +219,11 @@ export default {
       }
 
       if (!canPost.value) {
-        showError({ message: 'MISSING_CAPTION' }, 'post')
+        if (!caption.value.trim()) {
+          showError({ message: 'MISSING_CAPTION' }, 'post')
+        } else if (!selectedFile.value) {
+          showError({ message: 'MISSING_MEDIA' }, 'post')
+        }
         return
       }
 
@@ -201,7 +233,7 @@ export default {
         let mediaUrl = null
         let mediaType = null
 
-        // Upload media if selected - sử dụng uploadMedia để lưu vào bucket posts/
+        // Upload media - bắt buộc phải có media
         if (selectedFile.value) {
           const uploadResult = await uploadMedia(selectedFile.value, user.value.uid)
           mediaUrl = uploadResult.downloadURL
@@ -248,11 +280,20 @@ export default {
       }
     }, { immediate: true })
 
+    // Watch caption changes để auto-resize textarea
+    watch(caption, () => {
+      adjustTextareaHeight()
+    })
+
     // Load avatar on mount
     onMounted(() => {
       if (user.value) {
         loadUserAvatar()
       }
+      // Initial textarea height adjustment
+      nextTick(() => {
+        adjustTextareaHeight()
+      })
     })
 
     return {
@@ -260,6 +301,7 @@ export default {
       selectedFile,
       previewUrl,
       fileInput,
+      captionTextarea,
       isUploading,
       userAvatar,
       canPost,
@@ -268,6 +310,7 @@ export default {
       getText,
       getCurrentUserDisplayName,
       getCurrentTime,
+      adjustTextareaHeight,
       triggerFileInput,
       handleFileSelect,
       removeMedia,
@@ -413,31 +456,43 @@ export default {
   left: 0.625rem;
   right: 0.625rem;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 0.625rem;
 }
 
 .caption-input {
   flex: 1;
-  height: 1.875rem;
+  min-height: 1.875rem;
+  max-height: 6.25rem; /* Maximum height để tránh chiếm quá nhiều không gian */
   background: var(--theme-color);
   border: 0.125rem solid #000;
   border-radius: 0.9375rem;
-  padding: 0 0.625rem;
+  padding: 0.375rem 0.625rem;
   font-size: 0.75rem;
   color: #000;
   outline: none;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
+  resize: none; /* Disable manual resize */
+  overflow-y: hidden; /* Initially hidden, will be set to auto if needed */
+  font-family: inherit;
+  line-height: 1.2;
+  /* Expandable textarea styles */
+  transition: height 0.2s ease;
 }
 
 .caption-input::placeholder {
   color: rgba(0, 0, 0, 0.6);
 }
 
+.caption-input:focus {
+  box-shadow: 0 0 0.5rem rgba(255, 235, 124, 0.4);
+}
+
 .actions {
   display: flex;
   gap: 0.625rem;
+  align-self: flex-end; /* Align buttons to bottom */
 }
 
 .cancel-btn, .post-btn {
@@ -448,6 +503,7 @@ export default {
   cursor: pointer;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  flex-shrink: 0; /* Prevent buttons from shrinking */
 }
 
 .cancel-btn {

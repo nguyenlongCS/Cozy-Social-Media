@@ -1,9 +1,9 @@
 <!--
-src/components/HomeRight.vue - Updated với Comment Avatars
-Component sidebar bên phải - Chi tiết bài post
+src/components/HomeRight.vue - Updated with Fixed Caption Display
+Component sidebar bên phải - Chi tiết bài post với caption không xuống hàng
 Logic:
 - Hiển thị Caption, likes, comments của post hiện tại với fields mới
-- Chức năng like/unlike post thông qua togglePostLike
+- Caption không xuống hàng, hiển thị liên tiếp với ellipsis nếu quá dài
 - Load và hiển thị comments với structure mới (CommentID, PostID, UserID, UserName, etc.)
 - Form thêm comment mới với emoji picker dropdown
 - Hiển thị avatar bên trái comment-author cho mỗi comment
@@ -338,7 +338,10 @@ export default {
   font-size: 0.75rem;
   line-height: 1.4;
   color: rgba(255, 235, 124, 0.9);
+  /* UPDATED: Caption hiển thị đầy đủ nội dung - có thể xuống hàng */
   word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 .likes-section {

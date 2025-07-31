@@ -1,8 +1,8 @@
 /*
-src/composables/useErrorHandler.js - Updated with Data Sync Error Support
-Composable xử lý lỗi với hỗ trợ sync operations
+src/composables/useErrorHandler.js - Updated with Missing Media Error Support
+Composable xử lý lỗi với hỗ trợ media requirement validation
 Centralize error handling logic và provide consistent error messages
-Added: Data sync related error codes và context handling
+Added: Missing media error code cho create post validation
 */
 import { useLanguage } from './useLanguage'
 
@@ -32,6 +32,7 @@ export function useErrorHandler() {
       'FILE_TOO_LARGE': 'fileTooLarge',
       'INVALID_FILE_TYPE': 'invalidFileType',
       'MISSING_CAPTION': 'missingCaption',
+      'MISSING_MEDIA': 'missingMedia',
       'NOT_AUTHENTICATED': 'notAuthenticated',
       'MISSING_FILE_OR_USER': 'postFailed',
       'MISSING_POST_DATA': 'postFailed',

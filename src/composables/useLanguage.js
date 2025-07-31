@@ -1,8 +1,8 @@
 /*
-src/composables/useLanguage.js - Updated with Data Sync Text
-Composable quản lý ngôn ngữ với text cho data synchronization
+src/composables/useLanguage.js - Updated with Missing Media Error Message
+Composable quản lý ngôn ngữ với text cho missing media validation
 Centralize logic chuyển đổi ngôn ngữ và provide text translations
-Complete translation system cho toàn bộ ứng dụng bao gồm sync operations
+Complete translation system cho toàn bộ ứng dụng bao gồm media requirement
 */
 import { ref } from 'vue'
 
@@ -152,6 +152,7 @@ const translations = {
     fileTooLarge: 'File quá lớn! Tối đa 10MB.',
     invalidFileType: 'Loại file không hợp lệ! Chỉ chấp nhận ảnh/video.',
     missingCaption: 'Vui lòng nhập chú thích!',
+    missingMedia: 'Vui lòng chọn ảnh hoặc video!',
     notAuthenticated: 'Vui lòng đăng nhập!',
     loadPostsFailed: 'Tải bài viết thất bại!',
     
@@ -291,6 +292,7 @@ const translations = {
     fileTooLarge: 'File too large! Maximum 10MB.',
     invalidFileType: 'Invalid file type! Only images/videos allowed.',
     missingCaption: 'Please enter a caption!',
+    missingMedia: 'Please select a photo or video!',
     notAuthenticated: 'Please login first!',
     loadPostsFailed: 'Failed to load posts!',
     
