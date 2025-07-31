@@ -482,7 +482,7 @@ export default {
 .camera-icon {
   width: 1.25rem;
   height: 1.25rem;
-  background: url('@/icons/camera.png') center/cover;
+  /* background: url('@/icons/camera.png') center/cover; */
   filter: brightness(0) saturate(100%) invert(1);
 }
 
