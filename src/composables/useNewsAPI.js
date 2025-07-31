@@ -132,15 +132,95 @@ ${url}`
     }
   }
 
-  // Check xem article đã được post chưa (để tránh duplicate)
-  const isArticleAlreadyPosted = (article, recentPosts) => {
-    if (!recentPosts || recentPosts.length === 0) return false
+  // Check xem article đã được post chưa bằng cách query recent posts từ Firestore
+  const isArticleAlreadyPosted = async (article) => {
+    try {
+      // Query 30 bài post gần nhất của News Bot từ Firestore
+      const recentPosts = await getRecentNewsBotPosts(30)
+      
+      if (!recentPosts || recentPosts.length === 0) {
+        return false // Chưa có bài nào
+      }
+      
+      // Check bằng URL (primary check)
+      if (article.url) {
+        const urlExists = recentPosts.some(post => {
+          const caption = post.Caption || ''
+          return caption.includes(article.url)
+        })
+        if (urlExists) {
+          console.log('Article already posted (URL match):', article.url)
+          return true
+        }
+      }
+      
+      // Check bằng title (fallback check)
+      if (article.title) {
+        const titleExists = recentPosts.some(post => {
+          const caption = post.Caption || ''
+          // So sánh title (loại bỏ dấu câu và normalize)
+          const normalizedTitle = article.title.toLowerCase().replace(/[^\w\s]/g, '').trim()
+          const normalizedCaption = caption.toLowerCase().replace(/[^\w\s]/g, '')
+          return normalizedCaption.includes(normalizedTitle) && normalizedTitle.length > 10
+        })
+        if (titleExists) {
+          console.log('Article already posted (Title match):', article.title)
+          return true
+        }
+      }
+      
+      return false // Article chưa được post
+      
+    } catch (err) {
+      console.error('Error checking if article already posted:', err)
+      // Nếu có lỗi khi check, return false để vẫn cho phép post (fail-safe)
+      return false
+    }
+  }
+
+  // Get recent posts của News Bot từ Firestore để check duplicate
+  const getRecentNewsBotPosts = async (limitCount = 30) => {
+    try {
+      const { getPosts } = useFirestore()
+      
+      // Lấy posts gần nhất (sẽ bao gồm cả posts của News Bot và user khác)
+      const allRecentPosts = await getPosts(limitCount * 2) // Lấy nhiều hơn để filter
+      
+      // Filter chỉ lấy posts của News Bot
+      const newsBotPosts = allRecentPosts.filter(post => post.UserID === NEWS_BOT_USER_ID)
+      
+      console.log(`Found ${newsBotPosts.length} recent News Bot posts for duplicate check`)
+      return newsBotPosts.slice(0, limitCount) // Giới hạn số lượng
+      
+    } catch (err) {
+      console.error('Error getting recent News Bot posts:', err)
+      return [] // Return empty array nếu có lỗi
+    }
+  }
+
+  // Check xem article có đủ mới không (published trong vòng 6 giờ)
+  const isArticleRecent = (article) => {
+    if (!article.publishedAt) {
+      return true // Nếu không có publishedAt, coi như recent
+    }
     
-    // Check bằng URL hoặc title
-    return recentPosts.some(post => {
-      const postCaption = post.Caption || ''
-      return postCaption.includes(article.url) || postCaption.includes(article.title)
-    })
+    try {
+      const publishedTime = new Date(article.publishedAt)
+      const now = new Date()
+      const hoursSincePublished = (now - publishedTime) / (1000 * 60 * 60)
+      
+      // Chỉ post article published trong vòng 6 giờ gần đây
+      const isRecent = hoursSincePublished <= 6
+      
+      if (!isRecent) {
+        console.log(`Article too old: published ${hoursSincePublished.toFixed(1)} hours ago`)
+      }
+      
+      return isRecent
+    } catch (err) {
+      console.error('Error checking article recency:', err)
+      return true // Fail-safe: cho phép post nếu không check được
+    }
   }
 
   // Tạo một bài post tự động từ news article
@@ -182,7 +262,6 @@ ${url}`
       const savedPost = await createPost(postData)
       
       console.log('News post created successfully:', savedPost.PostID)
-      lastPostTime.value = new Date()
       
       return savedPost
     } catch (err) {
@@ -191,7 +270,7 @@ ${url}`
     }
   }
 
-  // Auto post tin tức mới nhất (chạy mỗi giờ)
+  // Auto post tin tức mới nhất với duplicate detection
   const performAutoPost = async () => {
     if (!autoPostEnabled.value) {
       console.log('Auto posting is disabled')
@@ -202,45 +281,122 @@ ${url}`
     error.value = null
 
     try {
-      console.log('Performing auto news post...')
+      console.log('Performing auto news post with duplicate detection...')
       
       // Fetch latest news
-      const articles = await fetchLatestNews('technology', 3)
+      const articles = await fetchLatestNews('technology', 5)
       
       if (!articles || articles.length === 0) {
         console.log('No news articles found')
         return
       }
 
-      // Lấy bài viết đầu tiên có hình ảnh (ưu tiên)
-      let selectedArticle = articles.find(article => article.urlToImage) || articles[0]
+      console.log(`Fetched ${articles.length} articles, checking for duplicates...`)
+
+      // Find first article that is both recent and not already posted
+      let selectedArticle = null
       
-      // Validate article
-      if (!selectedArticle.title || !selectedArticle.url) {
-        console.log('Invalid article structure, skipping')
-        return
+      for (const article of articles) {
+        // Validate article structure
+        if (!article.title || !article.url) {
+          console.log('Skipping invalid article:', article.title || 'No title')
+          continue
+        }
+        
+        // Check if article is recent (within 6 hours)
+        if (!isArticleRecent(article)) {
+          console.log('Skipping old article:', article.title)
+          continue
+        }
+        
+        // Check if article already posted (main duplicate detection)
+        const alreadyPosted = await isArticleAlreadyPosted(article)
+        if (alreadyPosted) {
+          console.log('Skipping duplicate article:', article.title)
+          continue
+        }
+        
+        // Found a good article!
+        selectedArticle = article
+        console.log('Selected new article for posting:', article.title)
+        break
       }
 
-      // TODO: Check duplicate posts (có thể implement sau)
-      // const recentPosts = await getRecentPosts(10)
-      // if (isArticleAlreadyPosted(selectedArticle, recentPosts)) {
-      //   console.log('Article already posted, skipping')
-      //   return
-      // }
+      // If no suitable article found, try different categories
+      if (!selectedArticle) {
+        console.log('No new articles in technology, trying other categories...')
+        
+        const alternativeCategories = ['general', 'business', 'science']
+        
+        for (const category of alternativeCategories) {
+          console.log(`Trying category: ${category}`)
+          const altArticles = await fetchLatestNews(category, 3)
+          
+          for (const article of altArticles) {
+            if (!article.title || !article.url) continue
+            if (!isArticleRecent(article)) continue
+            
+            const alreadyPosted = await isArticleAlreadyPosted(article)
+            if (!alreadyPosted) {
+              selectedArticle = article
+              console.log(`Found new article in ${category}:`, article.title)
+              break
+            }
+          }
+          
+          if (selectedArticle) break
+        }
+      }
 
-      // Tạo post
-      await createNewsPost(selectedArticle)
-      
-      console.log('Auto news post completed successfully')
+      // Post the selected article or skip if none found
+      if (selectedArticle) {
+        await createNewsPost(selectedArticle)
+        
+        // Lưu thời gian post thành công
+        saveLastPostTime()
+        lastPostTime.value = new Date()
+        
+        console.log('Auto news post completed successfully')
+      } else {
+        console.log('No new articles found - skipping this posting cycle')
+      }
       
     } catch (err) {
       console.error('Error during auto post:', err)
       error.value = err
       
       // Không hiển thị error alert cho auto posting để không spam user
-      // chỉ log error
     } finally {
       isLoading.value = false
+    }
+  }
+
+  // Check xem đã đến giờ post chưa (dựa trên localStorage)
+  const shouldPostNow = () => {
+    try {
+      const lastPostTime = localStorage.getItem('lastNewsPostTime')
+      if (!lastPostTime) {
+        return true // Chưa bao giờ post
+      }
+
+      const lastPost = new Date(lastPostTime)
+      const now = new Date()
+      const hoursSinceLastPost = (now - lastPost) / (1000 * 60 * 60)
+
+      // Post nếu đã qua ít nhất 1 giờ
+      return hoursSinceLastPost >= 1
+    } catch (err) {
+      console.error('Error checking last post time:', err)
+      return false
+    }
+  }
+
+  // Lưu thời gian post vào localStorage
+  const saveLastPostTime = () => {
+    try {
+      localStorage.setItem('lastNewsPostTime', new Date().toISOString())
+    } catch (err) {
+      console.error('Error saving last post time:', err)
     }
   }
 
@@ -250,21 +406,23 @@ ${url}`
       clearInterval(intervalId.value)
     }
 
-    // Post ngay lập tức lần đầu (sau 10 giây để app khởi động)
+    // Kiểm tra xem có cần post ngay không (chỉ khi đã qua 1 giờ)
     setTimeout(() => {
-      if (autoPostEnabled.value) {
+      if (autoPostEnabled.value && shouldPostNow()) {
         performAutoPost()
+      } else {
+        console.log('Skipping initial post - not enough time has passed')
       }
-    }, 10000)
+    }, 5000) // Kiểm tra sau 5 giây
 
     // Schedule post mỗi giờ
     intervalId.value = setInterval(() => {
-      if (autoPostEnabled.value) {
+      if (autoPostEnabled.value && shouldPostNow()) {
         performAutoPost()
       }
     }, 3600000) // 1 hour = 3600000ms
 
-    console.log('Auto news posting started - will post every hour')
+    console.log('Auto news posting started - will post every hour (when needed)')
   }
 
   // Dừng auto posting
@@ -302,6 +460,16 @@ ${url}`
 
   // Lifecycle hooks
   onMounted(async () => {
+    // Load last post time từ localStorage
+    try {
+      const lastPostTimeStr = localStorage.getItem('lastNewsPostTime')
+      if (lastPostTimeStr) {
+        lastPostTime.value = new Date(lastPostTimeStr)
+      }
+    } catch (err) {
+      console.error('Error loading last post time:', err)
+    }
+
     // Chỉ start auto posting nếu có API key
     if (NEWS_API_KEY && NEWS_API_KEY !== 'your_newsapi_key_here') {
       // Load News Bot info trước khi bắt đầu auto posting
@@ -342,6 +510,10 @@ ${url}`
     toggleAutoPosting,
     triggerManualPost,
     loadNewsBotInfo,
+    shouldPostNow,
+    isArticleAlreadyPosted,
+    isArticleRecent,
+    getRecentNewsBotPosts,
     getAutoPostStatus
   }
 }
