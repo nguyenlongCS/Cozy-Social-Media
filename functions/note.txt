@@ -1,0 +1,20 @@
+firebase functions:log --only triggerNewsPost
+
+Invoke-WebRequest `
+  -Uri "https://us-central1-fir-auth-cozy.cloudfunctions.net/triggerNewsPost" `
+  -Method POST `
+  -Body '{}' `
+  -ContentType "application/json"
+
+firebase functions:list
+
+# Delete functions trước
+firebase functions:delete triggerNewsPost
+firebase functions:delete autoPostNews
+firebase functions:delete getRecentNewsPosts
+
+# Deploy lại
+firebase deploy --only functions
+
+us-central1-fir-auth-cozy.cloudfunctions.net/getRecentNewsPosts
+https://us-central1-fir-auth-cozy.cloudfunctions.net/triggerNewsPost

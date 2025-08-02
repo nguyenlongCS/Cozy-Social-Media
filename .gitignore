@@ -1,7 +1,7 @@
+# .gitignore - Updated without useNewsAPI references
 .DS_Store
 node_modules
 /dist
-
 
 # local env files
 .env.local
@@ -22,3 +22,23 @@ pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Firebase
+.firebase
+.firebaserc.backup
+firebase-debug.log*
+firebase-debug.*.log
+
+# Cloud Functions
+functions/node_modules/
+functions/.runtimeconfig.json
+functions/lib/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
