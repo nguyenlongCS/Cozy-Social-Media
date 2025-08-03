@@ -1,12 +1,12 @@
 <!--
-src/view/Profile.vue
-View trang profile - Hiển thị và chỉnh sửa thông tin user
+src/view/Profile.vue - Updated with ProfileHomeRight
+View trang profile - Hiển thị và chỉnh sửa thông tin user với ProfileHomeRight
 Logic:
 - Load và hiển thị thông tin user từ Firestore users collection
 - Form chỉnh sửa thông tin: UserName, Bio, Gender
 - Upload và thay đổi Avatar
 - Save thay đổi vào Firestore
-- Navigation và layout tương tự các trang khác
+- Sử dụng ProfileHomeRight thay vì HomeRight cho profile-specific features
 -->
 <template>
   <div class="profile-page">
@@ -18,7 +18,7 @@ Logic:
     <div class="body">
       <HomeLeft />
       <ProfileMain />
-      <HomeRight />
+      <ProfileHomeRight />
     </div>
     <Footer />
   </div>
@@ -29,9 +29,9 @@ import NavLeft from '@/components/NavLeft.vue'
 import NavMid from '@/components/NavMid.vue'
 import NavRight from '@/components/NavRight.vue'
 import HomeLeft from '@/components/HomeLeft.vue'
-import HomeRight from '@/components/HomeRight.vue'
 import Footer from '@/components/Footer.vue'
 import ProfileMain from '@/components/ProfileMain.vue'
+import ProfileHomeRight from '@/components/ProfileHomeRight.vue'
 import { useLanguage } from '@/composables/useLanguage'
 
 // Import Firebase để đảm bảo được khởi tạo
@@ -44,9 +44,9 @@ export default {
     NavMid,
     NavRight,
     HomeLeft,
-    HomeRight,
     Footer,
-    ProfileMain
+    ProfileMain,
+    ProfileHomeRight // Updated component
   },
   setup() {
     const { toggleLanguage } = useLanguage()
@@ -62,7 +62,7 @@ export default {
 .profile-page {
   width: 100%;
   max-width: 80rem;
-  height: 39.4375rem;
+  min-height: 100vh; /* FIXED: Ensure full viewport height */
   display: flex;
   flex-direction: column;
   background: #2B2D42;
@@ -71,18 +71,21 @@ export default {
 .header {
   width: 100%;
   height: 3.5rem;
+  min-height: 3.5rem; /* FIXED: Prevent header shrinking */
   display: flex;
   align-items: center;
   justify-content: space-between;
   box-shadow: 0 0.125rem 0.3125rem rgba(0, 0, 0, 0.2);
   background: #2B2D42;
+  flex-shrink: 0; /* FIXED: Prevent header from shrinking */
 }
 
 .body {
   width: 100%;
-  height: 32.44rem;
+  flex: 1; /* FIXED: Take remaining space */
   display: flex;
   justify-content: space-between;
   background: #2B2D42;
+  min-height: 0; /* Allow flex children to shrink */
 }
 </style>

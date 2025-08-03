@@ -137,6 +137,16 @@ const translations = {
     signupFailed: 'Đăng ký thất bại!',
     logoutFailed: 'Đăng xuất thất bại!',
     resetEmailFailed: 'Gửi email thất bại!',
+
+    // ===== PROFILE HOME RIGHT =====
+    interests: 'Nội dung quan tâm',
+    noInterestsSelected: 'Chưa chọn nội dung quan tâm nào',
+    selectInterests: 'Chọn nội dung quan tâm',
+    posts: 'Danh sách bài viết',
+    friends: 'Danh sách bạn bè',
+    postsComingSoon: 'Tính năng sắp ra mắt',
+    friendsComingSoon: 'Tính năng sắp ra mắt',
+    save: 'Lưu',
     
     // ===== ERROR MESSAGES - SOCIAL LOGIN =====
     googleLoginFailed: 'Đăng nhập Google thất bại!',
@@ -254,6 +264,16 @@ const translations = {
     // ===== FOOTER & INTERACTION =====
     scrollToNext: 'Scroll to see next post',
     scrollTooFast: 'Scrolling too fast',
+    
+    // ===== PROFILE HOME RIGHT =====
+    interests: 'Interests',
+    noInterestsSelected: 'No interests selected',
+    selectInterests: 'Select Interests',
+    posts: 'Posts',
+    friends: 'Friends',
+    postsComingSoon: 'Coming Soon',
+    friendsComingSoon: 'Coming Soon',
+    save: 'Save',
     
     // ===== SUCCESS MESSAGES =====
     loginSuccess: 'Login successful!',
