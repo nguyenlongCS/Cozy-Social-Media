@@ -1,9 +1,10 @@
 <!--
-src/components/CreatePost.vue - Updated with Expandable Caption Input
+src/components/CreatePost.vue - Updated without Caption Length Validation
 Component CreatePost - Tạo bài đăng mới với expandable caption input
 Logic:
 - Form tạo bài đăng với preview media và expandable caption input
 - Caption input tự động giãn theo nội dung (có thể xuống hàng)
+- REMOVED: Caption length validation và maxlength restriction
 - Upload file vào bucket posts/ và lưu bài đăng thông qua useFirestore
 - Hiển thị avatar của user hiện tại thay vì icon mặc định
 - Load user profile để lấy avatar từ Firestore
@@ -45,7 +46,6 @@ Logic:
         v-model="caption" 
         :placeholder="getText('writeCaption')" 
         class="caption-input"
-        maxlength="500"
         rows="1"
         ref="captionTextarea"
         @input="adjustTextareaHeight"
@@ -86,7 +86,7 @@ export default {
     const isUploading = ref(false)
     const userAvatar = ref('')
 
-    // Computed properties
+    // Computed properties - UPDATED: Removed caption length requirement
     const canPost = computed(() => {
       return caption.value.trim().length > 0 && user.value && selectedFile.value !== null
     })
@@ -127,7 +127,7 @@ export default {
         
         // Tính chiều cao cần thiết
         const scrollHeight = captionTextarea.value.scrollHeight
-        const maxHeight = 100 // Maximum height in pixels (khoảng 4-5 dòng)
+        const maxHeight = 150 // Increased max height để cho phép caption dài hơn
         
         // Set chiều cao mới, không vượt quá max height
         const newHeight = Math.min(scrollHeight, maxHeight)
@@ -464,7 +464,7 @@ export default {
 .caption-input {
   flex: 1;
   min-height: 1.875rem;
-  max-height: 6.25rem; /* Maximum height để tránh chiếm quá nhiều không gian */
+  max-height: 9.375rem; /* Increased max height để cho phép caption dài hơn */
   background: var(--theme-color);
   border: 0.125rem solid #000;
   border-radius: 0.9375rem;
@@ -479,6 +479,7 @@ export default {
   line-height: 1.2;
   /* Expandable textarea styles */
   transition: height 0.2s ease;
+  /* REMOVED: maxlength attribute để cho phép caption dài */
 }
 
 .caption-input::placeholder {

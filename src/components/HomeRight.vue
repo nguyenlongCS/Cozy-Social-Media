@@ -1,13 +1,13 @@
 <!--
-src/components/HomeRight.vue - Updated with Fixed Caption Display
-Component sidebar bên phải - Chi tiết bài post với caption không xuống hàng
+src/components/HomeRight.vue - Updated with Tags Display
+Component sidebar bên phải - Chi tiết bài post với tags display
 Logic:
 - Hiển thị Caption, likes, comments của post hiện tại với fields mới
-- Caption không xuống hàng, hiển thị liên tiếp với ellipsis nếu quá dài
-- Load và hiển thị comments với structure mới (CommentID, PostID, UserID, UserName, etc.)
+- Caption hiển thị đầy đủ nội dung - có thể xuống hàng
+- Hiển thị tags ở dưới cùng với style viền bo tròn
+- Load và hiển thị comments với structure mới
 - Form thêm comment mới với emoji picker dropdown
 - Hiển thị avatar bên trái comment-author cho mỗi comment
-- Sử dụng fields mới: PostID, UserName, Avatar, Caption, Created, Content
 -->
 <template>
   <div class="right">
@@ -16,6 +16,17 @@ Logic:
       <div class="caption-section">
         <h3 class="section-title">{{ getText('caption') }}</h3>
         <p class="caption-text">{{ post.Caption || getText('noCaption') }}</p>
+        
+        <!-- Tags display - NEW -->
+        <div v-if="post.Tags && post.Tags.length > 0" class="tags-container">
+          <div 
+            v-for="tag in post.Tags" 
+            :key="tag"
+            class="tag-pill"
+          >
+            {{ tag }}
+          </div>
+        </div>
       </div>
 
       <!-- Likes section - READ ONLY -->
@@ -338,10 +349,37 @@ export default {
   font-size: 0.75rem;
   line-height: 1.4;
   color: rgba(255, 235, 124, 0.9);
-  /* UPDATED: Caption hiển thị đầy đủ nội dung - có thể xuống hàng */
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
+  margin-bottom: 0.75rem;
+}
+
+/* NEW: Tags styling */
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+}
+
+.tag-pill {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 235, 124, 0.15);
+  border: 1px solid rgba(255, 235, 124, 0.4);
+  border-radius: 1rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: var(--theme-color);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.tag-pill:hover {
+  background: rgba(255, 235, 124, 0.25);
+  border-color: rgba(255, 235, 124, 0.6);
+  transform: scale(1.05);
 }
 
 .likes-section {

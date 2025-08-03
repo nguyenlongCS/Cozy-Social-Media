@@ -1,11 +1,14 @@
 /*
-src/composables/useFirestore.js - Updated with Avatar Storage Path
-Composable quản lý Firestore và Storage với avatar bucket organization
+src/composables/useFirestore.js - Updated with Classification Integration
+Composable quản lý Firestore và Storage với tích hợp hệ thống phân loại
 Logic:
+- Giữ nguyên tất cả logic và chức năng đã có trước đó
+- Tích hợp classification system vào createPost
+- Thêm functions mới để query posts theo tags
 - Avatar files được lưu vào bucket avatar/
 - Post media files được lưu vào bucket posts/
 - Tự động populate author info từ users collection
-- Centralize logic tương tác với Firebase Firestore và Storage
+- Background classification không ảnh hưởng UX
 */
 import { ref } from 'vue'
 import { 
@@ -30,6 +33,9 @@ import {
 } from 'firebase/storage'
 import app from '@/firebase/config'
 import { useUsers } from './useUsers'
+
+// Import classification service cho auto-classification
+import { classifyNewPost } from '@/services/postClassificationService'
 
 // Initialize Firestore và Storage
 const db = getFirestore(app, 'social-media-db')
@@ -144,6 +150,7 @@ export function useFirestore() {
   }
 
   // Tạo post mới trong Firestore với user info từ users collection
+  // UPDATED: Tích hợp classification system
   const createPost = async (postData) => {
     if (!postData) {
       throw new Error('MISSING_POST_DATA')
@@ -173,7 +180,11 @@ export function useFirestore() {
         MediaType: postData.mediaType || null,
         MediaURL: postData.mediaUrl || null,
         likes: 0,
-        comments: 0
+        comments: 0,
+        // Classification fields - will be populated by classification service
+        Tags: null,
+        ClassifiedAt: null,
+        ClassificationVersion: null
       }
 
       const docRef = await addDoc(postsCollection, postToSave)
@@ -182,6 +193,16 @@ export function useFirestore() {
         PostID: docRef.id,
         UserID: postData.authorId,
         UserName: userInfo.UserName
+      })
+
+      // =============================================================================
+      // CLASSIFICATION INTEGRATION - Background classification
+      // =============================================================================
+      
+      // Background classification - không await để không làm chậm UX
+      classifyNewPost(docRef.id, postData.caption.trim()).catch(error => {
+        console.error('Classification failed for post:', docRef.id, error)
+        // Log error nhưng không ảnh hưởng đến user experience
       })
 
       return {
@@ -197,6 +218,7 @@ export function useFirestore() {
   }
 
   // Lấy danh sách posts từ Firestore với populated user info
+  // UPDATED: Include Tags field với backward compatibility
   const getPosts = async (limitCount = 10) => {
     isLoading.value = true
     error.value = null
@@ -225,7 +247,9 @@ export function useFirestore() {
         
         posts.push({
           PostID: docSnap.id,
-          ...postData
+          ...postData,
+          // Ensure Tags field exists (backward compatibility)
+          Tags: postData.Tags || []
         })
       }
 
@@ -237,6 +261,163 @@ export function useFirestore() {
       isLoading.value = false
     }
   }
+
+  // =============================================================================
+  // NEW FUNCTIONS: TAG-BASED QUERIES
+  // =============================================================================
+
+  // Lấy posts có chứa một hoặc nhiều tags cụ thể
+  const getPostsByTags = async (tags, limitCount = 10) => {
+    if (!tags || !Array.isArray(tags) || tags.length === 0) {
+      return []
+    }
+
+    isLoading.value = true
+    error.value = null
+
+    try {
+      const postsCollection = collection(db, 'posts')
+      const q = query(
+        postsCollection,
+        where('Tags', 'array-contains-any', tags),
+        orderBy('Created', 'desc'),
+        limit(limitCount)
+      )
+      
+      const querySnapshot = await getDocs(q)
+      const posts = []
+      
+      querySnapshot.forEach(doc => {
+        const postData = doc.data()
+        posts.push({
+          PostID: doc.id,
+          ...postData,
+          Tags: postData.Tags || []
+        })
+      })
+
+      console.log(`Found ${posts.length} posts with tags:`, tags)
+      return posts
+      
+    } catch (err) {
+      console.error('Error getting posts by tags:', err)
+      error.value = err
+      // Return empty array instead of throwing để không break UI
+      return []
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Lấy posts với tag filtering options
+  const getPostsWithTagFilter = async (options = {}) => {
+    const {
+      includeTags = [],
+      excludeTags = [],
+      limitCount = 10,
+      sortBy = 'Created'
+    } = options
+
+    isLoading.value = true
+    error.value = null
+
+    try {
+      let q = query(
+        collection(db, 'posts'),
+        orderBy(sortBy, 'desc'),
+        limit(limitCount * 2) // Over-fetch để có thể filter
+      )
+
+      // Nếu có includeTags, add where clause
+      if (includeTags.length > 0) {
+        q = query(
+          collection(db, 'posts'),
+          where('Tags', 'array-contains-any', includeTags),
+          orderBy(sortBy, 'desc'),
+          limit(limitCount * 2)
+        )
+      }
+      
+      const querySnapshot = await getDocs(q)
+      let posts = []
+      
+      querySnapshot.forEach(doc => {
+        const postData = doc.data()
+        posts.push({
+          PostID: doc.id,
+          ...postData,
+          Tags: postData.Tags || []
+        })
+      })
+
+      // Client-side filtering cho excludeTags
+      if (excludeTags.length > 0) {
+        posts = posts.filter(post => 
+          !post.Tags.some(tag => excludeTags.includes(tag))
+        )
+      }
+
+      // Limit to requested count
+      posts = posts.slice(0, limitCount)
+
+      console.log(`Filtered posts result: ${posts.length} posts`)
+      return posts
+      
+    } catch (err) {
+      console.error('Error getting posts with tag filter:', err)
+      error.value = err
+      return []
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  // Lấy thống kê tag distribution
+  const getTagStatistics = async () => {
+    try {
+      const postsCollection = collection(db, 'posts')
+      const q = query(
+        postsCollection,
+        where('Tags', '!=', null)
+      )
+      
+      const querySnapshot = await getDocs(q)
+      const tagCounts = {}
+      let totalClassifiedPosts = 0
+      
+      querySnapshot.forEach(doc => {
+        const tags = doc.data().Tags || []
+        totalClassifiedPosts++
+        
+        tags.forEach(tag => {
+          tagCounts[tag] = (tagCounts[tag] || 0) + 1
+        })
+      })
+      
+      // Sort tags by frequency
+      const sortedTags = Object.entries(tagCounts)
+        .sort(([,a], [,b]) => b - a)
+        .map(([tag, count]) => ({
+          tag,
+          count,
+          percentage: Math.round((count / totalClassifiedPosts) * 100)
+        }))
+      
+      return {
+        totalClassifiedPosts,
+        tagStatistics: sortedTags,
+        uniqueTags: Object.keys(tagCounts).length
+      }
+      
+    } catch (error) {
+      console.error('Error getting tag statistics:', error)
+      return null
+    }
+  }
+
+  // =============================================================================
+  // EXISTING LIKE FUNCTIONS (Không thay đổi)
+  // =============================================================================
 
   // Check if user has liked a post
   const checkUserLikedPost = async (postId, userId) => {
@@ -384,6 +565,10 @@ export function useFirestore() {
     }
   }
 
+  // =============================================================================
+  // EXISTING COMMENT FUNCTIONS (Không thay đổi)
+  // =============================================================================
+
   // Thêm comment cho một post với user info từ users collection
   const addComment = async (commentData) => {
     if (!commentData || !commentData.postId || !commentData.text || !commentData.authorId) {
@@ -501,18 +686,35 @@ export function useFirestore() {
     }
   }
 
+  // =============================================================================
+  // RETURN ALL FUNCTIONS
+  // =============================================================================
+
   return {
     isLoading,
     error,
-    uploadAvatar, // New function for avatar uploads
-    uploadMedia,  // Existing function for post media
-    createPost,
-    getPosts,
+    
+    // Storage functions
+    uploadAvatar, // Avatar uploads (bucket: avatar/)
+    uploadMedia,  // Post media uploads (bucket: posts/)
+    
+    // Post functions (UPDATED với classification)
+    createPost, // Updated với automatic classification
+    getPosts,   // Updated với Tags field support
+    
+    // NEW: Tag-based query functions
+    getPostsByTags,
+    getPostsWithTagFilter,
+    getTagStatistics,
+    
+    // Like functions (UNCHANGED)
     addLike,
     removeLike,
     togglePostLike,
     checkUserLikedPost,
     getUserLikedPosts,
+    
+    // Comment functions (UNCHANGED)
     addComment,
     getPostComments
   }
