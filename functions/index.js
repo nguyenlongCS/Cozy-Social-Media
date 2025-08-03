@@ -1,13 +1,11 @@
 /*
-functions/index.js - Cloud Functions Auto News Posting System
-Firebase Cloud Functions để tự động đăng bài viết tin tức 24/7
+functions/index.js - Optimized Auto News Posting System
+Firebase Cloud Functions tự động đăng bài viết tin tức với tối ưu hóa và cleanup
 Logic:
-- Schedule function chạy mỗi giờ với Cloud Scheduler
-- Fetch tin tức mới từ NewsAPI
-- Kiểm tra duplicate với posts đã có
-- Tạo post tự động vào Firestore collection 'posts'
-- Error handling và logging cho monitoring
-- Không phụ thuộc vào client application
+- Cleanup: Loại bỏ object fallback, giảm logging, merge duplicate logic
+- Enhanced: Retry mechanism, caption validation, source prioritization
+- Optimized: Constants consolidation, better error handling, source quality filtering
+- Professional: Focused categories, reliable news sources, production-ready code
 */
 
 const functions = require('firebase-functions')
@@ -17,153 +15,245 @@ const fetch = require('node-fetch')
 // Initialize Firebase Admin SDK
 admin.initializeApp()
 
-// Firestore database reference với database name chính xác
+// Firestore database reference
 const db = admin.firestore()
-// Set database name cho named database
 db.settings({databaseId: 'social-media-db'})
 
-// NewsAPI configuration
-const NEWS_API_KEY = functions.config().newsapi.key
-const NEWS_API_BASE_URL = 'https://newsapi.org/v2'
+// =============================================================================
+// CONSTANTS CONSOLIDATION
+// =============================================================================
 
-// News Bot configuration - User đã tồn tại trong collection users
-const NEWS_BOT_USER_ID = '1L64HAlhZZg3GSGjHtmq4B7i6Kh1'
+const CONFIG = {
+  // NewsAPI
+  NEWS_API_KEY: functions.config().newsapi?.key,
+  NEWS_API_BASE_URL: 'https://newsapi.org/v2',
+  
+  // News Bot
+  NEWS_BOT_USER_ID: '1L64HAlhZZg3GSGjHtmq4B7i6Kh1',
+  NEWS_BOT_FALLBACK: {
+    UserName: 'News Bot',
+    Email: 'news@system.auto',
+    Avatar: null
+  },
+  
+  // Content limits
+  MAX_CAPTION_LENGTH: 500,
+  MAX_TITLE_LENGTH: 200,
+  ARTICLE_AGE_HOURS: 24, // Giảm từ 48 xuống 24 giờ
+  RECENT_POSTS_CHECK: 30, // Giảm từ 50 xuống 30
+  
+  // Categories - Focused on high-quality tech news
+  CATEGORIES: ['technology', 'business'],
+  
+  // Retry configuration
+  MAX_RETRIES: 3,
+  RETRY_DELAY_MS: 2000,
+  
+  // Premium news sources for better content quality
+  PRIORITY_SOURCES: [
+    'techcrunch.com',
+    'theverge.com',
+    'arstechnica.com',
+    'wired.com',
+    'engadget.com',
+    'venturebeat.com',
+    'reuters.com',
+    'bbc.com',
+    'cnn.com'
+  ]
+}
 
-// Cloud Function chạy mỗi giờ để post tin tức tự động
+// =============================================================================
+// CORE AUTO POSTING FUNCTION
+// =============================================================================
+
 exports.autoPostNews = functions.pubsub
-  .schedule('0 * * * *') // Chạy mỗi giờ đúng phút 0
-  .timeZone('Asia/Ho_Chi_Minh') // Timezone Việt Nam
+  .schedule('0 * * * *') // Chạy mỗi giờ
+  .timeZone('Asia/Ho_Chi_Minh')
   .onRun(async (context) => {
-    console.log('Starting automated news posting...')
-    
-    try {
-      // Check API key configuration
-      if (!NEWS_API_KEY) {
-        console.error('NewsAPI key not configured in Firebase Functions config')
-        return null
-      }
-
-      // Load News Bot user info từ Firestore
-      const newsBotInfo = await loadNewsBotInfo()
-      if (!newsBotInfo) {
-        console.error('Failed to load News Bot user info')
-        return null
-      }
-
-      // Fetch latest news từ multiple categories
-      const categories = ['technology', 'business', 'science', 'general']
-      let selectedArticle = null
-
-      for (const category of categories) {
-        console.log(`Fetching news from category: ${category}`)
-        
-        const articles = await fetchLatestNews(category, 5)
-        if (!articles || articles.length === 0) {
-          console.log(`No articles found in category: ${category}`)
-          continue
-        }
-
-        // Tìm article phù hợp (mới và chưa được post)
-        for (const article of articles) {
-          if (!isValidArticle(article)) continue
-          if (!isArticleRecent(article)) continue
-          
-          const alreadyPosted = await isArticleAlreadyPosted(article)
-          if (alreadyPosted) continue
-
-          selectedArticle = article
-          console.log(`Selected article from ${category}: ${article.title}`)
-          break
-        }
-
-        if (selectedArticle) break
-      }
-
-      // Post article nếu tìm thấy
-      if (selectedArticle) {
-        await createNewsPost(selectedArticle, newsBotInfo)
-        console.log('Auto news post completed successfully')
-      } else {
-        console.log('No new articles found - skipping this cycle')
-      }
-
-      return null
-    } catch (error) {
-      console.error('Error in auto news posting:', error)
-      return null
-    }
+    return await executeNewsPosting('scheduled')
   })
 
-// Load News Bot user info từ Firestore users collection
-async function loadNewsBotInfo() {
+// =============================================================================
+// SHARED NEWS POSTING LOGIC
+// =============================================================================
+
+const executeNewsPosting = async (trigger = 'manual') => {
   try {
-    const userDoc = await db.collection('users').doc(NEWS_BOT_USER_ID).get()
+    // Validate API key
+    if (!CONFIG.NEWS_API_KEY) {
+      throw new Error('NewsAPI key not configured')
+    }
+
+    // Load News Bot user info
+    const newsBotInfo = await loadNewsBotInfo()
     
-    if (!userDoc.exists) {
-      console.error('News Bot user not found in users collection')
-      return {
-        UserName: 'News',
-        Email: 'news@system.auto',
-        Avatar: null
-      }
+    // Find suitable article
+    const selectedArticle = await findSuitableArticle()
+    
+    if (!selectedArticle) {
+      console.log(`No suitable articles found - ${trigger} trigger`)
+      return { success: true, message: 'NO_ARTICLES_FOUND' }
     }
 
-    const userData = userDoc.data()
-    console.log('News Bot loaded:', {
-      UserName: userData.UserName,
-      hasAvatar: !!userData.Avatar
+    // Create post
+    const result = await createNewsPost(selectedArticle, newsBotInfo)
+    
+    console.log(`Auto news post completed - ${trigger} trigger:`, {
+      postId: result.PostID,
+      title: selectedArticle.title?.substring(0, 50) + '...',
+      source: selectedArticle.source?.name
     })
-
-    return userData
-  } catch (error) {
-    console.error('Error loading News Bot info:', error)
-    return {
-      UserName: 'News',
-      Email: 'news@system.auto',
-      Avatar: null
+    
+    return { 
+      success: true, 
+      message: 'POST_CREATED',
+      postId: result.PostID,
+      trigger
     }
+
+  } catch (error) {
+    console.error(`Error in auto news posting (${trigger}):`, error.message)
+    return { success: false, error: error.message, trigger }
   }
 }
 
-// Fetch latest news từ NewsAPI
-async function fetchLatestNews(category = 'technology', pageSize = 5) {
+// =============================================================================
+// NEWS BOT USER MANAGEMENT
+// =============================================================================
+
+const loadNewsBotInfo = async () => {
   try {
-    const url = `${NEWS_API_BASE_URL}/top-headlines?category=${category}&country=us&pageSize=${pageSize}&apiKey=${NEWS_API_KEY}`
+    const userDoc = await db.collection('users').doc(CONFIG.NEWS_BOT_USER_ID).get()
+    
+    if (userDoc.exists) {
+      const userData = userDoc.data()
+      return {
+        UserName: userData.UserName || CONFIG.NEWS_BOT_FALLBACK.UserName,
+        Email: userData.Email || CONFIG.NEWS_BOT_FALLBACK.Email,
+        Avatar: userData.Avatar || CONFIG.NEWS_BOT_FALLBACK.Avatar
+      }
+    }
+    
+    // Return fallback without creating - News Bot should exist
+    console.warn('News Bot user not found, using fallback')
+    return CONFIG.NEWS_BOT_FALLBACK
+    
+  } catch (error) {
+    console.error('Error loading News Bot info:', error.message)
+    return CONFIG.NEWS_BOT_FALLBACK
+  }
+}
+
+// =============================================================================
+// ARTICLE DISCOVERY & FILTERING
+// =============================================================================
+
+const findSuitableArticle = async () => {
+  for (const category of CONFIG.CATEGORIES) {
+    const articles = await fetchLatestNewsWithRetry(category)
+    
+    if (articles.length === 0) continue
+    
+    // Sort by source priority first, then by publishedAt
+    const prioritizedArticles = prioritizeArticlesBySource(articles)
+    
+    for (const article of prioritizedArticles) {
+      if (await isArticleSuitable(article)) {
+        return article
+      }
+    }
+  }
+  
+  return null
+}
+
+const fetchLatestNewsWithRetry = async (category, retryCount = 0) => {
+  try {
+    const url = `${CONFIG.NEWS_API_BASE_URL}/top-headlines?category=${category}&country=us&pageSize=10&apiKey=${CONFIG.NEWS_API_KEY}`
     
     const response = await fetch(url)
     
     if (!response.ok) {
-      throw new Error(`NewsAPI Error: ${response.status} ${response.statusText}`)
+      throw new Error(`NewsAPI HTTP ${response.status}: ${response.statusText}`)
     }
 
     const data = await response.json()
     
     if (data.status !== 'ok') {
-      throw new Error(`NewsAPI Status Error: ${data.message || 'Unknown error'}`)
+      throw new Error(`NewsAPI Error: ${data.message || 'Unknown error'}`)
     }
 
-    console.log(`Fetched ${data.articles?.length || 0} articles from ${category}`)
     return data.articles || []
+    
   } catch (error) {
-    console.error(`Error fetching news from ${category}:`, error)
+    if (retryCount < CONFIG.MAX_RETRIES) {
+      console.log(`Retry ${retryCount + 1}/${CONFIG.MAX_RETRIES} for category ${category}`)
+      await delay(CONFIG.RETRY_DELAY_MS * (retryCount + 1))
+      return await fetchLatestNewsWithRetry(category, retryCount + 1)
+    }
+    
+    console.error(`Failed to fetch news for ${category} after ${CONFIG.MAX_RETRIES} retries:`, error.message)
     return []
   }
 }
 
-// Validate article structure
-function isValidArticle(article) {
-  return article && 
-         article.title && 
-         article.title.length > 10 &&
-         article.url &&
-         article.source &&
-         article.source.name
+const prioritizeArticlesBySource = (articles) => {
+  return articles.sort((a, b) => {
+    const aSourcePriority = getSourcePriority(a.source?.name)
+    const bSourcePriority = getSourcePriority(b.source?.name)
+    
+    if (aSourcePriority !== bSourcePriority) {
+      return aSourcePriority - bSourcePriority // Lower number = higher priority
+    }
+    
+    // If same priority, sort by publishedAt (newer first)
+    const aTime = new Date(a.publishedAt || 0)
+    const bTime = new Date(b.publishedAt || 0)
+    return bTime - aTime
+  })
 }
 
-// Check xem article có đủ mới không (published trong vòng 48 giờ)
-function isArticleRecent(article) {
+const getSourcePriority = (sourceName) => {
+  if (!sourceName) return 999
+  
+  const sourceUrl = sourceName.toLowerCase()
+  const priorityIndex = CONFIG.PRIORITY_SOURCES.findIndex(source => 
+    sourceUrl.includes(source.replace('.com', '')) || sourceUrl.includes(source)
+  )
+  
+  return priorityIndex === -1 ? 100 : priorityIndex // Priority sources get 0-8, others get 100
+}
+
+// =============================================================================
+// ARTICLE VALIDATION
+// =============================================================================
+
+const isArticleSuitable = async (article) => {
+  return isValidArticle(article) && 
+         isArticleRecent(article) && 
+         !(await isArticleAlreadyPosted(article))
+}
+
+const isValidArticle = (article) => {
+  if (!article?.title || !article?.url || !article?.source?.name) {
+    return false
+  }
+  
+  if (article.title.length < 10 || article.title.length > CONFIG.MAX_TITLE_LENGTH) {
+    return false
+  }
+  
+  // Filter out articles with generic or poor titles
+  const poorTitleIndicators = ['[removed]', '[deleted]', 'click here', 'you won\'t believe']
+  const titleLower = article.title.toLowerCase()
+  
+  return !poorTitleIndicators.some(indicator => titleLower.includes(indicator))
+}
+
+const isArticleRecent = (article) => {
   if (!article.publishedAt) {
-    return true // Nếu không có publishedAt, coi như recent
+    return false // Strict validation - require publishedAt
   }
   
   try {
@@ -171,156 +261,129 @@ function isArticleRecent(article) {
     const now = new Date()
     const hoursSincePublished = (now - publishedTime) / (1000 * 60 * 60)
     
-    // Cloud Functions có thể có delay, nên tăng thời gian lên 48 giờ
-    const isRecent = hoursSincePublished <= 48
-    
-    if (!isRecent) {
-      console.log(`Article too old: published ${hoursSincePublished.toFixed(1)} hours ago`)
-    }
-    
-    return isRecent
+    return hoursSincePublished <= CONFIG.ARTICLE_AGE_HOURS
   } catch (error) {
-    console.error('Error checking article recency:', error)
-    return true // Fail-safe: cho phép post nếu không check được
+    return false // Strict validation on error
   }
 }
 
-// Check xem article đã được post chưa bằng cách query Firestore
-async function isArticleAlreadyPosted(article) {
+const isArticleAlreadyPosted = async (article) => {
   try {
-    // Query posts gần nhất của News Bot (50 posts)
     const recentPostsQuery = await db
       .collection('posts')
-      .where('UserID', '==', NEWS_BOT_USER_ID)
+      .where('UserID', '==', CONFIG.NEWS_BOT_USER_ID)
       .orderBy('Created', 'desc')
-      .limit(50)
+      .limit(CONFIG.RECENT_POSTS_CHECK)
       .get()
 
-    if (recentPostsQuery.empty) {
-      return false // Chưa có post nào
-    }
+    if (recentPostsQuery.empty) return false
 
     const recentPosts = recentPostsQuery.docs.map(doc => doc.data())
 
-    // Check bằng URL (primary check)
+    // URL-based duplicate check (primary)
     if (article.url) {
-      const urlExists = recentPosts.some(post => {
-        const caption = post.Caption || ''
-        return caption.includes(article.url)
-      })
-      if (urlExists) {
-        console.log('Article already posted (URL match):', article.url)
-        return true
-      }
+      const urlExists = recentPosts.some(post => 
+        post.Caption?.includes(article.url)
+      )
+      if (urlExists) return true
     }
 
-    // Check bằng title (fallback check)
-    if (article.title) {
-      const normalizedTitle = article.title.toLowerCase().replace(/[^\w\s]/g, '').trim()
+    // Title-based duplicate check (secondary)
+    if (article.title && article.title.length > 20) {
+      const normalizedTitle = normalizeString(article.title)
       
       const titleExists = recentPosts.some(post => {
-        const caption = post.Caption || ''
-        const normalizedCaption = caption.toLowerCase().replace(/[^\w\s]/g, '')
-        return normalizedCaption.includes(normalizedTitle) && normalizedTitle.length > 10
+        const normalizedCaption = normalizeString(post.Caption || '')
+        return normalizedCaption.includes(normalizedTitle)
       })
       
-      if (titleExists) {
-        console.log('Article already posted (Title match):', article.title)
-        return true
-      }
+      if (titleExists) return true
     }
 
-    return false // Article chưa được post
+    return false
   } catch (error) {
-    console.error('Error checking if article already posted:', error)
-    return false // Fail-safe: cho phép post nếu không check được
+    console.error('Error checking duplicate articles:', error.message)
+    return false // Allow posting on error
   }
 }
 
-// Format news article thành caption
-function formatNewsCaption(article) {
-  const title = article.title || 'Không có tiêu đề'
-  const content = article.content || article.description || 'Không có nội dung'
-  const sourceName = article.source?.name || 'Không rõ nguồn'
-  const author = article.author || 'Không rõ tác giả'
-  const publishedAt = article.publishedAt ? formatPublishTime(article.publishedAt) : 'Không rõ thời gian'
+const normalizeString = (str) => {
+  return str.toLowerCase()
+    .replace(/[^\w\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+// =============================================================================
+// POST CREATION
+// =============================================================================
+
+const createNewsPost = async (article, newsBotInfo) => {
+  const caption = formatNewsCaption(article)
+  
+  // Validate caption length
+  if (caption.length > CONFIG.MAX_CAPTION_LENGTH) {
+    throw new Error(`Caption too long: ${caption.length} > ${CONFIG.MAX_CAPTION_LENGTH}`)
+  }
+
+  const postData = {
+    UserID: CONFIG.NEWS_BOT_USER_ID,
+    UserName: newsBotInfo.UserName,
+    Avatar: newsBotInfo.Avatar,
+    Caption: caption,
+    Created: admin.firestore.FieldValue.serverTimestamp(),
+    MediaType: article.urlToImage ? 'image' : null,
+    MediaURL: article.urlToImage || null,
+    likes: 0,
+    comments: 0
+  }
+
+  const docRef = await db.collection('posts').add(postData)
+  
+  return {
+    PostID: docRef.id,
+    ...postData
+  }
+}
+
+const formatNewsCaption = (article) => {
+  const title = article.title || 'No Title'
+  const description = article.description || 'No Description'
+  const sourceName = article.source?.name || 'Unknown Source'
+  const publishedAt = article.publishedAt ? formatPublishTime(article.publishedAt) : 'Unknown Time'
   const url = article.url || ''
 
-  // Template caption theo yêu cầu
+  // Optimized caption format
   const caption = `${title}
 
-${content}
+${description}
 
-📰 Nguồn: ${sourceName}
-✍️ Tác giả: ${author}  
-🕒 Thời gian: ${publishedAt}
+📰 ${sourceName} | 🕒 ${publishedAt}
 
 ${url}`
 
   return caption
 }
 
-// Format publish time từ ISO string
-function formatPublishTime(isoString) {
+const formatPublishTime = (isoString) => {
   try {
     const date = new Date(isoString)
+    const hours = date.getHours().toString().padStart(2, '0')
+    const minutes = date.getMinutes().toString().padStart(2, '0')
     const day = date.getDate().toString().padStart(2, '0')
     const month = (date.getMonth() + 1).toString().padStart(2, '0')
     const year = date.getFullYear()
-    const hours = date.getHours().toString().padStart(2, '0')
-    const minutes = date.getMinutes().toString().padStart(2, '0')
     
     return `${hours}:${minutes}, ${day}/${month}/${year}`
   } catch (error) {
-    console.error('Error formatting publish time:', error)
-    return 'Không rõ thời gian'
+    return 'Invalid Date'
   }
 }
 
-// Tạo post mới trong Firestore collection 'posts'
-async function createNewsPost(article, newsBotInfo) {
-  try {
-    const caption = formatNewsCaption(article)
-    
-    // Tạo post data với structure giống manual posts
-    const postData = {
-      UserID: NEWS_BOT_USER_ID,
-      UserName: newsBotInfo.UserName || 'News',
-      Avatar: newsBotInfo.Avatar || null,
-      Caption: caption,
-      Created: admin.firestore.FieldValue.serverTimestamp(),
-      MediaType: article.urlToImage ? 'image' : null,
-      MediaURL: article.urlToImage || null,
-      likes: 0,
-      comments: 0
-    }
+// =============================================================================
+// MANUAL TRIGGER ENDPOINT
+// =============================================================================
 
-    console.log('Creating news post:', {
-      title: article.title,
-      source: article.source.name,
-      hasImage: !!article.urlToImage,
-      userInfo: {
-        UserName: postData.UserName,
-        hasAvatar: !!postData.Avatar
-      }
-    })
-
-    // Lưu post vào Firestore collection 'posts'
-    const docRef = await db.collection('posts').add(postData)
-    
-    console.log('News post created successfully with ID:', docRef.id)
-    
-    return {
-      PostID: docRef.id,
-      ...postData
-    }
-  } catch (error) {
-    console.error('Error creating news post:', error)
-    throw error
-  }
-}
-
-// HTTP Function để manual trigger (for testing)
 exports.triggerNewsPost = functions.https.onRequest(async (req, res) => {
   // CORS headers
   res.set('Access-Control-Allow-Origin', '*')
@@ -333,58 +396,42 @@ exports.triggerNewsPost = functions.https.onRequest(async (req, res) => {
   }
 
   try {
-    console.log('Manual news post triggered via HTTP')
+    const result = await executeNewsPosting('manual')
     
-    if (!NEWS_API_KEY) {
-      res.status(500).json({ error: 'NewsAPI key not configured' })
-      return
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: result.message,
+        postId: result.postId || null,
+        trigger: result.trigger
+      })
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error,
+        trigger: result.trigger
+      })
     }
-
-    const newsBotInfo = await loadNewsBotInfo()
-    const articles = await fetchLatestNews('technology', 3)
-    
-    if (!articles || articles.length === 0) {
-      res.status(404).json({ error: 'No articles found' })
-      return
-    }
-
-    const validArticle = articles.find(article => 
-      isValidArticle(article) && isArticleRecent(article)
-    )
-
-    if (!validArticle) {
-      res.status(404).json({ error: 'No valid recent articles found' })
-      return
-    }
-
-    const result = await createNewsPost(validArticle, newsBotInfo)
-    
-    res.status(200).json({
-      success: true,
-      message: 'News post created successfully',
-      postId: result.PostID,
-      article: {
-        title: validArticle.title,
-        source: validArticle.source.name
-      }
-    })
   } catch (error) {
-    console.error('Error in manual news post:', error)
     res.status(500).json({ 
-      error: 'Failed to create news post',
-      details: error.message 
+      success: false,
+      error: error.message,
+      trigger: 'manual'
     })
   }
 })
 
-// Function để get recent news posts (for monitoring)
+// =============================================================================
+// MONITORING ENDPOINT
+// =============================================================================
+
 exports.getRecentNewsPosts = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*')
   
   try {
     const recentPosts = await db
       .collection('posts')
-      .where('UserID', '==', NEWS_BOT_USER_ID)
+      .where('UserID', '==', CONFIG.NEWS_BOT_USER_ID)
       .orderBy('Created', 'desc')
       .limit(10)
       .get()
@@ -398,13 +445,23 @@ exports.getRecentNewsPosts = functions.https.onRequest(async (req, res) => {
     res.status(200).json({
       success: true,
       count: posts.length,
-      posts: posts
+      posts: posts,
+      config: {
+        categories: CONFIG.CATEGORIES,
+        maxCaptionLength: CONFIG.MAX_CAPTION_LENGTH,
+        articleAgeHours: CONFIG.ARTICLE_AGE_HOURS
+      }
     })
   } catch (error) {
-    console.error('Error getting recent news posts:', error)
     res.status(500).json({ 
-      error: 'Failed to get recent posts',
-      details: error.message 
+      success: false,
+      error: error.message
     })
   }
 })
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))

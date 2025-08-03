@@ -1,4 +1,16 @@
-firebase functions:log --only triggerNewsPost
+# Delete functions cũ trước
+firebase functions:delete autoPostNews
+firebase functions:delete triggerNewsPost  
+firebase functions:delete getRecentNewsPosts
+
+# Deploy functions mới
+firebase deploy --only functions
+
+# Verify deployment
+firebase functions:list
+
+# Test manual trigger
+curl -X POST https://us-central1-fir-auth-cozy.cloudfunctions.net/triggerNewsPost
 
 Invoke-WebRequest `
   -Uri "https://us-central1-fir-auth-cozy.cloudfunctions.net/triggerNewsPost" `
@@ -6,15 +18,18 @@ Invoke-WebRequest `
   -Body '{}' `
   -ContentType "application/json"
 
-firebase functions:list
+# Check recent posts
+curl https://us-central1-fir-auth-cozy.cloudfunctions.net/getRecentNewsPosts
 
-# Delete functions trước
-firebase functions:delete triggerNewsPost
-firebase functions:delete autoPostNews
-firebase functions:delete getRecentNewsPosts
+# Monitor logs
+firebase functions:log --only autoPostNews
+firebase functions:log --only triggerNewsPost
 
-# Deploy lại
-firebase deploy --only functions
-
-us-central1-fir-auth-cozy.cloudfunctions.net/getRecentNewsPosts
+https://us-central1-fir-auth-cozy.cloudfunctions.net/getRecentNewsPosts
 https://us-central1-fir-auth-cozy.cloudfunctions.net/triggerNewsPost
+
+# Set NewsAPI key nếu chưa có
+firebase functions:config:set newsapi.key="YOUR_NEWSAPI_KEY"
+
+# Verify config
+firebase functions:config:get
