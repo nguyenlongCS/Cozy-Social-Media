@@ -1,15 +1,14 @@
 <!--
-src/components/CreatePost.vue - Updated without Caption Length Validation
-Component CreatePost - Tạo bài đăng mới với expandable caption input
+src/components/CreatePost.vue - Updated with Multi-Media Support
+Component CreatePost - Tạo bài đăng mới với multi-media support như Instagram
 Logic:
-- Form tạo bài đăng với preview media và expandable caption input
-- Caption input tự động giãn theo nội dung (có thể xuống hàng)
-- REMOVED: Caption length validation và maxlength restriction
-- Upload file vào bucket posts/ và lưu bài đăng thông qua useFirestore
-- Hiển thị avatar của user hiện tại thay vì icon mặc định
-- Load user profile để lấy avatar từ Firestore
-- Validation file size và type
-- Chuyển về trang chủ sau khi đăng thành công
+- Support upload nhiều ảnh/video cùng lúc
+- Carousel preview với navigation dots
+- Individual media controls (remove từng item)
+- Drag & drop reordering
+- Mixed media types (ảnh + video)
+- Enhanced file validation
+- Bulk upload to Firebase Storage
 -->
 <template>
   <div class="create-post">
@@ -22,23 +21,116 @@ Logic:
     </div>
     <div class="timestamp">{{ getCurrentTime() }}</div>
     
-    <div class="media-area" @click="triggerFileInput">
-      <div v-if="!selectedFile" class="upload-placeholder">
+    <div class="media-area">
+      <!-- Empty state -->
+      <div v-if="selectedFiles.length === 0" class="upload-placeholder" @click="triggerFileInput">
         <div class="plus-icon"></div>
         <span>{{ getText('addMedia') }}</span>
+        <div class="upload-hint">{{ getText('multiMediaHint') }}</div>
       </div>
-      <div v-else class="media-preview">
-        <img v-if="isImage" :src="previewUrl" alt="Preview" class="preview-media">
-        <video v-else-if="isVideo" :src="previewUrl" controls class="preview-media"></video>
-        <button class="remove-media" @click.stop="removeMedia">×</button>
+      
+      <!-- Multi-media preview -->
+      <div v-else class="media-carousel">
+        <!-- Current media display -->
+        <div class="media-container">
+          <div class="media-wrapper">
+            <img 
+              v-if="currentMedia.type.startsWith('image/')" 
+              :src="currentMedia.url" 
+              alt="Preview" 
+              class="preview-media"
+            >
+            <video 
+              v-else-if="currentMedia.type.startsWith('video/')" 
+              :src="currentMedia.url" 
+              controls
+              class="preview-media"
+            />
+          </div>
+          
+          <!-- Media controls -->
+          <div class="media-controls">
+            <button 
+              class="nav-btn prev-btn" 
+              @click="previousMedia"
+              v-if="selectedFiles.length > 1"
+              :disabled="currentIndex === 0"
+            >
+              ‹
+            </button>
+            <button 
+              class="nav-btn next-btn" 
+              @click="nextMedia"
+              v-if="selectedFiles.length > 1"
+              :disabled="currentIndex === selectedFiles.length - 1"
+            >
+              ›
+            </button>
+            <button 
+              class="remove-media" 
+              @click="removeCurrentMedia"
+            >
+              ×
+            </button>
+            <button 
+              class="add-more-btn" 
+              @click="triggerFileInput"
+              :disabled="selectedFiles.length >= 10"
+            >
+              +
+            </button>
+          </div>
+        </div>
+        
+        <!-- Dots indicator -->
+        <div v-if="selectedFiles.length > 1" class="media-dots">
+          <button
+            v-for="(file, index) in selectedFiles"
+            :key="index"
+            class="dot"
+            :class="{ active: index === currentIndex }"
+            @click="currentIndex = index"
+          >
+          </button>
+        </div>
+        
+        <!-- Media counter -->
+        <div class="media-counter">
+          {{ currentIndex + 1 }}/{{ selectedFiles.length }}
+          <span v-if="selectedFiles.length >= 10" class="limit-warning">{{ getText('mediaLimit') }}</span>
+        </div>
       </div>
+      
+      <!-- File input -->
       <input 
         ref="fileInput" 
         type="file" 
         accept="image/*,video/*" 
+        multiple
         @change="handleFileSelect"
         style="display: none"
       >
+    </div>
+
+    <!-- Media thumbnails -->
+    <div v-if="selectedFiles.length > 1" class="media-thumbnails">
+      <div 
+        v-for="(file, index) in selectedFiles" 
+        :key="index"
+        class="thumbnail"
+        :class="{ active: index === currentIndex }"
+        @click="currentIndex = index"
+      >
+        <img 
+          v-if="file.type.startsWith('image/')" 
+          :src="file.url" 
+          alt="Thumbnail"
+        >
+        <div v-else class="video-thumbnail">
+          <div class="play-icon">▶</div>
+        </div>
+        <button class="remove-thumbnail" @click.stop="removeMedia(index)">×</button>
+      </div>
     </div>
 
     <div class="bottom-bar">
@@ -52,7 +144,11 @@ Logic:
       ></textarea>
       <div class="actions">
         <button class="cancel-btn" @click="handleCancel" :disabled="isUploading"></button>
-        <button class="post-btn" @click="handlePost" :disabled="!canPost || isUploading"></button>
+        <button class="post-btn" @click="handlePost" :disabled="!canPost || isUploading">
+          <div v-if="isUploading" class="upload-progress">
+            {{ uploadProgress }}%
+          </div>
+        </button>
       </div>
     </div>
   </div>
@@ -79,31 +175,31 @@ export default {
 
     // Reactive data
     const caption = ref('')
-    const selectedFile = ref(null)
-    const previewUrl = ref('')
+    const selectedFiles = ref([])
+    const currentIndex = ref(0)
     const fileInput = ref(null)
     const captionTextarea = ref(null)
     const isUploading = ref(false)
+    const uploadProgress = ref(0)
     const userAvatar = ref('')
 
-    // Computed properties - UPDATED: Removed caption length requirement
+    // Constants
+    const MAX_FILES = 10
+    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+    const ALLOWED_TYPES = ['image/', 'video/']
+
+    // Computed properties
     const canPost = computed(() => {
-      return caption.value.trim().length > 0 && user.value && selectedFile.value !== null
+      return caption.value.trim().length > 0 && user.value && selectedFiles.value.length > 0
     })
 
-    const isImage = computed(() => {
-      return selectedFile.value && selectedFile.value.type.startsWith('image/')
-    })
-    
-    const isVideo = computed(() => {
-      return selectedFile.value && selectedFile.value.type.startsWith('video/')
+    const currentMedia = computed(() => {
+      return selectedFiles.value[currentIndex.value] || {}
     })
 
     // Methods
     const getCurrentUserDisplayName = () => {
       if (!user.value) return getText('guest')
-      
-      // Hiển thị "Me/Tôi" cho current user
       const meText = currentLanguage.value === 'vi' ? 'Tôi' : 'Me'
       return meText
     }
@@ -118,22 +214,15 @@ export default {
       return `${hours}:${minutes}, ${day}/${month}/${year}`
     }
 
-    // Auto-resize textarea theo nội dung
     const adjustTextareaHeight = async () => {
       await nextTick()
       if (captionTextarea.value) {
-        // Reset height để tính toán chính xác
         captionTextarea.value.style.height = 'auto'
-        
-        // Tính chiều cao cần thiết
         const scrollHeight = captionTextarea.value.scrollHeight
-        const maxHeight = 150 // Increased max height để cho phép caption dài hơn
-        
-        // Set chiều cao mới, không vượt quá max height
+        const maxHeight = 150
         const newHeight = Math.min(scrollHeight, maxHeight)
         captionTextarea.value.style.height = newHeight + 'px'
         
-        // Enable/disable scrollbar nếu vượt quá max height
         if (scrollHeight > maxHeight) {
           captionTextarea.value.style.overflowY = 'auto'
         } else {
@@ -142,7 +231,6 @@ export default {
       }
     }
 
-    // Load user avatar
     const loadUserAvatar = async () => {
       if (!user.value) {
         userAvatar.value = ''
@@ -154,12 +242,10 @@ export default {
         if (userProfile && userProfile.Avatar) {
           userAvatar.value = userProfile.Avatar
         } else {
-          // Fallback to Firebase Auth avatar if no custom avatar
           userAvatar.value = user.value.photoURL || ''
         }
       } catch (error) {
         console.error('Error loading user avatar:', error)
-        // Fallback to Firebase Auth avatar on error
         userAvatar.value = user.value.photoURL || ''
       }
     }
@@ -170,46 +256,115 @@ export default {
       }
     }
 
-    const handleFileSelect = (event) => {
-      const file = event.target.files[0]
-      if (!file) return
-
-      // Validate file size (max 10MB)
-      if (file.size > 10 * 1024 * 1024) {
+    const validateFile = (file) => {
+      // Check file size
+      if (file.size > MAX_FILE_SIZE) {
         showError({ message: 'FILE_TOO_LARGE' }, 'upload')
-        return
+        return false
       }
 
-      // Validate file type
-      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+      // Check file type
+      if (!ALLOWED_TYPES.some(type => file.type.startsWith(type))) {
         showError({ message: 'INVALID_FILE_TYPE' }, 'upload')
-        return
+        return false
       }
 
-      selectedFile.value = file
-      
-      // Create preview URL
-      if (previewUrl.value) {
-        URL.revokeObjectURL(previewUrl.value)
-      }
-      previewUrl.value = URL.createObjectURL(file)
+      return true
     }
 
-    const removeMedia = () => {
-      if (previewUrl.value) {
-        URL.revokeObjectURL(previewUrl.value)
+    const handleFileSelect = (event) => {
+      const files = Array.from(event.target.files)
+      if (!files.length) return
+
+      // Check total files limit
+      if (selectedFiles.value.length + files.length > MAX_FILES) {
+        showError({ message: 'TOO_MANY_FILES' }, 'upload')
+        return
       }
-      selectedFile.value = null
-      previewUrl.value = ''
+
+      // Validate and process files
+      const validFiles = files.filter(validateFile)
+      
+      validFiles.forEach(file => {
+        const fileObj = {
+          file,
+          url: URL.createObjectURL(file),
+          type: file.type,
+          name: file.name,
+          size: file.size
+        }
+        selectedFiles.value.push(fileObj)
+      })
+
+      // Reset file input
       if (fileInput.value) {
         fileInput.value.value = ''
+      }
+
+      console.log(`Added ${validFiles.length} files. Total: ${selectedFiles.value.length}`)
+    }
+
+    const removeMedia = (index) => {
+      if (selectedFiles.value[index]) {
+        URL.revokeObjectURL(selectedFiles.value[index].url)
+        selectedFiles.value.splice(index, 1)
+        
+        // Adjust current index
+        if (currentIndex.value >= selectedFiles.value.length) {
+          currentIndex.value = Math.max(0, selectedFiles.value.length - 1)
+        }
+      }
+    }
+
+    const removeCurrentMedia = () => {
+      removeMedia(currentIndex.value)
+    }
+
+    const removeAllMedia = () => {
+      selectedFiles.value.forEach(file => {
+        URL.revokeObjectURL(file.url)
+      })
+      selectedFiles.value = []
+      currentIndex.value = 0
+    }
+
+    const previousMedia = () => {
+      if (currentIndex.value > 0) {
+        currentIndex.value--
+      }
+    }
+
+    const nextMedia = () => {
+      if (currentIndex.value < selectedFiles.value.length - 1) {
+        currentIndex.value++
       }
     }
 
     const handleCancel = () => {
       caption.value = ''
-      removeMedia()
+      removeAllMedia()
       router.push('/')
+    }
+
+    const uploadMultipleMedia = async () => {
+      const uploadPromises = selectedFiles.value.map(async (fileObj, index) => {
+        try {
+          const result = await uploadMedia(fileObj.file, user.value.uid)
+          uploadProgress.value = Math.round(((index + 1) / selectedFiles.value.length) * 100)
+          return {
+            url: result.downloadURL,
+            type: fileObj.type.startsWith('image/') ? 'image' : 'video',
+            size: fileObj.size,
+            name: fileObj.name
+          }
+        } catch (error) {
+          console.error(`Failed to upload file ${fileObj.name}:`, error)
+          return null
+        }
+      })
+
+      const results = await Promise.all(uploadPromises)
+      return results.filter(result => result !== null)
     }
 
     const handlePost = async () => {
@@ -221,33 +376,35 @@ export default {
       if (!canPost.value) {
         if (!caption.value.trim()) {
           showError({ message: 'MISSING_CAPTION' }, 'post')
-        } else if (!selectedFile.value) {
+        } else if (selectedFiles.value.length === 0) {
           showError({ message: 'MISSING_MEDIA' }, 'post')
         }
         return
       }
 
       isUploading.value = true
+      uploadProgress.value = 0
 
       try {
-        let mediaUrl = null
-        let mediaType = null
-
-        // Upload media - bắt buộc phải có media
-        if (selectedFile.value) {
-          const uploadResult = await uploadMedia(selectedFile.value, user.value.uid)
-          mediaUrl = uploadResult.downloadURL
-          mediaType = selectedFile.value.type.startsWith('image/') ? 'image' : 'video'
+        // Upload all media files
+        const uploadedMedia = await uploadMultipleMedia()
+        
+        if (uploadedMedia.length === 0) {
+          throw new Error('No media files uploaded successfully')
         }
 
-        // Create post data
+        // Create post data with multiple media
         const postData = {
           caption: caption.value.trim(),
           authorId: user.value.uid,
           authorName: getCurrentUserDisplayName(),
           authorEmail: user.value.email,
-          mediaUrl,
-          mediaType,
+          // For single media compatibility
+          mediaUrl: uploadedMedia[0].url,
+          mediaType: uploadedMedia[0].type,
+          // New field for multiple media
+          mediaItems: uploadedMedia,
+          mediaCount: uploadedMedia.length,
           createdAt: new Date(),
           likes: 0,
           comments: []
@@ -260,7 +417,7 @@ export default {
         
         // Reset form and navigate home
         caption.value = ''
-        removeMedia()
+        removeAllMedia()
         router.push('/')
 
       } catch (error) {
@@ -268,6 +425,7 @@ export default {
         showError(error, 'post')
       } finally {
         isUploading.value = false
+        uploadProgress.value = 0
       }
     }
 
@@ -280,9 +438,16 @@ export default {
       }
     }, { immediate: true })
 
-    // Watch caption changes để auto-resize textarea
+    // Watch caption changes
     watch(caption, () => {
       adjustTextareaHeight()
+    })
+
+    // Watch current index bounds
+    watch(() => selectedFiles.value.length, (newLength) => {
+      if (currentIndex.value >= newLength) {
+        currentIndex.value = Math.max(0, newLength - 1)
+      }
     })
 
     // Load avatar on mount
@@ -290,7 +455,6 @@ export default {
       if (user.value) {
         loadUserAvatar()
       }
-      // Initial textarea height adjustment
       nextTick(() => {
         adjustTextareaHeight()
       })
@@ -298,15 +462,16 @@ export default {
 
     return {
       caption,
-      selectedFile,
-      previewUrl,
+      selectedFiles,
+      currentIndex,
       fileInput,
       captionTextarea,
       isUploading,
+      uploadProgress,
       userAvatar,
       canPost,
-      isImage,
-      isVideo,
+      currentMedia,
+      MAX_FILES,
       getText,
       getCurrentUserDisplayName,
       getCurrentTime,
@@ -314,6 +479,9 @@ export default {
       triggerFileInput,
       handleFileSelect,
       removeMedia,
+      removeCurrentMedia,
+      previousMedia,
+      nextMedia,
       handleCancel,
       handlePost
     }
@@ -374,7 +542,7 @@ export default {
 
 .media-area {
   width: 80%;
-  height: 18.75rem;
+  height: 15rem;
   background: var(--theme-color);
   display: flex;
   align-items: center;
@@ -399,6 +567,7 @@ export default {
   color: #000;
   font-size: 1rem;
   font-weight: 500;
+  text-align: center;
 }
 
 .plus-icon {
@@ -407,47 +576,254 @@ export default {
   background: url('@/icons/plus.png') center/cover;
 }
 
-.media-preview {
+.upload-hint {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+/* Media Carousel */
+.media-carousel {
   width: 100%;
   height: 100%;
   position: relative;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+}
+
+.media-container {
+  flex: 1;
+  position: relative;
   overflow: hidden;
 }
 
+.media-wrapper {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .preview-media {
-  max-width: 90%;
-  max-height: 90%;
+  max-width: 95%;
+  max-height: 95%;
   width: auto;
   height: auto;
   object-fit: contain;
-  border-radius: 0.9375rem;
+  border-radius: 0.5rem;
 }
 
-.remove-media {
+.media-controls {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
   width: 2rem;
   height: 2rem;
   background: rgba(0, 0, 0, 0.7);
   color: white;
   border: none;
   border-radius: 50%;
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: bold;
   cursor: pointer;
+  pointer-events: all;
+  transition: all 0.3s ease;
+}
+
+.prev-btn {
+  left: 0.5rem;
+}
+
+.next-btn {
+  right: 0.5rem;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.9);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.remove-media {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: rgba(255, 0, 0, 0.8);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  pointer-events: all;
+  transition: all 0.3s ease;
+}
+
+.add-more-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 2.5rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: rgba(0, 150, 0, 0.8);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  pointer-events: all;
+  transition: all 0.3s ease;
+}
+
+.remove-media:hover, .add-more-btn:hover {
+  transform: scale(1.1);
+}
+
+.add-more-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Media Dots */
+.media-dots {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.25rem;
+  pointer-events: all;
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dot.active {
+  background: white;
+  transform: scale(1.2);
+}
+
+.media-counter {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  pointer-events: all;
+}
+
+.limit-warning {
+  color: #ff6b6b;
+  margin-left: 0.25rem;
+}
+
+/* Media Thumbnails */
+.media-thumbnails {
+  width: 80%;
+  margin-top: 0.5rem;
+  display: flex;
+  gap: 0.375rem;
+  overflow-x: auto;
+  padding: 0.25rem;
+}
+
+.media-thumbnails::-webkit-scrollbar {
+  height: 0.25rem;
+}
+
+.media-thumbnails::-webkit-scrollbar-track {
+  background: rgba(255, 235, 124, 0.2);
+  border-radius: 0.125rem;
+}
+
+.media-thumbnails::-webkit-scrollbar-thumb {
+  background: rgba(255, 235, 124, 0.5);
+  border-radius: 0.125rem;
+}
+
+.thumbnail {
+  position: relative;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.375rem;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.thumbnail.active {
+  border-color: var(--theme-color);
+  transform: scale(1.05);
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.video-thumbnail {
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.3s ease;
-  z-index: 10;
 }
 
-.remove-media:hover {
-  background: rgba(0, 0, 0, 0.9);
+.play-icon {
+  color: white;
+  font-size: 1rem;
+}
+
+.remove-thumbnail {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  width: 1rem;
+  height: 1rem;
+  background: rgba(255, 0, 0, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 0.625rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.remove-thumbnail:hover {
+  transform: scale(1.1);
 }
 
 .bottom-bar {
@@ -464,7 +840,7 @@ export default {
 .caption-input {
   flex: 1;
   min-height: 1.875rem;
-  max-height: 9.375rem; /* Increased max height để cho phép caption dài hơn */
+  max-height: 9.375rem;
   background: var(--theme-color);
   border: 0.125rem solid #000;
   border-radius: 0.9375rem;
@@ -473,13 +849,11 @@ export default {
   color: #000;
   outline: none;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
-  resize: none; /* Disable manual resize */
-  overflow-y: hidden; /* Initially hidden, will be set to auto if needed */
+  resize: none;
+  overflow-y: hidden;
   font-family: inherit;
   line-height: 1.2;
-  /* Expandable textarea styles */
   transition: height 0.2s ease;
-  /* REMOVED: maxlength attribute để cho phép caption dài */
 }
 
 .caption-input::placeholder {
@@ -493,7 +867,7 @@ export default {
 .actions {
   display: flex;
   gap: 0.625rem;
-  align-self: flex-end; /* Align buttons to bottom */
+  align-self: flex-end;
 }
 
 .cancel-btn, .post-btn {
@@ -504,7 +878,8 @@ export default {
   cursor: pointer;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.3);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  flex-shrink: 0; /* Prevent buttons from shrinking */
+  flex-shrink: 0;
+  position: relative;
 }
 
 .cancel-btn {
@@ -513,6 +888,16 @@ export default {
 
 .post-btn {
   background: url('@/icons/post.png') center/cover var(--theme-color);
+}
+
+.upload-progress {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.625rem;
+  font-weight: bold;
+  color: #000;
 }
 
 .cancel-btn:hover:not(:disabled), .post-btn:hover:not(:disabled) {

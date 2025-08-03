@@ -1,14 +1,14 @@
 <!--
-src/components/HomeMain.vue - Updated với Posts Structure mới
-Component Feed chính - Hiển thị posts từ Firestore với chức năng like
+src/components/HomeMain.vue - Updated with Multi-Media Display Support
+Component Feed chính - Hiển thị posts từ Firestore với multi-media carousel support
 Logic:
-- Load posts từ Firestore với structure mới (PostID, UserID, UserName, etc.)
-- Cuộn wheel để chuyển bài với throttle và warning
-- Preload media cho bài tiếp theo để tránh lag
-- Emit currentPost để HomeRight hiển thị chi tiết
-- Format timestamp và display name với (me/tôi) cho current user
-- Xử lý like/unlike post thông qua togglePostLike
-- Sử dụng fields mới: PostID, UserName, Avatar, Caption, Created, MediaType, MediaURL
+- Hiển thị single media (backward compatibility)
+- Hiển thị multi-media với carousel navigation
+- Dots indicator cho multiple media
+- Media counter (1/5)
+- Preload media cho bài tiếp theo
+- Support mixed media types (image + video)
+- Maintain existing functionality (like, scroll, etc.)
 -->
 <template>
   <div class="feed">
@@ -59,15 +59,70 @@ Logic:
       <div class="timestamp">{{ formatTimestamp(currentPost.Created) }}</div>
       
       <div class="media-area">
-        <img v-if="currentPost.MediaType === 'image'" 
-             :src="currentPost.MediaURL" 
-             :alt="currentPost.Caption"
-             class="post-media">
-        <video v-else-if="currentPost.MediaType === 'video'" 
+        <!-- Multi-media carousel -->
+        <div v-if="hasMultipleMedia" class="media-carousel">
+          <div class="media-container">
+            <img v-if="currentMedia.type === 'image'" 
+                 :src="currentMedia.url" 
+                 :alt="currentPost.Caption"
+                 class="post-media">
+            <video v-else-if="currentMedia.type === 'video'" 
+                   :src="currentMedia.url" 
+                   controls
+                   class="post-media">
+            </video>
+            
+            <!-- Navigation controls -->
+            <div class="media-controls" v-if="currentPost.mediaCount > 1">
+              <button 
+                class="nav-btn prev-btn" 
+                @click="previousMedia"
+                :disabled="currentMediaIndex === 0"
+              >
+                ‹
+              </button>
+              <button 
+                class="nav-btn next-btn" 
+                @click="nextMedia"
+                :disabled="currentMediaIndex === currentPost.mediaCount - 1"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+          
+          <!-- Media dots indicator -->
+          <div v-if="currentPost.mediaCount > 1" class="media-dots">
+            <button
+              v-for="(item, index) in currentPost.mediaItems"
+              :key="index"
+              class="dot"
+              :class="{ active: index === currentMediaIndex }"
+              @click="currentMediaIndex = index"
+            >
+            </button>
+          </div>
+          
+          <!-- Media counter -->
+          <div v-if="currentPost.mediaCount > 1" class="media-counter">
+            {{ currentMediaIndex + 1 }}/{{ currentPost.mediaCount }}
+          </div>
+        </div>
+        
+        <!-- Single media (backward compatibility) -->
+        <div v-else-if="currentPost.MediaURL" class="single-media">
+          <img v-if="currentPost.MediaType === 'image'" 
                :src="currentPost.MediaURL" 
-               controls
+               :alt="currentPost.Caption"
                class="post-media">
-        </video>
+          <video v-else-if="currentPost.MediaType === 'video'" 
+                 :src="currentPost.MediaURL" 
+                 controls
+                 class="post-media">
+          </video>
+        </div>
+        
+        <!-- No media -->
         <div v-else class="no-media">
           {{ getText('textPost') }}
         </div>
@@ -110,15 +165,29 @@ export default {
     // Reactive data
     const posts = ref([])
     const currentIndex = ref(0)
+    const currentMediaIndex = ref(0) // New: for multi-media navigation
     const preloadedMedia = ref(new Map())
     const lastScrollTime = ref(0)
     const scrollCooldown = 300
     const isLiking = ref(false)
-    const userLikes = ref(new Set()) // Track posts liked by current user
+    const userLikes = ref(new Set())
 
     // Computed properties
     const currentPost = computed(() => {
       return posts.value[currentIndex.value] || {}
+    })
+
+    // New: Check if current post has multiple media
+    const hasMultipleMedia = computed(() => {
+      return currentPost.value.mediaItems && currentPost.value.mediaItems.length > 0
+    })
+
+    // New: Get current media item for multi-media posts
+    const currentMedia = computed(() => {
+      if (hasMultipleMedia.value) {
+        return currentPost.value.mediaItems[currentMediaIndex.value] || {}
+      }
+      return {}
     })
 
     const isLikedByUser = computed(() => {
@@ -138,6 +207,24 @@ export default {
       }
       
       return userName
+    }
+
+    // New: Multi-media navigation methods
+    const previousMedia = () => {
+      if (currentMediaIndex.value > 0) {
+        currentMediaIndex.value--
+      }
+    }
+
+    const nextMedia = () => {
+      if (currentMediaIndex.value < currentPost.value.mediaCount - 1) {
+        currentMediaIndex.value++
+      }
+    }
+
+    // Reset media index when post changes
+    const resetMediaIndex = () => {
+      currentMediaIndex.value = 0
     }
 
     const loadPosts = async () => {
@@ -180,16 +267,12 @@ export default {
       try {
         const isCurrentlyLiked = isLikedByUser.value
         
-        // Update in Firestore with strict policy
         const result = await togglePostLike(currentPost.value.PostID, user.value.uid)
         
         if (!result.success) {
-          // Handle failed like attempt
           if (result.message === 'ALREADY_LIKED') {
             console.log('User already liked this post')
-            // Ensure UI reflects actual state
             userLikes.value.add(currentPost.value.PostID)
-            // Show user-friendly message
             showError({ message: 'ALREADY_LIKED_POST' }, 'like')
           } else if (result.message === 'NOT_LIKED') {
             console.log('User has not liked this post')
@@ -227,33 +310,66 @@ export default {
       }
     }
 
+    // Updated: Enhanced preload for multi-media
     const preloadMedia = (index) => {
       const post = posts.value[index]
-      if (!post || !post.MediaURL || preloadedMedia.value.has(post.PostID)) {
+      if (!post || preloadedMedia.value.has(post.PostID)) {
         return
       }
 
-      if (post.MediaType === 'image') {
-        const img = new Image()
-        img.onload = () => {
-          preloadedMedia.value.set(post.PostID, true)
-          console.log('Preloaded image for post:', post.PostID)
+      // Preload multi-media items
+      if (post.mediaItems && post.mediaItems.length > 0) {
+        post.mediaItems.forEach((mediaItem, mediaIndex) => {
+          const cacheKey = `${post.PostID}_${mediaIndex}`
+          
+          if (mediaItem.type === 'image') {
+            const img = new Image()
+            img.onload = () => {
+              preloadedMedia.value.set(cacheKey, true)
+              console.log(`Preloaded multi-media image ${mediaIndex + 1} for post:`, post.PostID)
+            }
+            img.onerror = () => {
+              console.error(`Failed to preload multi-media image ${mediaIndex + 1} for post:`, post.PostID)
+            }
+            img.src = mediaItem.url
+          } else if (mediaItem.type === 'video') {
+            const video = document.createElement('video')
+            video.onloadeddata = () => {
+              preloadedMedia.value.set(cacheKey, true)
+              console.log(`Preloaded multi-media video ${mediaIndex + 1} for post:`, post.PostID)
+            }
+            video.onerror = () => {
+              console.error(`Failed to preload multi-media video ${mediaIndex + 1} for post:`, post.PostID)
+            }
+            video.preload = 'metadata'
+            video.src = mediaItem.url
+          }
+        })
+      }
+      // Fallback to single media preload
+      else if (post.MediaURL) {
+        if (post.MediaType === 'image') {
+          const img = new Image()
+          img.onload = () => {
+            preloadedMedia.value.set(post.PostID, true)
+            console.log('Preloaded single image for post:', post.PostID)
+          }
+          img.onerror = () => {
+            console.error('Failed to preload single image for post:', post.PostID)
+          }
+          img.src = post.MediaURL
+        } else if (post.MediaType === 'video') {
+          const video = document.createElement('video')
+          video.onloadeddata = () => {
+            preloadedMedia.value.set(post.PostID, true)
+            console.log('Preloaded single video for post:', post.PostID)
+          }
+          video.onerror = () => {
+            console.error('Failed to preload single video for post:', post.PostID)
+          }
+          video.preload = 'metadata'
+          video.src = post.MediaURL
         }
-        img.onerror = () => {
-          console.error('Failed to preload image for post:', post.PostID)
-        }
-        img.src = post.MediaURL
-      } else if (post.MediaType === 'video') {
-        const video = document.createElement('video')
-        video.onloadeddata = () => {
-          preloadedMedia.value.set(post.PostID, true)
-          console.log('Preloaded video for post:', post.PostID)
-        }
-        video.onerror = () => {
-          console.error('Failed to preload video for post:', post.PostID)
-        }
-        video.preload = 'metadata'
-        video.src = post.MediaURL
       }
     }
 
@@ -310,6 +426,9 @@ export default {
       const totalPosts = posts.value.length
       if (totalPosts === 0) return
 
+      // Reset media index when post changes
+      resetMediaIndex()
+
       const nextIndex = (newIndex + 1) % totalPosts
       preloadMedia(nextIndex)
 
@@ -321,10 +440,9 @@ export default {
       emit('current-post-changed', newPost)
     }, { immediate: true, deep: true })
 
-    // Watch user changes để reload likes tracking
+    // Watch user changes
     watch(user, async (newUser) => {
       if (newUser) {
-        // Re-load user liked posts khi user đăng nhập
         try {
           const likedPostIds = await getUserLikedPosts(newUser.uid)
           userLikes.value = new Set(likedPostIds)
@@ -333,7 +451,6 @@ export default {
           console.error('Error reloading user likes:', error)
         }
       } else {
-        // Clear likes tracking khi user đăng xuất
         userLikes.value.clear()
       }
     })
@@ -346,6 +463,9 @@ export default {
     return {
       posts,
       currentPost,
+      currentMediaIndex,
+      hasMultipleMedia,
+      currentMedia,
       isLoading,
       isLiking,
       isLikedByUser,
@@ -353,7 +473,9 @@ export default {
       getDisplayName,
       formatTimestamp,
       handleWheel,
-      handleLike
+      handleLike,
+      previousMedia,
+      nextMedia
     }
   }
 }
@@ -433,6 +555,33 @@ export default {
   font-size: 1rem;
   font-weight: 500;
   overflow: hidden;
+  position: relative;
+}
+
+/* Multi-media carousel styles */
+.media-carousel {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.media-container {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.single-media {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .post-media {
@@ -442,6 +591,89 @@ export default {
   height: auto;
   object-fit: contain;
   border-radius: 0.9375rem;
+}
+
+.media-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2rem;
+  height: 2rem;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  pointer-events: all;
+  transition: all 0.3s ease;
+  z-index: 10;
+}
+
+.prev-btn {
+  left: 0.5rem;
+}
+
+.next-btn {
+  right: 0.5rem;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.9);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.media-dots {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.25rem;
+  z-index: 10;
+}
+
+.dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dot.active {
+  background: white;
+  transform: scale(1.2);
+}
+
+.media-counter {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.75rem;
+  font-size: 0.625rem;
+  font-weight: 500;
+  z-index: 10;
 }
 
 .no-media, .loading-text, .empty-text {

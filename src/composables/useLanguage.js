@@ -114,6 +114,11 @@ const translations = {
     // ===== FOOTER & INTERACTION =====
     scrollToNext: 'Cuộn để xem bài viết tiếp theo',
     scrollTooFast: 'Thao tác cuộn quá nhanh',
+
+    // ===== MULTI-MEDIA SUPPORT =====
+    multiMediaHint: 'Chọn nhiều ảnh/video (tối đa 10)',
+    mediaLimit: 'Tối đa 10 media',
+    tooManyFiles: 'Quá nhiều files! Tối đa 10 media.',
     
     // ===== SUCCESS MESSAGES =====
     loginSuccess: 'Đăng nhập thành công!',
@@ -274,6 +279,11 @@ const translations = {
     postsComingSoon: 'Coming Soon',
     friendsComingSoon: 'Coming Soon',
     save: 'Save',
+
+    // ===== MULTI-MEDIA SUPPORT =====
+    multiMediaHint: 'Select multiple photos/videos (max 10)',
+    mediaLimit: 'Max 10 media',
+    tooManyFiles: 'Too many files! Maximum 10 media allowed.',
     
     // ===== SUCCESS MESSAGES =====
     loginSuccess: 'Login successful!',

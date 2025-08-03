@@ -150,7 +150,7 @@ export function useFirestore() {
   }
 
   // Tạo post mới trong Firestore với user info từ users collection
-  // UPDATED: Tích hợp classification system
+  // UPDATED: Tích hợp classification system + Multi-media support
   const createPost = async (postData) => {
     if (!postData) {
       throw new Error('MISSING_POST_DATA')
@@ -168,8 +168,7 @@ export function useFirestore() {
       // Get user info từ users collection
       const userInfo = await populateUserInfo(postData.authorId)
 
-      // Add post to Firestore collection 'posts'
-      const postsCollection = collection(db, 'posts')
+      // Prepare post data structure
       const postToSave = {
         // PostID sẽ được auto-generated bởi Firestore
         UserID: postData.authorId,
@@ -177,8 +176,6 @@ export function useFirestore() {
         Avatar: userInfo.Avatar,
         Caption: postData.caption.trim(),
         Created: postData.createdAt || new Date(),
-        MediaType: postData.mediaType || null,
-        MediaURL: postData.mediaUrl || null,
         likes: 0,
         comments: 0,
         // Classification fields - will be populated by classification service
@@ -187,18 +184,36 @@ export function useFirestore() {
         ClassificationVersion: null
       }
 
+      // Handle multi-media vs single media
+      if (postData.mediaItems && postData.mediaItems.length > 0) {
+        // NEW: Multi-media support
+        postToSave.mediaItems = postData.mediaItems
+        postToSave.mediaCount = postData.mediaItems.length
+        
+        // Backward compatibility - use first media as primary
+        postToSave.MediaURL = postData.mediaItems[0].url
+        postToSave.MediaType = postData.mediaItems[0].type
+        
+        console.log(`Creating post with ${postData.mediaItems.length} media items`)
+      } else {
+        // Single media (backward compatibility)
+        postToSave.MediaType = postData.mediaType || null
+        postToSave.MediaURL = postData.mediaUrl || null
+        postToSave.mediaItems = null
+        postToSave.mediaCount = postData.mediaUrl ? 1 : 0
+      }
+
+      // Add post to Firestore collection 'posts'
+      const postsCollection = collection(db, 'posts')
       const docRef = await addDoc(postsCollection, postToSave)
 
       console.log('Post created with user info:', {
         PostID: docRef.id,
         UserID: postData.authorId,
-        UserName: userInfo.UserName
+        UserName: userInfo.UserName,
+        MediaCount: postToSave.mediaCount
       })
 
-      // =============================================================================
-      // CLASSIFICATION INTEGRATION - Background classification
-      // =============================================================================
-      
       // Background classification - không await để không làm chậm UX
       classifyNewPost(docRef.id, postData.caption.trim()).catch(error => {
         console.error('Classification failed for post:', docRef.id, error)

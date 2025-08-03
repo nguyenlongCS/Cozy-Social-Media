@@ -93,7 +93,6 @@ Logic:
     <div class="posts-section">
       <h3 class="section-title">{{ getText('posts') }}</h3>
       <div class="placeholder-content">
-        <div class="placeholder-icon"></div>
         <p class="placeholder-text">{{ getText('postsComingSoon') }}</p>
       </div>
     </div>
@@ -102,7 +101,6 @@ Logic:
     <div class="friends-section">
       <h3 class="section-title">{{ getText('friends') }}</h3>
       <div class="placeholder-content">
-        <div class="placeholder-icon"></div>
         <p class="placeholder-text">{{ getText('friendsComingSoon') }}</p>
       </div>
     </div>
@@ -576,27 +574,6 @@ export default {
   padding: 1rem; /* Reduced padding */
   text-align: center;
   min-height: 0; /* Allow shrinking */
-}
-
-.placeholder-icon {
-  width: 2.5rem; /* Reduced size */
-  height: 2.5rem;
-  background: rgba(255, 235, 124, 0.2);
-  border-radius: 50%;
-  margin-bottom: 0.5rem; /* Reduced margin */
-  position: relative;
-  flex-shrink: 0; /* Prevent shrinking */
-}
-
-.placeholder-icon::after {
-  content: "...";
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: rgba(255, 235, 124, 0.6);
-  font-size: 1.25rem; /* Reduced font size */
-  font-weight: bold;
 }
 
 .placeholder-text {
