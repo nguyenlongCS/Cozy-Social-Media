@@ -1,7 +1,7 @@
 <!--
-src/components/Footer.vue - Refactored
-Component footer
-Logic: Hiển thị hướng dẫn cuộn và warning khi cuộn quá nhanh
+src/components/Footer.vue - Updated with Opacity
+Component footer với hiệu ứng làm mờ
+Logic: Hiển thị hướng dẫn cuộn và warning khi cuộn quá nhanh với độ mờ
 -->
 <template>
   <div class="footer">
@@ -49,6 +49,14 @@ export default {
   font-size: 0.875rem;
   font-weight: 500;
   position: relative;
+  /* UPDATED: Làm mờ footer */
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.footer:hover {
+  /* UPDATED: Hiển thị rõ hơn khi hover */
+  opacity: 1;
 }
 
 .footer-content {

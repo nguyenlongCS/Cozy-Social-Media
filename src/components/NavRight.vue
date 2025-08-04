@@ -7,7 +7,7 @@ Logic: Theme selector, language toggle, và auth button
   <div class="nav-right">
     <div class="theme-selector">
       <button class="theme-btn yellow" @click="changeTheme('#ffeb7c')"></button>
-      <button class="theme-btn green" @click="changeTheme('#a4f28d')"></button>
+      <button class="theme-btn green" @click="changeTheme('#6495ED')"></button>
       <button class="theme-btn aqua" @click="changeTheme('#7FFFD4')"></button>
     </div>
     <button class="language-btn btn" @click="handleToggleLanguage">

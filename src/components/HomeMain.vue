@@ -1,14 +1,10 @@
 <!--
-src/components/HomeMain.vue - Updated with Multi-Media Display Support
+src/components/HomeMain.vue - Updated UI
 Component Feed chính - Hiển thị posts từ Firestore với multi-media carousel support
-Logic:
-- Hiển thị single media (backward compatibility)
-- Hiển thị multi-media với carousel navigation
-- Dots indicator cho multiple media
-- Media counter (1/5)
-- Preload media cho bài tiếp theo
-- Support mixed media types (image + video)
-- Maintain existing functionality (like, scroll, etc.)
+UI Changes:
+- Bỏ media-area wrapper, hiển thị post-media trực tiếp trong content-container
+- Làm mờ footer
+- Giữ nguyên tất cả logic và chức năng hiện có
 -->
 <template>
   <div class="feed">
@@ -19,9 +15,7 @@ Logic:
         <span class="name">{{ getText('loading') }}</span>
       </div>
       <div class="timestamp">--:--</div>
-      <div class="media-area">
-        <div class="loading-text">{{ getText('loading') }}</div>
-      </div>
+      <div class="loading-text">{{ getText('loading') }}</div>
       <div class="bottom-bar">
         <span class="caption">{{ getText('loading') }}</span>
         <div class="actions">
@@ -38,9 +32,7 @@ Logic:
         <span class="name">{{ getText('noPosts') }}</span>
       </div>
       <div class="timestamp">--:--</div>
-      <div class="media-area">
-        <div class="empty-text">{{ getText('noPosts') }}</div>
-      </div>
+      <div class="empty-text">{{ getText('noPosts') }}</div>
       <div class="bottom-bar">
         <span class="caption">{{ getText('noPosts') }}</span>
         <div class="actions">
@@ -58,74 +50,72 @@ Logic:
       </div>
       <div class="timestamp">{{ formatTimestamp(currentPost.Created) }}</div>
       
-      <div class="media-area">
-        <!-- Multi-media carousel -->
-        <div v-if="hasMultipleMedia" class="media-carousel">
-          <div class="media-container">
-            <img v-if="currentMedia.type === 'image'" 
-                 :src="currentMedia.url" 
-                 :alt="currentPost.Caption"
-                 class="post-media">
-            <video v-else-if="currentMedia.type === 'video'" 
-                   :src="currentMedia.url" 
-                   controls
-                   class="post-media">
-            </video>
-            
-            <!-- Navigation controls -->
-            <div class="media-controls" v-if="currentPost.mediaCount > 1">
-              <button 
-                class="nav-btn prev-btn" 
-                @click="previousMedia"
-                :disabled="currentMediaIndex === 0"
-              >
-                ‹
-              </button>
-              <button 
-                class="nav-btn next-btn" 
-                @click="nextMedia"
-                :disabled="currentMediaIndex === currentPost.mediaCount - 1"
-              >
-                ›
-              </button>
-            </div>
-          </div>
-          
-          <!-- Media dots indicator -->
-          <div v-if="currentPost.mediaCount > 1" class="media-dots">
-            <button
-              v-for="(item, index) in currentPost.mediaItems"
-              :key="index"
-              class="dot"
-              :class="{ active: index === currentMediaIndex }"
-              @click="currentMediaIndex = index"
-            >
-            </button>
-          </div>
-          
-          <!-- Media counter -->
-          <div v-if="currentPost.mediaCount > 1" class="media-counter">
-            {{ currentMediaIndex + 1 }}/{{ currentPost.mediaCount }}
-          </div>
-        </div>
-        
-        <!-- Single media (backward compatibility) -->
-        <div v-else-if="currentPost.MediaURL" class="single-media">
-          <img v-if="currentPost.MediaType === 'image'" 
-               :src="currentPost.MediaURL" 
+      <!-- Multi-media carousel - DIRECT DISPLAY -->
+      <div v-if="hasMultipleMedia" class="media-carousel">
+        <div class="media-container">
+          <img v-if="currentMedia.type === 'image'" 
+               :src="currentMedia.url" 
                :alt="currentPost.Caption"
                class="post-media">
-          <video v-else-if="currentPost.MediaType === 'video'" 
-                 :src="currentPost.MediaURL" 
+          <video v-else-if="currentMedia.type === 'video'" 
+                 :src="currentMedia.url" 
                  controls
                  class="post-media">
           </video>
+          
+          <!-- Navigation controls -->
+          <div class="media-controls" v-if="currentPost.mediaCount > 1">
+            <button 
+              class="nav-btn prev-btn" 
+              @click="previousMedia"
+              :disabled="currentMediaIndex === 0"
+            >
+              ‹
+            </button>
+            <button 
+              class="nav-btn next-btn" 
+              @click="nextMedia"
+              :disabled="currentMediaIndex === currentPost.mediaCount - 1"
+            >
+              ›
+            </button>
+          </div>
         </div>
         
-        <!-- No media -->
-        <div v-else class="no-media">
-          {{ getText('textPost') }}
+        <!-- Media dots indicator -->
+        <div v-if="currentPost.mediaCount > 1" class="media-dots">
+          <button
+            v-for="(item, index) in currentPost.mediaItems"
+            :key="index"
+            class="dot"
+            :class="{ active: index === currentMediaIndex }"
+            @click="currentMediaIndex = index"
+          >
+          </button>
         </div>
+        
+        <!-- Media counter -->
+        <div v-if="currentPost.mediaCount > 1" class="media-counter">
+          {{ currentMediaIndex + 1 }}/{{ currentPost.mediaCount }}
+        </div>
+      </div>
+      
+      <!-- Single media (backward compatibility) - DIRECT DISPLAY -->
+      <div v-else-if="currentPost.MediaURL" class="single-media">
+        <img v-if="currentPost.MediaType === 'image'" 
+             :src="currentPost.MediaURL" 
+             :alt="currentPost.Caption"
+             class="post-media">
+        <video v-else-if="currentPost.MediaType === 'video'" 
+               :src="currentPost.MediaURL" 
+               controls
+               class="post-media">
+        </video>
+      </div>
+      
+      <!-- No media -->
+      <div v-else class="no-media">
+        {{ getText('textPost') }}
       </div>
       
       <div class="bottom-bar">
@@ -542,29 +532,15 @@ export default {
   font-weight: 400;
 }
 
-.media-area {
+/* Multi-media carousel styles - DIRECT DISPLAY */
+.media-carousel {
   width: 80%;
   height: 18.75rem;
-  background: var(--theme-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 0.9375rem;
-  box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.3);
-  color: #000;
-  font-size: 1rem;
-  font-weight: 500;
-  overflow: hidden;
-  position: relative;
-}
-
-/* Multi-media carousel styles */
-.media-carousel {
-  width: 100%;
-  height: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
+  border-radius: 0.9375rem;
+  overflow: hidden;
 }
 
 .media-container {
@@ -577,16 +553,18 @@ export default {
 }
 
 .single-media {
-  width: 100%;
-  height: 100%;
+  width: 80%;
+  height: 18.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 0.9375rem;
+  overflow: hidden;
 }
 
 .post-media {
-  max-width: 90%;
-  max-height: 90%;
+  max-width: 100%;
+  max-height: 100%;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -680,9 +658,14 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #000;
+  color: var(--theme-color);
   font-size: 1rem;
   font-weight: 500;
+  width: 80%;
+  height: 18.75rem;
+  background: rgba(255, 235, 124, 0.1);
+  border-radius: 0.9375rem;
+  border: 0.125rem solid rgba(255, 235, 124, 0.3);
 }
 
 .bottom-bar {
@@ -729,7 +712,8 @@ export default {
 }
 
 .like {
-  background: url('@/icons/like.png') center/cover var(--theme-color);
+  background: url('@/icons/like.png') center/1rem var(--theme-color); /* UPDATED: Smaller icon */
+  background-repeat: no-repeat;
 }
 
 .like.liked {
@@ -751,7 +735,8 @@ export default {
 }
 
 .options-menu {
-  background: url('@/icons/options.png') center/cover var(--theme-color);
+  background: url('@/icons/options.png') center/1rem var(--theme-color); /* UPDATED: Smaller icon */
+  background-repeat: no-repeat;
 }
 
 .like:hover:not(:disabled), .options-menu:hover {

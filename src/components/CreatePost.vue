@@ -501,7 +501,7 @@ export default {
   align-items: center;
   border-radius: 0.9375rem;
   border: 0.125rem solid var(--theme-color);
-  background: #2B2D42;
+  background: #F8F8FF;
   box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
 }
 
@@ -903,7 +903,7 @@ export default {
 .cancel-btn:hover:not(:disabled), .post-btn:hover:not(:disabled) {
   transform: scale(1.1);
   box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.4);
-  background-color: #2B2D42;
+  background-color: #F8F8FF;
 }
 
 .cancel-btn:disabled, .post-btn:disabled {

@@ -1,8 +1,9 @@
 <!--
-src/components/NavMid.vue - Updated với Profile Navigation
-Component navigation giữa header
+src/components/NavMid.vue - Updated với Profile Navigation và Smaller Icons
+Component navigation giữa header với icons nhỏ hơn
 Logic: Hiển thị 5 navigation buttons khi không ở trang login
 Thêm navigation đến trang profile khi click profile-button
+UI: Icons được làm nhỏ lại
 -->
 <template>
   <div class="nav-mid">
@@ -51,7 +52,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1.25rem;
+  gap: 1.5rem;
   border-radius: 0.9375rem;
 }
 
@@ -62,23 +63,28 @@ export default {
 }
 
 .home-button {
-  background: url('@/icons/home.png') center/cover var(--theme-color);
+  background: url('@/icons/home.png') center/1.5rem var(--theme-color); /* UPDATED: Smaller icon */
+  background-repeat: no-repeat;
 }
 
 .friends-button {
-  background: url('@/icons/friends.png') center/cover var(--theme-color);
+  background: url('@/icons/friends.png') center/1.5rem var(--theme-color); /* UPDATED: Smaller icon */
+  background-repeat: no-repeat;
 }
 
 .profile-button {
-  background: url('@/icons/profile.png') center/cover var(--theme-color);
+  background: url('@/icons/profile.png') center/1.5rem var(--theme-color); /* UPDATED: Smaller icon */
+  background-repeat: no-repeat;
 }
 
 .mess-button {
-  background: url('@/icons/mess.png') center/cover var(--theme-color);
+  background: url('@/icons/mess.png') center/1.5rem var(--theme-color); /* UPDATED: Smaller icon */
+  background-repeat: no-repeat;
 }
 
 .notification-button {
-  background: url('@/icons/notification.png') center/cover var(--theme-color);
+  background: url('@/icons/notification.png') center/1.5rem var(--theme-color); /* UPDATED: Smaller icon */
+  background-repeat: no-repeat;
 }
 
 .home-button:hover, .profile-button:hover, .mess-button:hover, .friends-button:hover, .notification-button:hover {
