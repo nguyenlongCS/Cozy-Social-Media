@@ -1,7 +1,7 @@
 {
   "name": "cozy-social-cloud-functions",
-  "description": "Cloud Functions for Cozy Social Media Auto News Posting",
-  "version": "1.0.0",
+  "description": "Cloud Functions for Cozy Social Media Auto News Posting with Classification",
+  "version": "1.0.1",
   "engines": {
     "node": "18"
   },
@@ -23,6 +23,7 @@
     "shell": "firebase functions:shell",
     "start": "npm run shell",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test-classification": "node -e \"const {classifyPost} = require('./classificationService'); console.log('Test:', classifyPost('iPhone 15 có camera tuyệt vời và hiệu năng mạnh mẽ'));\""
   }
 }

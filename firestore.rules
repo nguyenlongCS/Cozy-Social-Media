@@ -1,9 +1,9 @@
 /*
-firestore.rules - Updated with HasCustomAvatar Support
-Firestore Security Rules với support cho HasCustomAvatar field
+firestore.rules - Simplified Structure
+Firestore Security Rules với cấu trúc đơn giản, loại bỏ ClassificationVersion và ClassifiedAt
 Logic bảo mật cho collections:
 - users: Chỉ user được phép đọc/ghi document của chính mình, support HasCustomAvatar field
-- posts: Authenticated users có thể đọc tất cả, tạo post mới, update likes
+- posts: Authenticated users có thể đọc tất cả, tạo post mới, update likes (chỉ Tags field cho classification)
 - comments: Authenticated users có thể đọc tất cả, tạo comment mới
 - Ngăn chặn truy cập trái phép và đảm bảo data integrity
 */
@@ -28,7 +28,7 @@ service cloud.firestore {
         && validateUserUpdate(resource.data, request.resource.data);
     }
     
-    // Posts collection
+    // Posts collection (simplified structure)
     match /posts/{postId} {
       // Tất cả authenticated users có thể đọc posts
       allow read: if request.auth != null;
@@ -105,14 +105,16 @@ service cloud.firestore {
         && (!newData.keys().hasAny(['HasCustomAvatar']) || newData.HasCustomAvatar is bool);
     }
     
-    // Validate post data structure
+    // Validate post data structure (simplified - chỉ Tags field)
     function validatePostData(data) {
       return data.keys().hasAll(['caption', 'authorId', 'createdAt', 'likes', 'likedBy'])
         && data.caption is string
         && data.authorId is string
         && data.createdAt is timestamp
         && data.likes is number
-        && data.likedBy is list;
+        && data.likedBy is list
+        // Tags field là optional và có thể null
+        && (!data.keys().hasAny(['Tags']) || data.Tags == null || data.Tags is list);
     }
     
     // Validate post update - ngăn chặn thay đổi authorId, createdAt
@@ -127,7 +129,9 @@ service cloud.firestore {
         && newData.authorId == existingData.authorId
         && newData.createdAt == existingData.createdAt
         && (newData.mediaUrl == existingData.mediaUrl || (!('mediaUrl' in existingData) && !('mediaUrl' in newData)))
-        && (newData.mediaType == existingData.mediaType || (!('mediaType' in existingData) && !('mediaType' in newData)));
+        && (newData.mediaType == existingData.mediaType || (!('mediaType' in existingData) && !('mediaType' in newData)))
+        // Tags field có thể được update bởi system
+        && (newData.Tags == existingData.Tags || (!('Tags' in existingData) && !('Tags' in newData)) || newData.Tags is list);
     }
     
     // Validate like update logic

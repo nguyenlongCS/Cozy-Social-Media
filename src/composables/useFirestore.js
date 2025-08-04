@@ -1,10 +1,10 @@
 /*
-src/composables/useFirestore.js - Updated with Classification Integration
-Composable quản lý Firestore và Storage với tích hợp hệ thống phân loại
+src/composables/useFirestore.js - Simplified Classification Integration
+Composable quản lý Firestore và Storage với tích hợp hệ thống phân loại đơn giản
 Logic:
 - Giữ nguyên tất cả logic và chức năng đã có trước đó
-- Tích hợp classification system vào createPost
-- Thêm functions mới để query posts theo tags
+- Tích hợp classification system vào createPost chỉ với field Tags
+- Loại bỏ ClassificationVersion và ClassifiedAt fields
 - Avatar files được lưu vào bucket avatar/
 - Post media files được lưu vào bucket posts/
 - Tự động populate author info từ users collection
@@ -150,7 +150,7 @@ export function useFirestore() {
   }
 
   // Tạo post mới trong Firestore với user info từ users collection
-  // UPDATED: Tích hợp classification system + Multi-media support
+  // UPDATED: Tích hợp classification system đơn giản chỉ với Tags field
   const createPost = async (postData) => {
     if (!postData) {
       throw new Error('MISSING_POST_DATA')
@@ -178,15 +178,13 @@ export function useFirestore() {
         Created: postData.createdAt || new Date(),
         likes: 0,
         comments: 0,
-        // Classification fields - will be populated by classification service
-        Tags: null,
-        ClassifiedAt: null,
-        ClassificationVersion: null
+        // Tags field - sẽ được populate bởi classification service
+        Tags: null
       }
 
       // Handle multi-media vs single media
       if (postData.mediaItems && postData.mediaItems.length > 0) {
-        // NEW: Multi-media support
+        // Multi-media support
         postToSave.mediaItems = postData.mediaItems
         postToSave.mediaCount = postData.mediaItems.length
         
@@ -278,7 +276,7 @@ export function useFirestore() {
   }
 
   // =============================================================================
-  // NEW FUNCTIONS: TAG-BASED QUERIES
+  // TAG-BASED QUERIES
   // =============================================================================
 
   // Lấy posts có chứa một hoặc nhiều tags cụ thể
@@ -431,7 +429,7 @@ export function useFirestore() {
   }
 
   // =============================================================================
-  // EXISTING LIKE FUNCTIONS (Không thay đổi)
+  // LIKE FUNCTIONS (Không thay đổi)
   // =============================================================================
 
   // Check if user has liked a post
@@ -581,7 +579,7 @@ export function useFirestore() {
   }
 
   // =============================================================================
-  // EXISTING COMMENT FUNCTIONS (Không thay đổi)
+  // COMMENT FUNCTIONS (Không thay đổi)
   // =============================================================================
 
   // Thêm comment cho một post với user info từ users collection
@@ -713,11 +711,11 @@ export function useFirestore() {
     uploadAvatar, // Avatar uploads (bucket: avatar/)
     uploadMedia,  // Post media uploads (bucket: posts/)
     
-    // Post functions (UPDATED với classification)
-    createPost, // Updated với automatic classification
+    // Post functions (UPDATED với simplified classification)
+    createPost, // Updated với automatic classification chỉ Tags field
     getPosts,   // Updated với Tags field support
     
-    // NEW: Tag-based query functions
+    // Tag-based query functions
     getPostsByTags,
     getPostsWithTagFilter,
     getTagStatistics,

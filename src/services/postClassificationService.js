@@ -1,9 +1,10 @@
 /*
-src/services/postClassificationService.js
-Service tích hợp hệ thống phân loại vào Firestore
+src/services/postClassificationService.js - Simplified
+Service tích hợp hệ thống phân loại vào Firestore với cấu trúc đơn giản
 Logic:
 - Tích hợp usePostClassification vào quy trình tạo post
-- Tự động classify và lưu Tags vào Firestore
+- Tự động classify và lưu chỉ Tags vào Firestore
+- Loại bỏ ClassificationVersion và ClassifiedAt fields
 - Batch processing cho posts hiện có
 - Background classification không ảnh hưởng UX
 - Tách biệt hoàn toàn khỏi logic UI hiện tại
@@ -39,7 +40,7 @@ export class PostClassificationService {
   // =============================================================================
 
   /**
-   * Classify một post mới và update Tags field
+   * Classify một post mới và update Tags field (đơn giản)
    * Được gọi sau khi post được tạo thành công
    */
   async classifyAndUpdatePost(postId, caption) {
@@ -62,12 +63,10 @@ export class PostClassificationService {
       // Extract chỉ tên tags (không lưu confidence scores)
       const tags = classificationResult.map(result => result.tag)
       
-      // Update post với Tags field
+      // Update post với Tags field đơn giản
       const postRef = doc(db, 'posts', postId)
       await updateDoc(postRef, {
-        Tags: tags,
-        ClassifiedAt: new Date(),
-        ClassificationVersion: '1.0'
+        Tags: tags
       })
 
       console.log('Post classified successfully:', {
@@ -94,7 +93,7 @@ export class PostClassificationService {
   // =============================================================================
 
   /**
-   * Classify tất cả posts chưa có Tags
+   * Classify tất cả posts chưa có Tags (đơn giản)
    * Chạy trong background, không ảnh hưởng UX
    */
   async classifyExistingPosts(batchSize = 20) {
@@ -154,7 +153,7 @@ export class PostClassificationService {
         await new Promise(resolve => setTimeout(resolve, 100))
       }
 
-      // Update Firestore với batch writes
+      // Update Firestore với batch writes (đơn giản)
       await this.updatePostsWithTags(results)
 
       console.log(`Batch classification completed: ${results.length} posts processed`)
@@ -169,7 +168,7 @@ export class PostClassificationService {
   }
 
   /**
-   * Update multiple posts với Tags field sử dụng batch writes
+   * Update multiple posts với Tags field sử dụng batch writes (đơn giản)
    */
   async updatePostsWithTags(classificationResults) {
     if (!classificationResults || classificationResults.length === 0) {
@@ -187,10 +186,9 @@ export class PostClassificationService {
         chunk.forEach(result => {
           if (result.tags && result.tags.length > 0) {
             const postRef = doc(db, 'posts', result.postId)
+            // Chỉ update Tags field
             batch.update(postRef, {
-              Tags: result.tags,
-              ClassifiedAt: new Date(),
-              ClassificationVersion: '1.0'
+              Tags: result.tags
             })
           }
         })
@@ -206,11 +204,11 @@ export class PostClassificationService {
   }
 
   // =============================================================================
-  // UTILITY METHODS
+  // UTILITY METHODS (SIMPLIFIED)
   // =============================================================================
 
   /**
-   * Get classification statistics
+   * Get classification statistics (đơn giản)
    */
   async getClassificationStats() {
     try {
@@ -254,23 +252,22 @@ export class PostClassificationService {
   }
 
   /**
-   * Re-classify posts với version mới
+   * Re-classify posts (đơn giản - chỉ update Tags)
    */
-  async reclassifyPosts(version = '1.0', batchSize = 50) {
+  async reclassifyPosts(batchSize = 50) {
     try {
-      console.log(`Starting reclassification with version ${version}...`)
+      console.log('Starting reclassification...')
       
       const postsCollection = collection(db, 'posts')
-      const outdatedQuery = query(
+      const postsQuery = query(
         postsCollection,
-        where('ClassificationVersion', '!=', version),
         limit(batchSize)
       )
       
-      const querySnapshot = await getDocs(outdatedQuery)
+      const querySnapshot = await getDocs(postsQuery)
       
       if (querySnapshot.empty) {
-        console.log('No posts need reclassification')
+        console.log('No posts found for reclassification')
         return
       }
 
@@ -298,7 +295,7 @@ export class PostClassificationService {
   }
 
   /**
-   * Validate classification accuracy với manual labels
+   * Validate classification accuracy với manual labels (đơn giản)
    */
   async validateClassification(testCases) {
     if (!Array.isArray(testCases)) {
@@ -361,11 +358,11 @@ export class PostClassificationService {
 export const postClassificationService = new PostClassificationService()
 
 // =============================================================================
-// INTEGRATION HELPER FUNCTIONS
+// INTEGRATION HELPER FUNCTIONS (SIMPLIFIED)
 // =============================================================================
 
 /**
- * Helper function để integrate vào createPost flow
+ * Helper function để integrate vào createPost flow (đơn giản)
  * Gọi function này sau khi post được tạo thành công
  */
 export const classifyNewPost = async (postId, caption) => {
@@ -373,7 +370,7 @@ export const classifyNewPost = async (postId, caption) => {
 }
 
 /**
- * Helper function để chạy batch classification
+ * Helper function để chạy batch classification (đơn giản)
  * Có thể gọi từ admin panel hoặc cron job
  */
 export const runBatchClassification = async (batchSize = 20) => {
@@ -381,7 +378,7 @@ export const runBatchClassification = async (batchSize = 20) => {
 }
 
 /**
- * Helper function để get stats
+ * Helper function để get stats (đơn giản)
  */
 export const getClassificationStats = async () => {
   return await postClassificationService.getClassificationStats()

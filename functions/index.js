@@ -1,8 +1,9 @@
 /*
-functions/index.js - Optimized Auto News Posting System
-Firebase Cloud Functions tự động đăng bài viết tin tức với tối ưu hóa và cleanup
+functions/index.js - Auto News Posting System with Server-side Classification
+Firebase Cloud Functions tự động đăng bài viết tin tức với tích hợp classification
 Logic:
-- Cleanup: Loại bỏ object fallback, giảm logging, merge duplicate logic
+- Tích hợp server-side classification service cho auto posts
+- Tự động classify và gán Tags cho news posts
 - Enhanced: Retry mechanism, caption validation, source prioritization
 - Optimized: Constants consolidation, better error handling, source quality filtering
 - Professional: Focused categories, reliable news sources, production-ready code
@@ -11,6 +12,9 @@ Logic:
 const functions = require('firebase-functions')
 const admin = require('firebase-admin')
 const fetch = require('node-fetch')
+
+// Import server-side classification service
+const { classifyPost } = require('./classificationService')
 
 // Initialize Firebase Admin SDK
 admin.initializeApp()
@@ -39,7 +43,7 @@ const CONFIG = {
   // Content limits
   MAX_CAPTION_LENGTH: 500,
   MAX_TITLE_LENGTH: 200,
-  ARTICLE_AGE_HOURS: 24, // Giảm từ 48 xuống 24 giờ
+  ARTICLE_AGE_HOURS: 48, // Giảm từ 48 xuống 48 giờ
   RECENT_POSTS_CHECK: 30, // Giảm từ 50 xuống 30
   
   // Categories - Focused on high-quality tech news
@@ -315,7 +319,7 @@ const normalizeString = (str) => {
 }
 
 // =============================================================================
-// POST CREATION
+// POST CREATION WITH SERVER-SIDE CLASSIFICATION
 // =============================================================================
 
 const createNewsPost = async (article, newsBotInfo) => {
@@ -324,6 +328,21 @@ const createNewsPost = async (article, newsBotInfo) => {
   // Validate caption length
   if (caption.length > CONFIG.MAX_CAPTION_LENGTH) {
     throw new Error(`Caption too long: ${caption.length} > ${CONFIG.MAX_CAPTION_LENGTH}`)
+  }
+
+  // Classify caption using server-side classification service
+  let tags = null
+  try {
+    const classificationResult = classifyPost(caption)
+    if (classificationResult && classificationResult.length > 0) {
+      tags = classificationResult
+      console.log('Auto post classified with tags:', tags)
+    } else {
+      console.log('No classification tags found for auto post')
+    }
+  } catch (classificationError) {
+    console.error('Classification failed for auto post:', classificationError)
+    // Continue without tags rather than failing the post
   }
 
   const postData = {
@@ -335,11 +354,20 @@ const createNewsPost = async (article, newsBotInfo) => {
     MediaType: article.urlToImage ? 'image' : null,
     MediaURL: article.urlToImage || null,
     likes: 0,
-    comments: 0
+    comments: 0,
+    // Include Tags from server-side classification
+    Tags: tags
   }
 
   const docRef = await db.collection('posts').add(postData)
   
+  console.log('News post created with classification:', {
+    PostID: docRef.id,
+    UserID: CONFIG.NEWS_BOT_USER_ID,
+    UserName: newsBotInfo.UserName,
+    Tags: tags
+  })
+
   return {
     PostID: docRef.id,
     ...postData
