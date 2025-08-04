@@ -1,10 +1,10 @@
 <!--
-src/view/Home.vue
-View trang chủ - Updated
+src/view/Home.vue - Updated with Post Counter
+View trang chủ với post counter cho Footer
 Logic: 
 - Nhận showScrollWarning từ HomeMain component
-- Nhận currentPost từ HomeMain để pass sang HomeRight
-- Truyền scrollTooFast prop xuống Footer component
+- Nhận currentPost và postStats từ HomeMain để pass sang HomeRight và Footer
+- Truyền scrollTooFast và post counter props xuống Footer component
 - Xử lý chuyển đổi ngôn ngữ thông qua useLanguage
 -->
 <template>
@@ -19,10 +19,15 @@ Logic:
       <HomeMain 
         @scroll-warning="handleScrollWarning" 
         @current-post-changed="handleCurrentPostChanged"
+        @post-stats-changed="handlePostStatsChanged"
       />
       <HomeRight :post="currentPost" />
     </div>
-    <Footer :scrollTooFast="scrollWarning" />
+    <Footer 
+      :scrollTooFast="scrollWarning"
+      :currentPostIndex="postStats.currentIndex"
+      :totalPosts="postStats.totalPosts"
+    />
   </div>
 </template>
 
@@ -55,6 +60,10 @@ export default {
     const { toggleLanguage } = useLanguage()
     const scrollWarning = ref(false)
     const currentPost = ref({})
+    const postStats = ref({
+      currentIndex: 0,
+      totalPosts: 0
+    })
 
     // Handle scroll warning từ HomeMain
     const handleScrollWarning = (isWarning) => {
@@ -66,12 +75,19 @@ export default {
       currentPost.value = post
     }
 
+    // Handle post stats change từ HomeMain
+    const handlePostStatsChanged = (stats) => {
+      postStats.value = stats
+    }
+
     return {
       toggleLanguage,
       scrollWarning,
       currentPost,
+      postStats,
       handleScrollWarning,
-      handleCurrentPostChanged
+      handleCurrentPostChanged,
+      handlePostStatsChanged
     }
   }
 }

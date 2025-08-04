@@ -1,10 +1,14 @@
 <!--
-src/components/HomeMain.vue - Updated UI
-Component Feed chính - Hiển thị posts từ Firestore với multi-media carousel support
-UI Changes:
-- Bỏ media-area wrapper, hiển thị post-media trực tiếp trong content-container
-- Làm mờ footer
-- Giữ nguyên tất cả logic và chức năng hiện có
+src/components/HomeMain.vue - Updated with Options Menu
+Component Feed chính với options menu cho bài viết
+Logic:
+- Thêm options menu dropdown với 5 chức năng
+- Xóa bài viết (chỉ owner)
+- Ẩn bài viết (chỉ owner) 
+- Tải xuống media
+- Báo cáo bài viết
+- Kiểm tra quyền sở hữu để hiển thị menu phù hợp
+- Click outside để đóng menu
 -->
 <template>
   <div class="feed">
@@ -50,7 +54,7 @@ UI Changes:
       </div>
       <div class="timestamp">{{ formatTimestamp(currentPost.Created) }}</div>
       
-      <!-- Multi-media carousel - DIRECT DISPLAY -->
+      <!-- Multi-media carousel -->
       <div v-if="hasMultipleMedia" class="media-carousel">
         <div class="media-container">
           <img v-if="currentMedia.type === 'image'" 
@@ -100,7 +104,7 @@ UI Changes:
         </div>
       </div>
       
-      <!-- Single media (backward compatibility) - DIRECT DISPLAY -->
+      <!-- Single media -->
       <div v-else-if="currentPost.MediaURL" class="single-media">
         <img v-if="currentPost.MediaType === 'image'" 
              :src="currentPost.MediaURL" 
@@ -129,7 +133,57 @@ UI Changes:
           >
             <span class="like-count">{{ currentPost.likes || 0 }}</span>
           </button>
-          <button class="options-menu"></button>
+          
+          <!-- Options Menu Button -->
+          <div class="options-container">
+            <button 
+              class="options-menu"
+              @click="toggleOptionsMenu"
+              :disabled="isActionsLoading"
+            ></button>
+            
+            <!-- Options Dropdown Menu -->
+            <div v-if="showOptionsMenu" class="options-dropdown">
+              <!-- Owner-only actions -->
+              <template v-if="isPostOwner">
+                <button 
+                  class="option-item delete-option"
+                  @click="handleDeletePost"
+                  :disabled="isActionsLoading"
+                >
+                  <div class="option-icon delete-icon"></div>
+                  <span>{{ getText('deletePost') }}</span>
+                </button>
+                <button 
+                  class="option-item hide-option"
+                  @click="handleHidePost"
+                  :disabled="isActionsLoading"
+                >
+                  <div class="option-icon hide-icon"></div>
+                  <span>{{ getText('hidePost') }}</span>
+                </button>
+              </template>
+              
+              <!-- Common actions -->
+              <button 
+                class="option-item download-option"
+                @click="handleDownloadMedia"
+                :disabled="isActionsLoading || !hasMedia"
+              >
+                <div class="option-icon download-icon"></div>
+                <span>{{ getText('downloadMedia') }}</span>
+              </button>
+              <button 
+                class="option-item report-option"
+                @click="handleReportPost"
+                :disabled="isActionsLoading"
+              >
+                <div class="option-icon report-icon"></div>
+                <span>{{ getText('reportPost') }}</span>
+              </button>
+
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -137,42 +191,51 @@ UI Changes:
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useFirestore } from '@/composables/useFirestore'
 import { useLanguage } from '@/composables/useLanguage'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 import { useAuth } from '@/composables/useAuth'
+import { usePostActions } from '@/composables/usePostActions'
 
 export default {
   name: 'HomeMain',
-  emits: ['scroll-warning', 'current-post-changed'],
+  emits: ['scroll-warning', 'current-post-changed', 'post-deleted', 'post-hidden', 'post-stats-changed'],
   setup(props, { emit }) {
     const { getPosts, togglePostLike, getUserLikedPosts, isLoading } = useFirestore()
     const { getText, currentLanguage } = useLanguage()
     const { showError } = useErrorHandler()
     const { user } = useAuth()
+    const { 
+      deletePost, 
+      hidePost, 
+      downloadPostMedia, 
+      reportPost,
+      isLoading: isActionsLoading 
+    } = usePostActions()
     
     // Reactive data
     const posts = ref([])
     const currentIndex = ref(0)
-    const currentMediaIndex = ref(0) // New: for multi-media navigation
+    const currentMediaIndex = ref(0)
     const preloadedMedia = ref(new Map())
     const lastScrollTime = ref(0)
     const scrollCooldown = 300
     const isLiking = ref(false)
     const userLikes = ref(new Set())
+    
+    // Options menu state
+    const showOptionsMenu = ref(false)
 
     // Computed properties
     const currentPost = computed(() => {
       return posts.value[currentIndex.value] || {}
     })
 
-    // New: Check if current post has multiple media
     const hasMultipleMedia = computed(() => {
       return currentPost.value.mediaItems && currentPost.value.mediaItems.length > 0
     })
 
-    // New: Get current media item for multi-media posts
     const currentMedia = computed(() => {
       if (hasMultipleMedia.value) {
         return currentPost.value.mediaItems[currentMediaIndex.value] || {}
@@ -183,6 +246,16 @@ export default {
     const isLikedByUser = computed(() => {
       if (!user.value || !currentPost.value.PostID) return false
       return userLikes.value.has(currentPost.value.PostID)
+    })
+
+    // Options menu computed properties
+    const isPostOwner = computed(() => {
+      return user.value && currentPost.value.UserID === user.value.uid
+    })
+
+    const hasMedia = computed(() => {
+      return currentPost.value.MediaURL || 
+             (currentPost.value.mediaItems && currentPost.value.mediaItems.length > 0)
     })
 
     // Methods
@@ -199,7 +272,7 @@ export default {
       return userName
     }
 
-    // New: Multi-media navigation methods
+    // Media navigation methods
     const previousMedia = () => {
       if (currentMediaIndex.value > 0) {
         currentMediaIndex.value--
@@ -212,27 +285,137 @@ export default {
       }
     }
 
-    // Reset media index when post changes
     const resetMediaIndex = () => {
       currentMediaIndex.value = 0
     }
 
+    // Options menu methods
+    const toggleOptionsMenu = () => {
+      showOptionsMenu.value = !showOptionsMenu.value
+    }
+
+    const closeOptionsMenu = () => {
+      showOptionsMenu.value = false
+    }
+
+    // Handle click outside to close menu
+    const handleClickOutside = (event) => {
+      const optionsContainer = event.target.closest('.options-container')
+      if (!optionsContainer && showOptionsMenu.value) {
+        closeOptionsMenu()
+      }
+    }
+
+    // Post action handlers
+    const handleDeletePost = async () => {
+      if (!currentPost.value || !user.value) return
+      
+      const confirmed = confirm(getText('confirmDeletePost'))
+      if (!confirmed) return
+
+      try {
+        await deletePost(currentPost.value, user.value.uid)
+        
+        // Remove post from local state
+        posts.value.splice(currentIndex.value, 1)
+        
+        // Adjust current index
+        if (currentIndex.value >= posts.value.length) {
+          currentIndex.value = Math.max(0, posts.value.length - 1)
+        }
+        
+        // Emit updated post stats
+        emitPostStats()
+        
+        closeOptionsMenu()
+        emit('post-deleted', currentPost.value.PostID)
+        
+        // Reload posts if list becomes empty
+        if (posts.value.length === 0) {
+          await loadPosts()
+        }
+        
+      } catch (error) {
+        console.error('Delete post failed:', error)
+      }
+    }
+
+    const handleHidePost = async () => {
+      if (!currentPost.value || !user.value) return
+      
+      const confirmed = confirm(getText('confirmHidePost'))
+      if (!confirmed) return
+
+      try {
+        await hidePost(currentPost.value, user.value.uid)
+        
+        // Remove post from local state (visually hidden from feed)
+        posts.value.splice(currentIndex.value, 1)
+        
+        // Adjust current index
+        if (currentIndex.value >= posts.value.length) {
+          currentIndex.value = Math.max(0, posts.value.length - 1)
+        }
+        
+        // Emit updated post stats
+        emitPostStats()
+        
+        closeOptionsMenu()
+        emit('post-hidden', currentPost.value.PostID)
+        
+        // Reload posts if list becomes empty
+        if (posts.value.length === 0) {
+          await loadPosts()
+        }
+        
+      } catch (error) {
+        console.error('Hide post failed:', error)
+      }
+    }
+
+    const handleDownloadMedia = async () => {
+      if (!currentPost.value) return
+      
+      try {
+        await downloadPostMedia(currentPost.value)
+        closeOptionsMenu()
+      } catch (error) {
+        console.error('Download media failed:', error)
+      }
+    }
+
+    const handleReportPost = async () => {
+      if (!currentPost.value) return
+      
+      try {
+        await reportPost(currentPost.value)
+        closeOptionsMenu()
+      } catch (error) {
+        console.error('Report post failed:', error)
+      }
+    }
+
+    // Existing methods (loadPosts, handleLike, etc.) remain unchanged
     const loadPosts = async () => {
       try {
-        const fetchedPosts = await getPosts(10)
-        posts.value = fetchedPosts
-        console.log('Posts loaded:', fetchedPosts.length)
+        // Load ALL posts instead of limit 10
+        const fetchedPosts = await getPosts(1000) // Large number to get all posts
+        // Filter out hidden posts
+        posts.value = fetchedPosts.filter(post => !post.Hidden)
+        console.log('Posts loaded:', posts.value.length, 'Total fetched:', fetchedPosts.length)
         
-        // Load user liked posts if user is logged in
+        // Emit post stats for footer counter
+        emitPostStats()
+        
         if (user.value) {
           const likedPostIds = await getUserLikedPosts(user.value.uid)
           userLikes.value = new Set(likedPostIds)
           console.log('User liked posts loaded:', likedPostIds.length)
         }
         
-        if (fetchedPosts.length > 0) {
+        if (posts.value.length > 0) {
           preloadMedia(0)
-          if (fetchedPosts.length > 1) {
+          if (posts.value.length > 1) {
             preloadMedia(1)
           }
         }
@@ -240,6 +423,14 @@ export default {
         console.error('Error loading posts:', error)
         showError(error, 'loadPosts')
       }
+    }
+
+    // Emit post stats to parent
+    const emitPostStats = () => {
+      emit('post-stats-changed', {
+        currentIndex: currentIndex.value,
+        totalPosts: posts.value.length
+      })
     }
 
     const handleLike = async () => {
@@ -271,14 +462,12 @@ export default {
           return
         }
 
-        // Update UI state on successful toggle
         if (isCurrentlyLiked) {
           userLikes.value.delete(currentPost.value.PostID)
         } else {
           userLikes.value.add(currentPost.value.PostID)
         }
         
-        // Update local post data
         const postIndex = posts.value.findIndex(p => p.PostID === currentPost.value.PostID)
         if (postIndex !== -1) {
           const newLikeCount = isCurrentlyLiked 
@@ -300,14 +489,13 @@ export default {
       }
     }
 
-    // Updated: Enhanced preload for multi-media
+    // Preload media method (unchanged)
     const preloadMedia = (index) => {
       const post = posts.value[index]
       if (!post || preloadedMedia.value.has(post.PostID)) {
         return
       }
 
-      // Preload multi-media items
       if (post.mediaItems && post.mediaItems.length > 0) {
         post.mediaItems.forEach((mediaItem, mediaIndex) => {
           const cacheKey = `${post.PostID}_${mediaIndex}`
@@ -335,9 +523,7 @@ export default {
             video.src = mediaItem.url
           }
         })
-      }
-      // Fallback to single media preload
-      else if (post.MediaURL) {
+      } else if (post.MediaURL) {
         if (post.MediaType === 'image') {
           const img = new Image()
           img.onload = () => {
@@ -389,6 +575,11 @@ export default {
       
       event.preventDefault()
       
+      // Close options menu when scrolling
+      if (showOptionsMenu.value) {
+        closeOptionsMenu()
+      }
+      
       const currentTime = Date.now()
       const timeSinceLastScroll = currentTime - lastScrollTime.value
       
@@ -416,8 +607,11 @@ export default {
       const totalPosts = posts.value.length
       if (totalPosts === 0) return
 
-      // Reset media index when post changes
       resetMediaIndex()
+      closeOptionsMenu() // Close menu when changing posts
+      
+      // Emit updated post stats
+      emitPostStats()
 
       const nextIndex = (newIndex + 1) % totalPosts
       preloadMedia(nextIndex)
@@ -430,7 +624,6 @@ export default {
       emit('current-post-changed', newPost)
     }, { immediate: true, deep: true })
 
-    // Watch user changes
     watch(user, async (newUser) => {
       if (newUser) {
         try {
@@ -448,24 +641,39 @@ export default {
     // Lifecycle
     onMounted(() => {
       loadPosts()
+      document.addEventListener('click', handleClickOutside)
+    })
+
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside)
     })
 
     return {
       posts,
       currentPost,
+      currentIndex,
       currentMediaIndex,
       hasMultipleMedia,
       currentMedia,
       isLoading,
       isLiking,
       isLikedByUser,
+      isPostOwner,
+      hasMedia,
+      showOptionsMenu,
+      isActionsLoading,
       getText,
       getDisplayName,
       formatTimestamp,
       handleWheel,
       handleLike,
       previousMedia,
-      nextMedia
+      nextMedia,
+      toggleOptionsMenu,
+      handleDeletePost,
+      handleHidePost,
+      handleDownloadMedia,
+      handleReportPost
     }
   }
 }
@@ -532,7 +740,7 @@ export default {
   font-weight: 400;
 }
 
-/* Multi-media carousel styles - DIRECT DISPLAY */
+/* Multi-media carousel styles */
 .media-carousel {
   width: 80%;
   height: 18.75rem;
@@ -712,7 +920,7 @@ export default {
 }
 
 .like {
-  background: url('@/icons/like.png') center/1rem var(--theme-color); /* UPDATED: Smaller icon */
+  background: url('@/icons/like.png') center/1rem var(--theme-color);
   background-repeat: no-repeat;
 }
 
@@ -735,7 +943,7 @@ export default {
 }
 
 .options-menu {
-  background: url('@/icons/options.png') center/1rem var(--theme-color); /* UPDATED: Smaller icon */
+  background: url('@/icons/options.png') center/1rem var(--theme-color);
   background-repeat: no-repeat;
 }
 
@@ -745,9 +953,89 @@ export default {
   background-color: #2B2D42;
 }
 
-.like:disabled {
+.like:disabled, .options-menu:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+/* Options Menu Styles */
+.options-container {
+  position: relative;
+}
+
+.options-dropdown {
+  position: absolute;
+  bottom: 2.5rem;
+  right: 0;
+  min-width: 10rem;
+  background: #2B2D42;
+  border: 0.125rem solid var(--theme-color);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.option-item {
+  width: 100%;
+  padding: 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--theme-color);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.3s ease;
+  text-align: left;
+}
+
+.option-item:hover:not(:disabled) {
+  background: rgba(255, 235, 124, 0.1);
+}
+
+.option-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.option-icon {
+  width: 1rem;
+  height: 1rem;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
+}
+
+.delete-icon {
+  background-image: url('@/icons/delete.png');
+}
+
+.hide-icon {
+  background-image: url('@/icons/hide.png');
+}
+
+.download-icon {
+  background-image: url('@/icons/download.png');
+}
+
+.report-icon {
+  background-image: url('@/icons/report.png');
+}
+
+/* Special colors for critical actions */
+.delete-option {
+  color: #ff6b6b;
+}
+
+.delete-option .option-icon {
+  filter: brightness(0) saturate(100%) invert(55%) sepia(100%) saturate(3000%) hue-rotate(335deg) brightness(100%) contrast(95%);
+}
+
+.delete-option:hover:not(:disabled) {
+  background: rgba(255, 107, 107, 0.1);
 }
 </style>

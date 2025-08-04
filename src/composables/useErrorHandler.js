@@ -1,8 +1,8 @@
 /*
-src/composables/useErrorHandler.js - Updated with Missing Media Error Support
-Composable xử lý lỗi với hỗ trợ media requirement validation
+src/composables/useErrorHandler.js - Updated with Post Actions Error Support
+Composable xử lý lỗi với hỗ trợ post actions (delete, hide, download, report, share)
 Centralize error handling logic và provide consistent error messages
-Added: Missing media error code cho create post validation
+Added: Post actions error codes và success messages
 */
 import { useLanguage } from './useLanguage'
 
@@ -37,6 +37,11 @@ export function useErrorHandler() {
       'MISSING_FILE_OR_USER': 'postFailed',
       'MISSING_POST_DATA': 'postFailed',
       'MISSING_REQUIRED_FIELDS': 'postFailed',
+      
+      // Post Actions errors
+      'INVALID_POST': 'invalidPost',
+      'PERMISSION_DENIED': 'permissionDenied',
+      'NO_MEDIA_TO_DOWNLOAD': 'noMediaToDownload',
       
       // Profile errors
       'AVATAR_TOO_LARGE': 'avatarTooLarge',
@@ -109,6 +114,22 @@ export function useErrorHandler() {
       sync: {
         'defaultError': 'syncFailed',
         'syncSuccess': 'syncSuccess'
+      },
+      // New contexts for post actions
+      deletePost: {
+        'defaultError': 'deletePostFailed'
+      },
+      hidePost: {
+        'defaultError': 'hidePostFailed'
+      },
+      download: {
+        'defaultError': 'downloadMediaFailed'
+      },
+      report: {
+        'defaultError': 'reportComingSoon'
+      },
+      share: {
+        'defaultError': 'shareComingSoon'
       }
     }
 
@@ -149,7 +170,11 @@ export function useErrorHandler() {
       reset: 'resetEmailSent',
       post: 'postSuccess',
       profile: 'profileSuccess',
-      sync: 'syncSuccess'
+      sync: 'syncSuccess',
+      // New success contexts for post actions
+      deletePost: 'deletePostSuccess',
+      hidePost: 'hidePostSuccess',
+      download: 'downloadMediaSuccess'
     }
     
     const messageKey = successKeys[context] || 'loginSuccess'

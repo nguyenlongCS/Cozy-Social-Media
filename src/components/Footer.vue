@@ -1,7 +1,9 @@
 <!--
-src/components/Footer.vue - Updated with Opacity
-Component footer với hiệu ứng làm mờ
-Logic: Hiển thị hướng dẫn cuộn và warning khi cuộn quá nhanh với độ mờ
+src/components/Footer.vue - Updated with Post Counter
+Component footer với hiệu ứng làm mờ và hiển thị tổng số bài viết
+Logic: 
+- Hiển thị hướng dẫn cuộn và warning khi cuộn quá nhanh với độ mờ
+- Hiển thị counter bài viết hiện tại/tổng số (vd: 6/15) ở góc phải
 -->
 <template>
   <div class="footer">
@@ -10,6 +12,11 @@ Logic: Hiển thị hướng dẫn cuộn và warning khi cuộn quá nhanh vớ
     </div>
     <div v-if="scrollTooFast" class="scroll-warning">
       {{ getText('scrollTooFast') }}
+    </div>
+    
+    <!-- Post Counter -->
+    <div v-if="totalPosts > 0" class="post-counter">
+      {{ currentPostIndex + 1 }}/{{ totalPosts }}
     </div>
   </div>
 </template>
@@ -23,6 +30,14 @@ export default {
     scrollTooFast: {
       type: Boolean,
       default: false
+    },
+    currentPostIndex: {
+      type: Number,
+      default: 0
+    },
+    totalPosts: {
+      type: Number,
+      default: 0
     }
   },
   setup() {
@@ -72,6 +87,19 @@ export default {
   color: #d32f2f;
   font-weight: 600;
   animation: fadeInOut 2s ease-in-out;
+}
+
+.post-counter {
+  position: absolute;
+  bottom: 0.5rem;
+  right: 1rem;
+  font-size: 0.75rem;
+  color: #000;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.75rem;
+  backdrop-filter: blur(2px);
 }
 
 @keyframes fadeInOut {

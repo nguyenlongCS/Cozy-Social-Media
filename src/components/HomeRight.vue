@@ -1,7 +1,10 @@
 <!--
-src/components/HomeRight.vue - Updated with Tags Display
-Component sidebar bên phải - Chi tiết bài post với tags display
+src/components/HomeRight.vue - Updated with Theme Support
+Component sidebar bên phải - Chi tiết bài post với theme support
 Logic:
+- Sử dụng useTheme để áp dụng theme color động
+- CSS variables được cập nhật theo theme
+- Tích hợp theme cho tất cả UI elements
 - Hiển thị Caption, likes, comments của post hiện tại với fields mới
 - Caption hiển thị đầy đủ nội dung - có thể xuống hàng
 - Hiển thị tags ở dưới cùng với style viền bo tròn
@@ -10,14 +13,14 @@ Logic:
 - Hiển thị avatar bên trái comment-author cho mỗi comment
 -->
 <template>
-  <div class="right">
+  <div class="right" :style="themeStyles">
     <div v-if="post && post.PostID" class="post-details">
       <!-- Caption section -->
       <div class="caption-section">
         <h3 class="section-title">{{ getText('caption') }}</h3>
         <p class="caption-text">{{ post.Caption || getText('noCaption') }}</p>
         
-        <!-- Tags display - NEW -->
+        <!-- Tags display -->
         <div v-if="post.Tags && post.Tags.length > 0" class="tags-container">
           <div 
             v-for="tag in post.Tags" 
@@ -124,11 +127,12 @@ Logic:
 </template>
 
 <script>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useLanguage } from '@/composables/useLanguage'
 import { useFirestore } from '@/composables/useFirestore'
 import { useErrorHandler } from '@/composables/useErrorHandler'
+import { useTheme } from '@/composables/useTheme'
 
 export default {
   name: 'HomeRight',
@@ -143,13 +147,22 @@ export default {
     const { getText } = useLanguage()
     const { addComment, getPostComments } = useFirestore()
     const { showError } = useErrorHandler()
+    const { currentTheme } = useTheme()
 
-    // Reactive data - Loại bỏ like-related states
+    // Reactive data
     const comments = ref([])
     const newComment = ref('')
     const isLoading = ref(false)
     const isLoadingComments = ref(false)
     const showEmojiPicker = ref(false)
+
+    // Theme styles computed property
+    const themeStyles = computed(() => ({
+      '--current-theme-color': currentTheme.value,
+      '--theme-color-20': `${currentTheme.value}33`,  // 20% opacity
+      '--theme-color-10': `${currentTheme.value}1A`,  // 10% opacity
+      '--theme-color-05': `${currentTheme.value}0D`,  // 5% opacity
+    }))
 
     // Emoji list for picker
     const emojiList = [
@@ -158,7 +171,7 @@ export default {
       '💪', '👌', '✨', '🌟', '💖', '💕', '🙏', '👀'
     ]
 
-    // Methods - Loại bỏ handleLike
+    // Methods
     const formatCommentTime = (timestamp) => {
       if (!timestamp) return ''
       
@@ -234,7 +247,7 @@ export default {
         console.log('Comment saved successfully:', savedComment)
         
         newComment.value = ''
-        showEmojiPicker.value = false // Đóng emoji picker sau khi comment
+        showEmojiPicker.value = false
         await loadComments()
 
       } catch (error) {
@@ -245,18 +258,15 @@ export default {
       }
     }
 
-    // Toggle emoji picker visibility
     const toggleEmojiPicker = () => {
       showEmojiPicker.value = !showEmojiPicker.value
     }
 
-    // Select emoji và thêm vào comment input
     const selectEmoji = (emoji) => {
       newComment.value += emoji
-      showEmojiPicker.value = false // Đóng picker sau khi chọn
+      showEmojiPicker.value = false
     }
 
-    // Close emoji picker khi click outside
     const handleClickOutside = (event) => {
       const emojiContainer = event.target.closest('.emoji-container')
       if (!emojiContainer && showEmojiPicker.value) {
@@ -272,7 +282,6 @@ export default {
       } else {
         comments.value = []
       }
-      // Đóng emoji picker khi chuyển post
       showEmojiPicker.value = false
     }, { immediate: true, deep: true })
 
@@ -293,6 +302,7 @@ export default {
       isLoadingComments,
       showEmojiPicker,
       emojiList,
+      themeStyles,
       getText,
       formatCommentTime,
       handleAddComment,
@@ -309,7 +319,7 @@ export default {
   background: #2B2D42;
   display: flex;
   flex-direction: column;
-  color: var(--theme-color);
+  color: var(--current-theme-color, var(--theme-color));
   font-size: 0.875rem;
   overflow: hidden;
 }
@@ -327,7 +337,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
   font-size: 0.875rem;
   text-align: center;
   padding: 1rem;
@@ -336,26 +346,27 @@ export default {
 .section-title {
   font-size: 0.875rem;
   font-weight: 700;
-  color: var(--theme-color);
+  color: var(--current-theme-color, var(--theme-color));
   margin-bottom: 0.5rem;
 }
 
 .caption-section {
-  border-bottom: 1px solid rgba(255, 235, 124, 0.2);
+  border-bottom: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.2));
   padding-bottom: 0.75rem;
 }
 
 .caption-text {
   font-size: 0.75rem;
   line-height: 1.4;
-  color: rgba(255, 235, 124, 0.9);
+  color: var(--current-theme-color, rgba(255, 235, 124, 0.9));
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
   margin-bottom: 0.75rem;
+  opacity: 0.9;
 }
 
-/* NEW: Tags styling */
+/* Tags styling */
 .tags-container {
   display: flex;
   flex-wrap: wrap;
@@ -366,24 +377,24 @@ export default {
 .tag-pill {
   display: inline-block;
   padding: 0.25rem 0.5rem;
-  background: rgba(255, 235, 124, 0.15);
-  border: 1px solid rgba(255, 235, 124, 0.4);
+  background: var(--theme-color-10, rgba(255, 235, 124, 0.15));
+  border: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.4));
   border-radius: 1rem;
   font-size: 0.625rem;
   font-weight: 500;
-  color: var(--theme-color);
+  color: var(--current-theme-color, var(--theme-color));
   white-space: nowrap;
   transition: all 0.2s ease;
 }
 
 .tag-pill:hover {
-  background: rgba(255, 235, 124, 0.25);
-  border-color: rgba(255, 235, 124, 0.6);
+  background: var(--theme-color-20, rgba(255, 235, 124, 0.25));
+  border-color: var(--current-theme-color, rgba(255, 235, 124, 0.6));
   transform: scale(1.05);
 }
 
 .likes-section {
-  border-bottom: 1px solid rgba(255, 235, 124, 0.2);
+  border-bottom: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.2));
   padding-bottom: 0.75rem;
 }
 
@@ -413,7 +424,8 @@ export default {
 
 .likes-count {
   font-size: 0.75rem;
-  color: rgba(255, 235, 124, 0.8);
+  color: var(--current-theme-color, rgba(255, 235, 124, 0.8));
+  opacity: 0.8;
 }
 
 .comments-section {
@@ -435,17 +447,17 @@ export default {
 }
 
 .comments-list::-webkit-scrollbar-track {
-  background: rgba(255, 235, 124, 0.1);
+  background: var(--theme-color-10, rgba(255, 235, 124, 0.1));
   border-radius: 0.125rem;
 }
 
 .comments-list::-webkit-scrollbar-thumb {
-  background: rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-20, rgba(255, 235, 124, 0.3));
   border-radius: 0.125rem;
 }
 
 .loading-comments, .no-comments {
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
   font-size: 0.75rem;
   text-align: center;
   padding: 1rem 0;
@@ -454,9 +466,9 @@ export default {
 .comment-item {
   margin-bottom: 0.75rem;
   padding: 0.5rem;
-  background: rgba(255, 235, 124, 0.05);
+  background: var(--theme-color-05, rgba(255, 235, 124, 0.05));
   border-radius: 0.5rem;
-  border-left: 2px solid rgba(255, 235, 124, 0.3);
+  border-left: 2px solid var(--theme-color-20, rgba(255, 235, 124, 0.3));
 }
 
 .comment-header {
@@ -469,8 +481,8 @@ export default {
 .comment-avatar {
   width: 1.5rem;
   height: 1.5rem;
-  background: url('@/icons/user.png') center/cover var(--theme-color);
-  border: 0.125rem solid rgba(255, 235, 124, 0.3);
+  background: url('@/icons/user.png') center/cover var(--current-theme-color, var(--theme-color));
+  border: 0.125rem solid var(--theme-color-20, rgba(255, 235, 124, 0.3));
   border-radius: 50%;
   background-size: cover;
   background-position: center;
@@ -487,47 +499,48 @@ export default {
 .comment-author {
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--theme-color);
+  color: var(--current-theme-color, var(--theme-color));
 }
 
 .comment-time {
   font-size: 0.625rem;
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
 }
 
 .comment-text {
   font-size: 0.75rem;
   line-height: 1.3;
-  color: rgba(255, 235, 124, 0.9);
+  color: var(--current-theme-color, rgba(255, 235, 124, 0.9));
   word-wrap: break-word;
-  margin-left: 2rem; /* Indent text để align với avatar */
+  margin-left: 2rem;
+  opacity: 0.9;
 }
 
 .add-comment {
-  border-top: 1px solid rgba(255, 235, 124, 0.2);
+  border-top: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.2));
   padding-top: 0.75rem;
 }
 
 .comment-input {
   width: 100%;
   height: 2rem;
-  background: rgba(255, 235, 124, 0.1);
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-10, rgba(255, 235, 124, 0.1));
+  border: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.3));
   border-radius: 1rem;
   padding: 0 0.75rem;
   font-size: 0.75rem;
-  color: var(--theme-color);
+  color: var(--current-theme-color, var(--theme-color));
   outline: none;
   margin-bottom: 0.5rem;
 }
 
 .comment-input::placeholder {
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
 }
 
 .comment-input:focus {
-  border-color: var(--theme-color);
-  box-shadow: 0 0 0.25rem rgba(255, 235, 124, 0.3);
+  border-color: var(--current-theme-color, var(--theme-color));
+  box-shadow: 0 0 0.25rem var(--theme-color-20, rgba(255, 235, 124, 0.3));
 }
 
 .comment-actions {
@@ -536,7 +549,6 @@ export default {
   gap: 0.5rem;
 }
 
-/* Emoji Container với Relative Positioning */
 .emoji-container {
   position: relative;
 }
@@ -546,7 +558,7 @@ export default {
   height: 1.75rem;
   border: none;
   border-radius: 50%;
-  background: rgba(255, 235, 124, 0.1);
+  background: var(--theme-color-10, rgba(255, 235, 124, 0.1));
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -555,7 +567,7 @@ export default {
 }
 
 .emoji-btn:hover:not(:disabled), .send-btn:hover:not(:disabled) {
-  background: rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-20, rgba(255, 235, 124, 0.2));
   transform: scale(1.1);
 }
 
@@ -576,15 +588,14 @@ export default {
   filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
 }
 
-/* Emoji Picker Dropdown */
 .emoji-picker {
   position: absolute;
-  bottom: 2.25rem; /* Hiển thị phía trên emoji button */
+  bottom: 2.25rem;
   right: 0;
   width: 12rem;
   max-height: 8rem;
   background: #2B2D42;
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  border: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.3));
   border-radius: 0.5rem;
   box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3);
   z-index: 10;
@@ -605,12 +616,12 @@ export default {
 }
 
 .emoji-grid::-webkit-scrollbar-track {
-  background: rgba(255, 235, 124, 0.1);
+  background: var(--theme-color-10, rgba(255, 235, 124, 0.1));
   border-radius: 0.125rem;
 }
 
 .emoji-grid::-webkit-scrollbar-thumb {
-  background: rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-20, rgba(255, 235, 124, 0.3));
   border-radius: 0.125rem;
 }
 
@@ -629,15 +640,15 @@ export default {
 }
 
 .emoji-option:hover {
-  background: rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-20, rgba(255, 235, 124, 0.2));
   transform: scale(1.1);
 }
 
 .login-prompt {
-  border-top: 1px solid rgba(255, 235, 124, 0.2);
+  border-top: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.2));
   padding-top: 0.75rem;
   text-align: center;
   font-size: 0.75rem;
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
 }
 </style>

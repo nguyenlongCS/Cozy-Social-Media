@@ -7,6 +7,7 @@ Logic:
 - Ngăn việc thu nhỏ web khi cuộn bằng min-height
 - Giữ nguyên tỉ lệ hiện tại với max-width constraint
 - Responsive layout với flexbox
+- Loại bỏ thanh cuộn mặc định của trình duyệt
 */
 :root {
     --theme-color: #6495ED;
@@ -18,12 +19,44 @@ Logic:
     box-sizing: border-box;
 }
 
+/* Hide default scrollbars */
+body, html {
+    overflow: hidden; /* Loại bỏ thanh cuộn mặc định */
+}
+
 body {
     font-family: 'Roboto', sans-serif;
     background: #2B2D42;
     min-height: 100vh; /* Đảm bảo body không bao giờ nhỏ hơn viewport */
     width: 100vw; /* Đảm bảo body sử dụng full viewport width */
-    overflow-x: auto; /* Cho phép scroll ngang nếu cần */
+    height: 100vh; /* Cố định chiều cao để tránh overflow */
+}
+
+/* Custom scrollbar styles for specific elements that need scrolling */
+::-webkit-scrollbar {
+    width: 0.375rem;
+    height: 0.375rem;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(255, 235, 124, 0.1);
+    border-radius: 0.1875rem;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 235, 124, 0.4);
+    border-radius: 0.1875rem;
+    transition: background 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 235, 124, 0.6);
+}
+
+/* Firefox scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 235, 124, 0.4) rgba(255, 235, 124, 0.1);
 }
 
 .home {
@@ -33,6 +66,7 @@ body {
     display: flex;
     flex-direction: column;
     background: #2B2D42;
+    overflow: hidden; /* Ngăn trang cuộn */
 }
 
 .header {
@@ -55,6 +89,7 @@ body {
     justify-content: space-between;
     background: #2B2D42;
     padding: 0 1rem; /* Thêm padding để tạo responsive spacing */
+    overflow: hidden; /* Ngăn body cuộn */
 }
 
 .btn {
@@ -89,3 +124,16 @@ body {
 .theme-btn.yellow { background: #ffeb7c; }
 .theme-btn.green { background: #6495ED; }
 .theme-btn.aqua { background: #7FFFD4; }
+
+/* Specific components that still need scrolling can override */
+.scrollable {
+    overflow-y: auto;
+}
+
+.scrollable-x {
+    overflow-x: auto;
+}
+
+.scrollable-both {
+    overflow: auto;
+}
