@@ -501,7 +501,7 @@ export default {
   align-items: center;
   border-radius: 0.9375rem;
   border: 0.125rem solid var(--theme-color);
-  background: #F8F8FF;
+  background: #2B2D42;
   box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.2);
 }
 
