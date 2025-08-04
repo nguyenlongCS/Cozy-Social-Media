@@ -290,7 +290,7 @@ const SCORING_WEIGHTS = {
 
 function preprocessText(text) {
   if (!text || typeof text !== 'string') return ''
-  
+
   return text
     .toLowerCase()
     .trim()
@@ -311,10 +311,10 @@ function preprocessText(text) {
 function findKeywordMatches(text, keywords) {
   const matches = []
   const processedText = preprocessText(text)
-  
+
   keywords.forEach(keyword => {
     const processedKeyword = preprocessText(keyword)
-    
+
     // Exact match
     if (processedText.includes(processedKeyword)) {
       matches.push({
@@ -324,14 +324,14 @@ function findKeywordMatches(text, keywords) {
       })
       return
     }
-    
+
     // Partial match (từ khóa có nhiều từ)
     const keywordWords = processedKeyword.split(' ')
     if (keywordWords.length > 1) {
-      const matchedWords = keywordWords.filter(word => 
+      const matchedWords = keywordWords.filter(word =>
         processedText.includes(word) && word.length > 2
       )
-      
+
       if (matchedWords.length >= Math.ceil(keywordWords.length / 2)) {
         matches.push({
           keyword: keyword,
@@ -341,7 +341,7 @@ function findKeywordMatches(text, keywords) {
       }
     }
   })
-  
+
   return matches
 }
 
@@ -367,7 +367,7 @@ function classifyPost(caption) {
       // Primary keywords (Vietnamese)
       if (categoryData.primary?.vi) {
         const matches = findKeywordMatches(caption, categoryData.primary.vi)
-        totalScore += matches.reduce((sum, match) => 
+        totalScore += matches.reduce((sum, match) =>
           sum + (match.score * SCORING_WEIGHTS.primary), 0
         )
       }
@@ -375,7 +375,7 @@ function classifyPost(caption) {
       // Primary keywords (English)
       if (categoryData.primary?.en) {
         const matches = findKeywordMatches(caption, categoryData.primary.en)
-        totalScore += matches.reduce((sum, match) => 
+        totalScore += matches.reduce((sum, match) =>
           sum + (match.score * SCORING_WEIGHTS.primary), 0
         )
       }
@@ -383,7 +383,7 @@ function classifyPost(caption) {
       // Secondary keywords (Vietnamese)
       if (categoryData.secondary?.vi) {
         const matches = findKeywordMatches(caption, categoryData.secondary.vi)
-        totalScore += matches.reduce((sum, match) => 
+        totalScore += matches.reduce((sum, match) =>
           sum + (match.score * SCORING_WEIGHTS.secondary), 0
         )
       }
@@ -391,7 +391,7 @@ function classifyPost(caption) {
       // Secondary keywords (English)
       if (categoryData.secondary?.en) {
         const matches = findKeywordMatches(caption, categoryData.secondary.en)
-        totalScore += matches.reduce((sum, match) => 
+        totalScore += matches.reduce((sum, match) =>
           sum + (match.score * SCORING_WEIGHTS.secondary), 0
         )
       }
@@ -399,7 +399,7 @@ function classifyPost(caption) {
       // Brand keywords
       if (categoryData.brands?.length > 0) {
         const matches = findKeywordMatches(caption, categoryData.brands)
-        totalScore += matches.reduce((sum, match) => 
+        totalScore += matches.reduce((sum, match) =>
           sum + (match.score * SCORING_WEIGHTS.brands), 0
         )
       }
@@ -419,14 +419,14 @@ function classifyPost(caption) {
       }
     })
 
-    // Sort by confidence và chỉ lấy top 3 tags
+    // Sort by confidence và lấy tất cả tag có confidence >= threshold
     const sortedCategories = Object.entries(categoryScores)
-      .sort(([,a], [,b]) => b.confidence - a.confidence)
-      .slice(0, 3)
+      .sort(([, a], [, b]) => b.confidence - a.confidence)
       .map(([category, data]) => ({
         tag: category,
         confidence: Math.round(data.confidence * 100) / 100
       }))
+
 
     console.log('Server-side classification result:', {
       caption: caption.substring(0, 100) + '...',
