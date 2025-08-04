@@ -10,8 +10,6 @@ firebase deploy --only functions
 firebase functions:list
 
 # Test manual trigger
-curl -X POST https://us-central1-fir-auth-cozy.cloudfunctions.net/triggerNewsPost
-
 Invoke-WebRequest `
   -Uri "https://us-central1-fir-auth-cozy.cloudfunctions.net/triggerNewsPost" `
   -Method POST `
@@ -19,8 +17,10 @@ Invoke-WebRequest `
   -ContentType "application/json"
 
 # Check recent posts
-curl https://us-central1-fir-auth-cozy.cloudfunctions.net/getRecentNewsPosts
-
+Invoke-WebRequest `
+  -Uri "https://us-central1-fir-auth-cozy.cloudfunctions.net/getRecentNewsPosts" `
+  -Method GET
+  
 # Monitor logs
 firebase functions:log --only autoPostNews
 firebase functions:log --only triggerNewsPost
