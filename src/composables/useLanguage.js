@@ -1,8 +1,8 @@
 /*
-src/composables/useLanguage.js - Updated with Missing Media Error Message
-Composable quản lý ngôn ngữ với text cho missing media validation
-Centralize logic chuyển đổi ngôn ngữ và provide text translations
-Complete translation system cho toàn bộ ứng dụng bao gồm media requirement
+src/composables/useLanguage.js - Updated with Friends Feature Text
+Composable quản lý ngôn ngữ với text cho chức năng kết bạn
+Added: Translations cho friends, suggestions, friend requests, actions
+Complete translation system cho toàn bộ ứng dụng bao gồm friends feature
 */
 import { ref } from 'vue'
 
@@ -33,7 +33,7 @@ const saveLanguageToStorage = (language) => {
 // Initialize language từ storage
 loadLanguageFromStorage()
 
-// Complete text translations
+// Complete text translations with Friends feature
 const translations = {
   vi: {
     // ===== AUTHENTICATION =====
@@ -55,6 +55,23 @@ const translations = {
     search: 'Tìm kiếm...',
     home: 'Trang chủ',
     profile: 'Hồ sơ',
+    
+    // ===== FRIENDS FEATURE =====
+    friends: 'Bạn bè',
+    suggestions: 'Gợi ý kết bạn',
+    friendRequests: 'Lời mời kết bạn',
+    noFriendsYet: 'Chưa có bạn bè nào',
+    noSuggestions: 'Không có gợi ý nào',
+    noFriendRequests: 'Không có lời mời nào',
+    selectOption: 'Chọn một tùy chọn',
+    friendsSince: 'Bạn bè từ',
+    requestSent: 'Gửi lời mời',
+    addFriend: 'Kết bạn',
+    unfriend: 'Hủy kết bạn',
+    accept: 'Chấp nhận',
+    reject: 'Từ chối',
+    confirmUnfriend: 'Bạn có chắc muốn hủy kết bạn?',
+    unknownUser: 'Người dùng không xác định',
     
     // ===== CREATE POST =====
     writeCaption: 'Viết chú thích...',
@@ -128,6 +145,10 @@ const translations = {
     postSuccess: 'Đăng bài thành công!',
     profileSuccess: 'Cập nhật thông tin thành công!',
     syncSuccess: 'Đồng bộ dữ liệu thành công!',
+    friendRequestSent: 'Đã gửi lời mời kết bạn!',
+    friendRequestAccepted: 'Đã chấp nhận lời mời kết bạn!',
+    friendRequestRejected: 'Đã từ chối lời mời kết bạn!',
+    unfriend: 'Đã hủy kết bạn!',
     
     // ===== ERROR MESSAGES - AUTHENTICATION =====
     fillAllFields: 'Vui lòng nhập đầy đủ thông tin!',
@@ -148,7 +169,6 @@ const translations = {
     noInterestsSelected: 'Chưa chọn nội dung quan tâm nào',
     selectInterests: 'Chọn nội dung quan tâm',
     posts: 'Danh sách bài viết',
-    friends: 'Danh sách bạn bè',
     postsComingSoon: 'Tính năng sắp ra mắt',
     friendsComingSoon: 'Tính năng sắp ra mắt',
     save: 'Lưu',
@@ -182,6 +202,14 @@ const translations = {
     loadCommentsFailed: 'Tải bình luận thất bại!',
     alreadyLikedPost: 'Bạn đã thích bài viết này!',
     
+    // ===== ERROR MESSAGES - FRIENDS =====
+    loadFriends: 'Tải danh sách bạn bè thất bại!',
+    loadSuggestions: 'Tải gợi ý kết bạn thất bại!',
+    loadRequests: 'Tải lời mời kết bạn thất bại!',
+    sendRequest: 'Gửi lời mời kết bạn thất bại!',
+    acceptRequest: 'Chấp nhận lời mời thất bại!',
+    rejectRequest: 'Từ chối lời mời thất bại!',
+    
     // ===== ERROR MESSAGES - SYNC =====
     syncFailed: 'Đồng bộ dữ liệu thất bại!',
     
@@ -210,6 +238,23 @@ const translations = {
     search: 'Search...',
     home: 'Home',
     profile: 'Profile',
+    
+    // ===== FRIENDS FEATURE =====
+    friends: 'Friends',
+    suggestions: 'Friend Suggestions',
+    friendRequests: 'Friend Requests',
+    noFriendsYet: 'No friends yet',
+    noSuggestions: 'No suggestions available',
+    noFriendRequests: 'No friend requests',
+    selectOption: 'Select an option',
+    friendsSince: 'Friends since',
+    requestSent: 'Request sent',
+    addFriend: 'Add Friend',
+    unfriend: 'Unfriend',
+    accept: 'Accept',
+    reject: 'Reject',
+    confirmUnfriend: 'Are you sure you want to unfriend?',
+    unknownUser: 'Unknown User',
     
     // ===== CREATE POST =====
     writeCaption: 'Write a caption...',
@@ -275,7 +320,6 @@ const translations = {
     noInterestsSelected: 'No interests selected',
     selectInterests: 'Select Interests',
     posts: 'Posts',
-    friends: 'Friends',
     postsComingSoon: 'Coming Soon',
     friendsComingSoon: 'Coming Soon',
     save: 'Save',
@@ -293,6 +337,10 @@ const translations = {
     postSuccess: 'Post created successfully!',
     profileSuccess: 'Profile updated successfully!',
     syncSuccess: 'Data sync completed!',
+    friendRequestSent: 'Friend request sent!',
+    friendRequestAccepted: 'Friend request accepted!',
+    friendRequestRejected: 'Friend request rejected!',
+    unfriend: 'Unfriended successfully!',
     
     // ===== ERROR MESSAGES - AUTHENTICATION =====
     fillAllFields: 'Please fill in all fields!',
@@ -336,6 +384,14 @@ const translations = {
     commentFailed: 'Failed to add comment!',
     loadCommentsFailed: 'Failed to load comments!',
     alreadyLikedPost: 'You already liked this post!',
+    
+    // ===== ERROR MESSAGES - FRIENDS =====
+    loadFriends: 'Failed to load friends!',
+    loadSuggestions: 'Failed to load suggestions!',
+    loadRequests: 'Failed to load friend requests!',
+    sendRequest: 'Failed to send friend request!',
+    acceptRequest: 'Failed to accept request!',
+    rejectRequest: 'Failed to reject request!',
     
     // ===== ERROR MESSAGES - SYNC =====
     syncFailed: 'Data sync failed!',

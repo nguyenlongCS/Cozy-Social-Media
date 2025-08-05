@@ -1,14 +1,14 @@
 <!--
-src/components/NavMid.vue - Updated với Profile Navigation và Smaller Icons
+src/components/NavMid.vue - Updated với Friends Navigation
 Component navigation giữa header với icons nhỏ hơn
 Logic: Hiển thị 5 navigation buttons khi không ở trang login
-Thêm navigation đến trang profile khi click profile-button
+Added: Navigation đến trang friends khi click friends-button
 UI: Icons được làm nhỏ lại
 -->
 <template>
   <div class="nav-mid">
     <button v-if="!isLoginPage" class="profile-button btn" @click="goToProfile"></button>
-    <button v-if="!isLoginPage" class="friends-button btn"></button>
+    <button v-if="!isLoginPage" class="friends-button btn" @click="goToFriends"></button>
     <button v-if="!isLoginPage" class="home-button btn" @click="goToHome"></button>
     <button v-if="!isLoginPage" class="mess-button btn"></button>
     <button v-if="!isLoginPage" class="notification-button btn"></button>
@@ -35,10 +35,15 @@ export default {
       router.push('/profile')
     }
 
+    const goToFriends = () => {
+      router.push('/friends')
+    }
+
     return {
       isLoginPage,
       goToHome,
-      goToProfile
+      goToProfile,
+      goToFriends
     }
   }
 }

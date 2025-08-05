@@ -1,8 +1,8 @@
 /*
-src/composables/useErrorHandler.js - Updated with Post Actions Error Support
-Composable xử lý lỗi với hỗ trợ post actions (delete, hide, download, report, share)
+src/composables/useErrorHandler.js - Updated with Friends Feature Error Support
+Composable xử lý lỗi với hỗ trợ friends actions
 Centralize error handling logic và provide consistent error messages
-Added: Post actions error codes và success messages
+Added: Friends error codes và success messages
 */
 import { useLanguage } from './useLanguage'
 
@@ -64,6 +64,12 @@ export function useErrorHandler() {
       'ALREADY_LIKED': 'alreadyLikedPost',
       'NOT_LIKED': 'likeFailed',
       
+      // Friends errors
+      'INVALID_FRIEND_REQUEST': 'sendRequest',
+      'FRIENDSHIP_ALREADY_EXISTS': 'sendRequest',
+      'INVALID_REQUEST_ID': 'acceptRequest',
+      'INVALID_FRIENDSHIP_ID': 'unfriend',
+      
       // Firebase permission errors
       'permission-denied': 'notAuthenticated',
       'unauthenticated': 'notAuthenticated'
@@ -115,7 +121,7 @@ export function useErrorHandler() {
         'defaultError': 'syncFailed',
         'syncSuccess': 'syncSuccess'
       },
-      // New contexts for post actions
+      // Post actions contexts
       deletePost: {
         'defaultError': 'deletePostFailed'
       },
@@ -130,6 +136,28 @@ export function useErrorHandler() {
       },
       share: {
         'defaultError': 'shareComingSoon'
+      },
+      // Friends contexts
+      loadFriends: {
+        'defaultError': 'loadFriends'
+      },
+      loadSuggestions: {
+        'defaultError': 'loadSuggestions'
+      },
+      loadRequests: {
+        'defaultError': 'loadRequests'
+      },
+      sendRequest: {
+        'defaultError': 'sendRequest'
+      },
+      acceptRequest: {
+        'defaultError': 'acceptRequest'
+      },
+      rejectRequest: {
+        'defaultError': 'rejectRequest'
+      },
+      unfriend: {
+        'defaultError': 'unfriend'
       }
     }
 
@@ -171,10 +199,15 @@ export function useErrorHandler() {
       post: 'postSuccess',
       profile: 'profileSuccess',
       sync: 'syncSuccess',
-      // New success contexts for post actions
+      // Post actions success contexts
       deletePost: 'deletePostSuccess',
       hidePost: 'hidePostSuccess',
-      download: 'downloadMediaSuccess'
+      download: 'downloadMediaSuccess',
+      // Friends success contexts
+      friendRequestSent: 'friendRequestSent',
+      friendRequestAccepted: 'friendRequestAccepted',
+      friendRequestRejected: 'friendRequestRejected',
+      unfriend: 'unfriend'
     }
     
     const messageKey = successKeys[context] || 'loginSuccess'

@@ -1,16 +1,15 @@
 <!--
-src/view/Profile.vue - Fixed Layout Size to Match Home Page
-View trang profile - Hiển thị và chỉnh sửa thông tin user với ProfileHomeRight
+src/view/Friends.vue
+View trang Friends với layout tương tự Home page
 Logic:
-- Load và hiển thị thông tin user từ Firestore users collection
-- Form chỉnh sửa thông tin: UserName, Bio, Gender
-- Upload và thay đổi Avatar
-- Save thay đổi vào Firestore
-- Sử dụng ProfileHomeRight thay vì HomeRight cho profile-specific features
-- FIXED: Layout size to match Home page exactly
+- Layout: Header + Body (HomeLeft + FriendMain + FriendRight) + Footer
+- Xử lý communication giữa FriendMain và FriendRight
+- Truyền activeTab từ FriendRight xuống FriendMain
+- Handle data updates để refresh counters
+- Match Home page layout size exactly
 -->
 <template>
-  <div class="profile-page">
+  <div class="friends-page">
     <div class="header">
       <NavLeft />
       <NavMid />
@@ -18,50 +17,78 @@ Logic:
     </div>
     <div class="body">
       <HomeLeft />
-      <ProfileMain />
-      <ProfileHomeRight />
+      <FriendMain 
+        :activeTab="activeTab"
+        @data-updated="handleDataUpdated"
+      />
+      <FriendRight 
+        ref="friendRightRef"
+        @tab-changed="handleTabChanged"
+      />
     </div>
     <Footer />
   </div>
 </template>
 
 <script>
+import { ref } from 'vue'
 import NavLeft from '@/components/NavLeft.vue'
 import NavMid from '@/components/NavMid.vue'
 import NavRight from '@/components/NavRight.vue'
 import HomeLeft from '@/components/HomeLeft.vue'
+import FriendMain from '@/components/FriendMain.vue'
+import FriendRight from '@/components/FriendRight.vue'
 import Footer from '@/components/Footer.vue'
-import ProfileMain from '@/components/ProfileMain.vue'
-import ProfileHomeRight from '@/components/ProfileRight.vue'
 import { useLanguage } from '@/composables/useLanguage'
 
 // Import Firebase để đảm bảo được khởi tạo
 import '@/firebase/config'
 
 export default {
-  name: 'ProfilePage',
+  name: 'FriendsPage',
   components: {
     NavLeft,
     NavMid,
     NavRight,
     HomeLeft,
-    Footer,
-    ProfileMain,
-    ProfileHomeRight // Updated component
+    FriendMain,
+    FriendRight,
+    Footer
   },
   setup() {
     const { toggleLanguage } = useLanguage()
+    const activeTab = ref('friends')
+    const friendRightRef = ref(null)
+
+    // Handle tab change từ FriendRight
+    const handleTabChanged = (tab) => {
+      activeTab.value = tab
+      console.log('Active tab changed:', tab)
+    }
+
+    // Handle data update từ FriendMain để refresh counters
+    const handleDataUpdated = () => {
+      console.log('Data updated, refreshing counters')
+      // Call updateCounts method on FriendRight component
+      if (friendRightRef.value && friendRightRef.value.updateCounts) {
+        friendRightRef.value.updateCounts()
+      }
+    }
 
     return {
-      toggleLanguage
+      toggleLanguage,
+      activeTab,
+      friendRightRef,
+      handleTabChanged,
+      handleDataUpdated
     }
   }
 }
 </script>
 
 <style scoped>
-/* FIXED: Match Home page layout exactly */
-.profile-page {
+/* Match Home page layout exactly */
+.friends-page {
   width: 100vw; /* Use full viewport width like Home */
   height: 100vh; /* Use full viewport height like Home */
   min-height: 39.4375rem; /* Same minimum height as Home */
