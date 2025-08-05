@@ -149,6 +149,7 @@ const translations = {
     friendRequestAccepted: 'Đã chấp nhận lời mời kết bạn!',
     friendRequestRejected: 'Đã từ chối lời mời kết bạn!',
     unfriend: 'Hủy kết bạn',
+    viewAllFriends: 'Toàn bộ bạn bè',
     
     // ===== ERROR MESSAGES - AUTHENTICATION =====
     fillAllFields: 'Vui lòng nhập đầy đủ thông tin!',
@@ -341,6 +342,7 @@ const translations = {
     friendRequestAccepted: 'Friend request accepted!',
     friendRequestRejected: 'Friend request rejected!',
     unfriend: 'Unfriended',
+    viewAllFriends: 'View All Friends',
     
     // ===== ERROR MESSAGES - AUTHENTICATION =====
     fillAllFields: 'Please fill in all fields!',

@@ -7,7 +7,7 @@ Centralize logic chuyển đổi theme color và lưu trữ vào localStorage
 import { ref } from 'vue'
 
 // Global state cho theme color
-const currentTheme = ref('#ffeb7c') // Default yellow theme
+const currentTheme = ref('#6495ED') // Default blue theme
 
 // Apply theme color vào CSS
 const applyTheme = (color) => {
