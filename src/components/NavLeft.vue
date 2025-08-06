@@ -1,11 +1,10 @@
 <!--
-src/components/NavLeft.vue - Updated with User Avatar
+src/components/NavLeft.vue - Refactored
 Component navigation bên trái header với user avatar
 Logic: 
-- Hiển thị avatar của user hiện tại thay vì icon mặc định
+- Hiển thị avatar của user hiện tại
 - Load user profile để lấy avatar từ Firestore
 - Fallback về icon mặc định nếu không có avatar
-- Chỉ hiển thị khi không ở trang login
 -->
 <template>
   <div class="nav-left">
@@ -39,12 +38,9 @@ export default {
     const { user } = useAuth()
     const { getUserById } = useUsers()
 
-    // Reactive data
     const userAvatar = ref('')
-
     const isLoginPage = computed(() => route.name === 'Login')
 
-    // Load user avatar
     const loadUserAvatar = async () => {
       if (!user.value) {
         userAvatar.value = ''
@@ -53,20 +49,12 @@ export default {
 
       try {
         const userProfile = await getUserById(user.value.uid)
-        if (userProfile && userProfile.Avatar) {
-          userAvatar.value = userProfile.Avatar
-        } else {
-          // Fallback to Firebase Auth avatar if no custom avatar
-          userAvatar.value = user.value.photoURL || ''
-        }
+        userAvatar.value = userProfile?.Avatar || user.value.photoURL || ''
       } catch (error) {
-        console.error('Error loading user avatar:', error)
-        // Fallback to Firebase Auth avatar on error
         userAvatar.value = user.value.photoURL || ''
       }
     }
 
-    // Watch user changes
     watch(user, (newUser) => {
       if (newUser) {
         loadUserAvatar()
@@ -75,11 +63,8 @@ export default {
       }
     }, { immediate: true })
 
-    // Load avatar on mount
     onMounted(() => {
-      if (user.value) {
-        loadUserAvatar()
-      }
+      if (user.value) loadUserAvatar()
     })
 
     return {

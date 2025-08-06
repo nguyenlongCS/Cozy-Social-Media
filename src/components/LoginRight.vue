@@ -37,8 +37,7 @@ export default {
 
     const handleGoogleLogin = async () => {
       try {
-        const user = await loginWithGoogle()
-        console.log('Google login successful:', user)
+        await loginWithGoogle()
         router.push('/')
       } catch (error) {
         showError(error, 'google')
@@ -47,16 +46,10 @@ export default {
     
     const handleFacebookLogin = async () => {
       try {
-        const user = await loginWithFacebook()
-        console.log('Facebook login successful:', user)
+        await loginWithFacebook()
         router.push('/')
       } catch (error) {
         showError(error, 'facebook')
-        console.log('Error details:', {
-          code: error.code,
-          message: error.message,
-          customData: error.customData
-        })
       }
     }
 

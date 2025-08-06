@@ -1,13 +1,11 @@
 <!--
-src/components/ProfileHomeRight.vue
+src/components/ProfileRight.vue - Refactored
 Component sidebar bên phải cho trang profile
 Logic:
 - Hiển thị nội dung quan tâm với button thêm tags
 - Popup chọn tags từ 19 danh mục có sẵn
 - Lưu user interests vào Firestore
-- Danh sách bài viết (placeholder)
-- Danh sách bạn bè (placeholder)
-- Responsive design consistent với HomeRight
+- Business logic đã được tách ra composables
 -->
 <template>
   <div class="profile-right">
@@ -17,7 +15,7 @@ Logic:
         <h3 class="section-title">{{ getText('interests') }}</h3>
         <button 
           class="add-interest-btn"
-          @click="toggleInterestSelector"
+          @click="showInterestSelector = true"
           :disabled="isLoading"
         >
           <div class="plus-icon"></div>
@@ -44,10 +42,9 @@ Logic:
           </button>
         </div>
       </div>
-
     </div>
 
-    <!-- Interest Selector Popup - MOVED OUTSIDE of interests-section -->
+    <!-- Interest Selector Popup -->
     <div v-if="showInterestSelector" class="interest-selector-overlay" @click="closeInterestSelector">
       <div class="interest-selector" @click.stop>
         <div class="selector-header">
@@ -121,27 +118,25 @@ import {
 } from 'firebase/firestore'
 import app from '@/firebase/config'
 
-// Initialize Firestore
 const db = getFirestore(app, 'social-media-db')
 
 export default {
-  name: 'ProfileHomeRight',
+  name: 'ProfileRight',
   setup() {
     const { user } = useAuth()
     const { getText } = useLanguage()
     const { showError, showSuccess } = useErrorHandler()
     const { CATEGORIES } = usePostClassification()
 
-    // Reactive data
+    // Reactive state
     const userInterests = ref([])
     const showInterestSelector = ref(false)
     const selectedCategories = ref([])
     const isLoading = ref(false)
 
-    // Available categories from classification system
     const availableCategories = computed(() => CATEGORIES)
 
-    // Methods
+    // Load user interests
     const loadUserInterests = async () => {
       if (!user.value) {
         userInterests.value = []
@@ -155,34 +150,22 @@ export default {
         if (userInterestsDoc.exists()) {
           const data = userInterestsDoc.data()
           userInterests.value = data.interests || []
-          console.log('User interests loaded:', userInterests.value)
         } else {
           userInterests.value = []
         }
       } catch (error) {
-        console.error('Error loading user interests:', error)
         userInterests.value = []
       }
     }
 
-    const toggleInterestSelector = () => {
-      console.log('Toggle interest selector clicked') // Debug log
-      showInterestSelector.value = true
-      selectedCategories.value = []
-      console.log('showInterestSelector:', showInterestSelector.value) // Debug log
-    }
-
+    // Interest selector methods
     const closeInterestSelector = () => {
-      console.log('Close interest selector') // Debug log
       showInterestSelector.value = false
       selectedCategories.value = []
     }
 
     const toggleCategory = (category) => {
-      // Không cho phép select nếu đã có trong userInterests
-      if (userInterests.value.includes(category)) {
-        return
-      }
+      if (userInterests.value.includes(category)) return
 
       const index = selectedCategories.value.indexOf(category)
       if (index === -1) {
@@ -193,18 +176,14 @@ export default {
     }
 
     const saveSelectedInterests = async () => {
-      if (!user.value || selectedCategories.value.length === 0) {
-        return
-      }
+      if (!user.value || selectedCategories.value.length === 0) return
 
       isLoading.value = true
 
       try {
-        // Merge new interests với existing interests
         const newInterests = [...userInterests.value, ...selectedCategories.value]
-        const uniqueInterests = [...new Set(newInterests)] // Remove duplicates
+        const uniqueInterests = [...new Set(newInterests)]
 
-        // Save to Firestore
         const userInterestsRef = doc(db, 'userInterests', user.value.uid)
         await setDoc(userInterestsRef, {
           userId: user.value.uid,
@@ -212,15 +191,11 @@ export default {
           updatedAt: new Date()
         })
 
-        // Update local state
         userInterests.value = uniqueInterests
-        
-        console.log('User interests saved:', uniqueInterests)
         showSuccess('profile')
         closeInterestSelector()
 
       } catch (error) {
-        console.error('Error saving user interests:', error)
         showError(error, 'profile')
       } finally {
         isLoading.value = false
@@ -233,7 +208,6 @@ export default {
       try {
         const updatedInterests = userInterests.value.filter(item => item !== interest)
         
-        // Save to Firestore
         const userInterestsRef = doc(db, 'userInterests', user.value.uid)
         await setDoc(userInterestsRef, {
           userId: user.value.uid,
@@ -241,21 +215,10 @@ export default {
           updatedAt: new Date()
         })
 
-        // Update local state
         userInterests.value = updatedInterests
-        
-        console.log('Interest removed:', interest)
-
       } catch (error) {
-        console.error('Error removing interest:', error)
         showError(error, 'profile')
       }
-    }
-
-    // Close selector when clicking outside - UPDATED
-    const handleClickOutside = (event) => {
-      // Remove this auto-close functionality to debug
-      console.log('Click outside detected')
     }
 
     // Watchers
@@ -267,12 +230,9 @@ export default {
       }
     }, { immediate: true })
 
-    // Lifecycle - SIMPLIFIED for debugging
+    // Lifecycle
     onMounted(() => {
-      console.log('ProfileHomeRight mounted')
-      console.log('Available categories:', availableCategories.value)
-      // Temporarily remove click outside listener for debugging
-      // document.addEventListener('click', handleClickOutside)
+      if (user.value) loadUserInterests()
     })
 
     return {
@@ -282,7 +242,6 @@ export default {
       isLoading,
       availableCategories,
       getText,
-      toggleInterestSelector,
       closeInterestSelector,
       toggleCategory,
       saveSelectedInterests,
@@ -295,24 +254,24 @@ export default {
 <style scoped>
 .profile-right {
   width: 22.13%;
-  height: 100%; /* FIXED: Set height to 100% để match với HomeRight */
+  height: 100%;
   background: #2B2D42;
   display: flex;
   flex-direction: column;
   color: var(--theme-color);
   font-size: 0.875rem;
-  overflow: hidden; /* FIXED: Prevent overflow để maintain consistent height */
+  overflow: hidden;
   padding: 1rem;
-  gap: 1rem; /* Reduced gap để fit better */
+  gap: 1rem;
 }
 
-/* Interests Section - FIXED height management */
+/* Interests Section */
 .interests-section {
   border-bottom: 1px solid rgba(255, 235, 124, 0.2);
   padding-bottom: 0.75rem;
-  flex-shrink: 0; /* Prevent shrinking */
-  max-height: 40%; /* Limit max height */
-  overflow-y: auto; /* Allow scrolling if needed */
+  flex-shrink: 0;
+  max-height: 40%;
+  overflow-y: auto;
 }
 
 .section-header {
@@ -408,7 +367,7 @@ export default {
   color: #ff6b6b;
 }
 
-/* Interest Selector Popup - UPDATED with higher z-index and better positioning */
+/* Interest Selector Popup */
 .interest-selector-overlay {
   position: fixed;
   top: 0;
@@ -419,22 +378,22 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999; /* Increased z-index */
-  backdrop-filter: blur(2px); /* Added blur effect */
+  z-index: 9999;
+  backdrop-filter: blur(2px);
 }
 
 .interest-selector {
   background: #2B2D42;
-  border: 2px solid var(--theme-color); /* Increased border width */
+  border: 2px solid var(--theme-color);
   border-radius: 0.75rem;
   padding: 1.5rem;
-  max-width: 28rem; /* Slightly larger */
+  max-width: 28rem;
   width: 95%;
   max-height: 85vh;
   overflow-y: auto;
-  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.7); /* Enhanced shadow */
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.7);
   position: relative;
-  z-index: 10000; /* Ensure selector is above overlay */
+  z-index: 10000;
 }
 
 .selector-header {
@@ -549,20 +508,20 @@ export default {
   transform: none;
 }
 
-/* Posts and Friends Sections - FIXED height management */
+/* Posts and Friends Sections */
 .posts-section, .friends-section {
   border-bottom: 1px solid rgba(255, 235, 124, 0.2);
   padding-bottom: 0.75rem;
-  flex: 1; /* FIXED: Allow sections to expand equally */
+  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Prevent overflow */
-  min-height: 0; /* Allow flex shrinking */
+  overflow: hidden;
+  min-height: 0;
 }
 
 .friends-section {
   border-bottom: none;
-  flex: 1; /* Equal height distribution */
+  flex: 1;
 }
 
 .placeholder-content {
@@ -570,10 +529,10 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  flex: 1; /* FIXED: Fill available space */
-  padding: 1rem; /* Reduced padding */
+  flex: 1;
+  padding: 1rem;
   text-align: center;
-  min-height: 0; /* Allow shrinking */
+  min-height: 0;
 }
 
 .placeholder-text {
@@ -581,24 +540,6 @@ export default {
   font-size: 0.75rem;
   font-style: italic;
   margin: 0;
-  flex-shrink: 0; /* Prevent text from shrinking */
-}
-
-/* Scrollbar Styling */
-.categories-grid::-webkit-scrollbar,
-.interest-selector::-webkit-scrollbar {
-  width: 0.25rem;
-}
-
-.categories-grid::-webkit-scrollbar-track,
-.interest-selector::-webkit-scrollbar-track {
-  background: rgba(255, 235, 124, 0.1);
-  border-radius: 0.125rem;
-}
-
-.categories-grid::-webkit-scrollbar-thumb,
-.interest-selector::-webkit-scrollbar-thumb {
-  background: rgba(255, 235, 124, 0.3);
-  border-radius: 0.125rem;
+  flex-shrink: 0;
 }
 </style>

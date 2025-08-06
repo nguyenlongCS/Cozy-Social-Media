@@ -1,13 +1,12 @@
 <!--
-src/components/ProfileMain.vue
+src/components/ProfileMain.vue - Refactored
 Component chính cho trang profile - Chỉnh sửa thông tin user
 Logic:
-- Load thông tin user hiện tại từ Firestore users collection
-- Form chỉnh sửa UserName, Bio, Gender với validation
-- Upload avatar mới với preview vào bucket avatar/
-- Save thay đổi vào Firestore và trigger data sync tự động
-- Hiển thị sync progress khi có thay đổi avatar/username
-- Error handling cho cả profile update và sync operations
+- Load thông tin user từ Firestore
+- Form chỉnh sửa UserName, Bio, Gender
+- Upload avatar với preview
+- Save thay đổi và sync data
+- Business logic đã được tách ra composables
 -->
 <template>
   <div class="profile-main">
@@ -167,7 +166,7 @@ export default {
     const { showError, showSuccess } = useErrorHandler()
     const { syncProgress } = useDataSync()
 
-    // Reactive data
+    // Reactive state
     const userProfile = ref(null)
     const error = ref(null)
     const isSaving = ref(false)
@@ -197,7 +196,7 @@ export default {
       )
     })
 
-    // Methods
+    // Load user profile
     const loadUserProfile = async () => {
       if (!user.value) {
         userProfile.value = null
@@ -217,6 +216,7 @@ export default {
           }
           originalForm.value = { ...editForm.value }
         } else {
+          // Create default profile for new users
           userProfile.value = {
             id: user.value.uid,
             UserID: user.value.uid,
@@ -242,6 +242,7 @@ export default {
       }
     }
 
+    // Helper methods
     const getProviderText = (provider) => {
       const providerMap = {
         'email': 'Email',
@@ -257,19 +258,16 @@ export default {
       let date
       if (timestamp.toDate) {
         date = timestamp.toDate()
-      } else if (timestamp instanceof Date) {
-        date = timestamp
       } else {
-        date = new Date(timestamp)
+        date = timestamp instanceof Date ? timestamp : new Date(timestamp)
       }
       
       return date.toLocaleDateString()
     }
 
+    // Avatar handling
     const triggerAvatarInput = () => {
-      if (avatarInput.value) {
-        avatarInput.value.click()
-      }
+      avatarInput.value?.click()
     }
 
     const handleAvatarSelect = (event) => {
@@ -305,12 +303,14 @@ export default {
       }
     }
 
+    // Save button text
     const getSaveButtonText = () => {
       if (isSaving.value) return getText('saving')
       if (isSyncing.value) return getText('syncing')
       return getText('saveChanges')
     }
 
+    // Action handlers
     const handleSave = async () => {
       if (!user.value || !hasChanges.value) return
 
@@ -358,9 +358,7 @@ export default {
     }, { immediate: true })
 
     // Lifecycle
-    onMounted(() => {
-      loadUserProfile()
-    })
+    onMounted(loadUserProfile)
 
     return {
       userProfile,
@@ -478,13 +476,6 @@ export default {
 .avatar-display:hover .avatar-overlay {
   opacity: 1;
 }
-
-/* .camera-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-  background: url('@/icons/camera.png') center/cover;
-  filter: brightness(0) saturate(100%) invert(1);
-} */
 
 .remove-avatar-btn {
   background: rgba(255, 235, 124, 0.1);

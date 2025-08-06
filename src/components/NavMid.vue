@@ -1,9 +1,7 @@
 <!--
-src/components/NavMid.vue - Updated với Friends Navigation
-Component navigation giữa header với icons nhỏ hơn
-Logic: Hiển thị 5 navigation buttons khi không ở trang login
-Added: Navigation đến trang friends khi click friends-button
-UI: Icons được làm nhỏ lại
+src/components/NavMid.vue - Refactored
+Component navigation giữa header
+Logic: Hiển thị 5 navigation buttons với navigation logic đơn giản
 -->
 <template>
   <div class="nav-mid">
@@ -27,17 +25,9 @@ export default {
 
     const isLoginPage = computed(() => route.name === 'Login')
 
-    const goToHome = () => {
-      router.push('/')
-    }
-
-    const goToProfile = () => {
-      router.push('/profile')
-    }
-
-    const goToFriends = () => {
-      router.push('/friends')
-    }
+    const goToHome = () => router.push('/')
+    const goToProfile = () => router.push('/profile')
+    const goToFriends = () => router.push('/friends')
 
     return {
       isLoginPage,
@@ -68,27 +58,27 @@ export default {
 }
 
 .home-button {
-  background: url('@/icons/home.png') center/1.5rem var(--theme-color); /* UPDATED: Smaller icon */
+  background: url('@/icons/home.png') center/1.5rem var(--theme-color);
   background-repeat: no-repeat;
 }
 
 .friends-button {
-  background: url('@/icons/friends.png') center/1.5rem var(--theme-color); /* UPDATED: Smaller icon */
+  background: url('@/icons/friends.png') center/1.5rem var(--theme-color);
   background-repeat: no-repeat;
 }
 
 .profile-button {
-  background: url('@/icons/profile.png') center/1.5rem var(--theme-color); /* UPDATED: Smaller icon */
+  background: url('@/icons/profile.png') center/1.5rem var(--theme-color);
   background-repeat: no-repeat;
 }
 
 .mess-button {
-  background: url('@/icons/mess.png') center/1.5rem var(--theme-color); /* UPDATED: Smaller icon */
+  background: url('@/icons/mess.png') center/1.5rem var(--theme-color);
   background-repeat: no-repeat;
 }
 
 .notification-button {
-  background: url('@/icons/notification.png') center/1.5rem var(--theme-color); /* UPDATED: Smaller icon */
+  background: url('@/icons/notification.png') center/1.5rem var(--theme-color);
   background-repeat: no-repeat;
 }
 

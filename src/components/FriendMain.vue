@@ -1,13 +1,11 @@
 <!--
-src/components/FriendMain.vue
-Component chính hiển thị danh sách friends (vị trí giữa, tương tự HomeMain)
+src/components/FriendMain.vue - Refactored
+Component chính hiển thị danh sách friends
 Logic:
-- Nhận activeTab từ parent để quyết định hiển thị gì
-- Hiển thị danh sách bạn bè (ACCEPTED)
-- Hiển thị gợi ý kết bạn (all users trừ friends)
-- Hiển thị lời mời kết bạn (PENDING requests)
+- Hiển thị friends, suggestions, requests dựa vào activeTab
 - Xử lý các actions: gửi/chấp nhận/từ chối lời mời, hủy kết bạn
-- Layout tương tự HomeMain với scroll và card design
+- Auto-populate user info cho các items
+- Business logic đã được tách ra composables
 -->
 <template>
   <div class="friend-main">
@@ -170,7 +168,7 @@ export default {
     const { getText } = useLanguage()
     const { showError, showSuccess } = useErrorHandler()
 
-    // Reactive data
+    // Reactive state
     const friendsList = ref([])
     const suggestionsList = ref([])
     const requestsList = ref([])
@@ -179,7 +177,7 @@ export default {
     // Computed
     const currentUserId = computed(() => user.value?.uid)
 
-    // Load data functions
+    // Data loading methods
     const loadFriends = async () => {
       if (!currentUserId.value) return
 
@@ -193,7 +191,6 @@ export default {
         }
         
         friendsList.value = friends
-        console.log('Friends loaded with user info:', friends.length)
       } catch (error) {
         console.error('Error loading friends:', error)
         showError(error, 'loadFriends')
@@ -206,7 +203,6 @@ export default {
       try {
         const suggestions = await getFriendSuggestions(currentUserId.value)
         suggestionsList.value = suggestions
-        console.log('Suggestions loaded:', suggestions.length)
       } catch (error) {
         console.error('Error loading suggestions:', error)
         showError(error, 'loadSuggestions')
@@ -226,7 +222,6 @@ export default {
         }
         
         requestsList.value = requests
-        console.log('Friend requests loaded with sender info:', requests.length)
       } catch (error) {
         console.error('Error loading friend requests:', error)
         showError(error, 'loadRequests')
@@ -299,17 +294,15 @@ export default {
       }
     }
 
-    // Format date
+    // Format date helper
     const formatDate = (timestamp) => {
       if (!timestamp) return ''
       
       let date
       if (timestamp.toDate) {
         date = timestamp.toDate()
-      } else if (timestamp instanceof Date) {
-        date = timestamp
       } else {
-        date = new Date(timestamp)
+        date = timestamp instanceof Date ? timestamp : new Date(timestamp)
       }
       
       return date.toLocaleDateString()
@@ -526,24 +519,5 @@ export default {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-}
-
-/* Scrollbar */
-.content-container::-webkit-scrollbar {
-  width: 0.25rem;
-}
-
-.content-container::-webkit-scrollbar-track {
-  background: rgba(255, 235, 124, 0.1);
-  border-radius: 0.125rem;
-}
-
-.content-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 235, 124, 0.3);
-  border-radius: 0.125rem;
-}
-
-.content-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 235, 124, 0.5);
 }
 </style>

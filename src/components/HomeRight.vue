@@ -1,16 +1,12 @@
 <!--
-src/components/HomeRight.vue - Updated with Theme Support
-Component sidebar bên phải - Chi tiết bài post với theme support
+src/components/HomeRight.vue - Refactored
+Component sidebar bên phải hiển thị chi tiết bài post
 Logic:
-- Sử dụng useTheme để áp dụng theme color động
-- CSS variables được cập nhật theo theme
-- Tích hợp theme cho tất cả UI elements
-- Hiển thị Caption, likes, comments của post hiện tại với fields mới
-- Caption hiển thị đầy đủ nội dung - có thể xuống hàng
-- Hiển thị tags ở dưới cùng với style viền bo tròn
-- Load và hiển thị comments với structure mới
-- Form thêm comment mới với emoji picker dropdown
-- Hiển thị avatar bên trái comment-author cho mỗi comment
+- Hiển thị caption, likes, comments của post hiện tại
+- Form thêm comment với emoji picker
+- Theme support qua CSS variables
+- Auto-scroll comments list
+- Business logic đã được tách ra composables
 -->
 <template>
   <div class="right" :style="themeStyles">
@@ -32,7 +28,7 @@ Logic:
         </div>
       </div>
 
-      <!-- Likes section - READ ONLY -->
+      <!-- Likes section -->
       <div class="likes-section">
         <div class="likes-info">
           <div class="like-display">
@@ -149,39 +145,37 @@ export default {
     const { showError } = useErrorHandler()
     const { currentTheme } = useTheme()
 
-    // Reactive data
+    // Reactive state
     const comments = ref([])
     const newComment = ref('')
     const isLoading = ref(false)
     const isLoadingComments = ref(false)
     const showEmojiPicker = ref(false)
 
-    // Theme styles computed property
+    // Theme styles
     const themeStyles = computed(() => ({
       '--current-theme-color': currentTheme.value,
-      '--theme-color-20': `${currentTheme.value}33`,  // 20% opacity
-      '--theme-color-10': `${currentTheme.value}1A`,  // 10% opacity
-      '--theme-color-05': `${currentTheme.value}0D`,  // 5% opacity
+      '--theme-color-20': `${currentTheme.value}33`,
+      '--theme-color-10': `${currentTheme.value}1A`,
+      '--theme-color-05': `${currentTheme.value}0D`,
     }))
 
-    // Emoji list for picker
+    // Emoji list
     const emojiList = [
       '😊', '😂', '❤️', '😍', '👍', '👏', '🔥', '💯', 
       '😎', '🤔', '😮', '😢', '😡', '🥰', '🤗', '🎉',
       '💪', '👌', '✨', '🌟', '💖', '💕', '🙏', '👀'
     ]
 
-    // Methods
+    // Format comment time
     const formatCommentTime = (timestamp) => {
       if (!timestamp) return ''
       
       let date
       if (timestamp.toDate) {
         date = timestamp.toDate()
-      } else if (timestamp instanceof Date) {
-        date = timestamp
       } else {
-        date = new Date(timestamp)
+        date = timestamp instanceof Date ? timestamp : new Date(timestamp)
       }
       
       const now = new Date()
@@ -189,10 +183,7 @@ export default {
       
       if (diffInHours < 1) {
         const diffInMinutes = Math.floor((now - date) / (1000 * 60))
-        if (diffInMinutes <= 1) {
-          return getText('justNow')
-        }
-        return `${diffInMinutes}${getText('minutesAgo')}`
+        return diffInMinutes <= 1 ? getText('justNow') : `${diffInMinutes}${getText('minutesAgo')}`
       } else if (diffInHours < 24) {
         return `${diffInHours}${getText('hoursAgo')}`
       } else {
@@ -201,6 +192,7 @@ export default {
       }
     }
 
+    // Load comments
     const loadComments = async () => {
       if (!props.post.PostID) {
         comments.value = []
@@ -208,12 +200,10 @@ export default {
       }
 
       isLoadingComments.value = true
-      console.log('Loading comments for PostID:', props.post.PostID)
 
       try {
         const postComments = await getPostComments(props.post.PostID)
         comments.value = postComments
-        console.log('Loaded comments:', postComments)
       } catch (error) {
         console.error('Error loading comments:', error)
         if (error.code !== 'permission-denied' && error.code !== 'unauthenticated') {
@@ -225,13 +215,11 @@ export default {
       }
     }
 
+    // Handle add comment
     const handleAddComment = async () => {
-      if (!user.value || !props.post.PostID || !newComment.value.trim()) {
-        return
-      }
+      if (!user.value || !props.post.PostID || !newComment.value.trim()) return
 
       isLoading.value = true
-      console.log('Adding comment for PostID:', props.post.PostID)
 
       try {
         const commentData = {
@@ -240,11 +228,8 @@ export default {
           authorId: user.value.uid,
           createdAt: new Date()
         }
-
-        console.log('Comment data:', commentData)
         
-        const savedComment = await addComment(commentData)
-        console.log('Comment saved successfully:', savedComment)
+        await addComment(commentData)
         
         newComment.value = ''
         showEmojiPicker.value = false
@@ -258,6 +243,7 @@ export default {
       }
     }
 
+    // Emoji picker methods
     const toggleEmojiPicker = () => {
       showEmojiPicker.value = !showEmojiPicker.value
     }
@@ -267,6 +253,7 @@ export default {
       showEmojiPicker.value = false
     }
 
+    // Click outside handler
     const handleClickOutside = (event) => {
       const emojiContainer = event.target.closest('.emoji-container')
       if (!emojiContainer && showEmojiPicker.value) {
@@ -276,7 +263,6 @@ export default {
 
     // Watchers
     watch(() => props.post, (newPost) => {
-      console.log('Post changed:', newPost)
       if (newPost && newPost.PostID) {
         loadComments()
       } else {
@@ -285,7 +271,7 @@ export default {
       showEmojiPicker.value = false
     }, { immediate: true, deep: true })
 
-    // Lifecycle hooks
+    // Lifecycle
     onMounted(() => {
       document.addEventListener('click', handleClickOutside)
     })
@@ -442,20 +428,6 @@ export default {
   padding-right: 0.25rem;
 }
 
-.comments-list::-webkit-scrollbar {
-  width: 0.25rem;
-}
-
-.comments-list::-webkit-scrollbar-track {
-  background: var(--theme-color-10, rgba(255, 235, 124, 0.1));
-  border-radius: 0.125rem;
-}
-
-.comments-list::-webkit-scrollbar-thumb {
-  background: var(--theme-color-20, rgba(255, 235, 124, 0.3));
-  border-radius: 0.125rem;
-}
-
 .loading-comments, .no-comments {
   color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
   font-size: 0.75rem;
@@ -609,20 +581,6 @@ export default {
   padding: 0.5rem;
   max-height: 7rem;
   overflow-y: auto;
-}
-
-.emoji-grid::-webkit-scrollbar {
-  width: 0.25rem;
-}
-
-.emoji-grid::-webkit-scrollbar-track {
-  background: var(--theme-color-10, rgba(255, 235, 124, 0.1));
-  border-radius: 0.125rem;
-}
-
-.emoji-grid::-webkit-scrollbar-thumb {
-  background: var(--theme-color-20, rgba(255, 235, 124, 0.3));
-  border-radius: 0.125rem;
 }
 
 .emoji-option {

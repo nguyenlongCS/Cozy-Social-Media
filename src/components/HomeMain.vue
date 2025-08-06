@@ -1,14 +1,12 @@
 <!--
-src/components/HomeMain.vue - Updated with Options Menu
+src/components/HomeMain.vue - Refactored
 Component Feed chính với options menu cho bài viết
 Logic:
-- Thêm options menu dropdown với 5 chức năng
-- Xóa bài viết (chỉ owner)
-- Ẩn bài viết (chỉ owner) 
-- Tải xuống media
-- Báo cáo bài viết
-- Kiểm tra quyền sở hữu để hiển thị menu phù hợp
-- Click outside để đóng menu
+- Hiển thị posts với multi-media carousel support
+- Options menu với các chức năng: xóa, ẩn, tải xuống, báo cáo
+- Like/unlike posts với validation
+- Wheel scrolling với cooldown protection
+- Emit events cho parent component
 -->
 <template>
   <div class="feed">
@@ -181,7 +179,6 @@ Logic:
                 <div class="option-icon report-icon"></div>
                 <span>{{ getText('reportPost') }}</span>
               </button>
-
             </div>
           </div>
         </div>
@@ -214,7 +211,7 @@ export default {
       isLoading: isActionsLoading 
     } = usePostActions()
     
-    // Reactive data
+    // Reactive state
     const posts = ref([])
     const currentIndex = ref(0)
     const currentMediaIndex = ref(0)
@@ -223,73 +220,48 @@ export default {
     const scrollCooldown = 300
     const isLiking = ref(false)
     const userLikes = ref(new Set())
-    
-    // Options menu state
     const showOptionsMenu = ref(false)
 
     // Computed properties
-    const currentPost = computed(() => {
-      return posts.value[currentIndex.value] || {}
-    })
-
-    const hasMultipleMedia = computed(() => {
-      return currentPost.value.mediaItems && currentPost.value.mediaItems.length > 0
-    })
-
+    const currentPost = computed(() => posts.value[currentIndex.value] || {})
+    const hasMultipleMedia = computed(() => currentPost.value.mediaItems?.length > 0)
     const currentMedia = computed(() => {
-      if (hasMultipleMedia.value) {
-        return currentPost.value.mediaItems[currentMediaIndex.value] || {}
-      }
-      return {}
+      return hasMultipleMedia.value ? currentPost.value.mediaItems[currentMediaIndex.value] || {} : {}
     })
-
     const isLikedByUser = computed(() => {
-      if (!user.value || !currentPost.value.PostID) return false
-      return userLikes.value.has(currentPost.value.PostID)
+      return user.value && currentPost.value.PostID ? userLikes.value.has(currentPost.value.PostID) : false
     })
-
-    // Options menu computed properties
-    const isPostOwner = computed(() => {
-      return user.value && currentPost.value.UserID === user.value.uid
-    })
-
+    const isPostOwner = computed(() => user.value && currentPost.value.UserID === user.value.uid)
     const hasMedia = computed(() => {
-      return currentPost.value.MediaURL || 
-             (currentPost.value.mediaItems && currentPost.value.mediaItems.length > 0)
+      return currentPost.value.MediaURL || (currentPost.value.mediaItems?.length > 0)
     })
 
-    // Methods
+    // Display name helper
     const getDisplayName = (post) => {
       if (!post.UserName) return getText('user')
       
       const userName = post.UserName
-      
       if (user.value && post.UserID === user.value.uid) {
         const meText = currentLanguage.value === 'vi' ? 'tôi' : 'me'
         return `${userName} (${meText})`
       }
-      
       return userName
     }
 
-    // Media navigation methods
+    // Media navigation
     const previousMedia = () => {
-      if (currentMediaIndex.value > 0) {
-        currentMediaIndex.value--
-      }
+      if (currentMediaIndex.value > 0) currentMediaIndex.value--
     }
 
     const nextMedia = () => {
-      if (currentMediaIndex.value < currentPost.value.mediaCount - 1) {
-        currentMediaIndex.value++
-      }
+      if (currentMediaIndex.value < currentPost.value.mediaCount - 1) currentMediaIndex.value++
     }
 
     const resetMediaIndex = () => {
       currentMediaIndex.value = 0
     }
 
-    // Options menu methods
+    // Options menu
     const toggleOptionsMenu = () => {
       showOptionsMenu.value = !showOptionsMenu.value
     }
@@ -298,7 +270,7 @@ export default {
       showOptionsMenu.value = false
     }
 
-    // Handle click outside to close menu
+    // Click outside handler
     const handleClickOutside = (event) => {
       const optionsContainer = event.target.closest('.options-container')
       if (!optionsContainer && showOptionsMenu.value) {
@@ -306,7 +278,7 @@ export default {
       }
     }
 
-    // Post action handlers
+    // Post actions
     const handleDeletePost = async () => {
       if (!currentPost.value || !user.value) return
       
@@ -315,25 +287,17 @@ export default {
 
       try {
         await deletePost(currentPost.value, user.value.uid)
-        
-        // Remove post from local state
         posts.value.splice(currentIndex.value, 1)
         
-        // Adjust current index
         if (currentIndex.value >= posts.value.length) {
           currentIndex.value = Math.max(0, posts.value.length - 1)
         }
         
-        // Emit updated post stats
         emitPostStats()
-        
         closeOptionsMenu()
         emit('post-deleted', currentPost.value.PostID)
         
-        // Reload posts if list becomes empty
-        if (posts.value.length === 0) {
-          await loadPosts()
-        }
+        if (posts.value.length === 0) await loadPosts()
         
       } catch (error) {
         console.error('Delete post failed:', error)
@@ -348,25 +312,17 @@ export default {
 
       try {
         await hidePost(currentPost.value, user.value.uid)
-        
-        // Remove post from local state (visually hidden from feed)
         posts.value.splice(currentIndex.value, 1)
         
-        // Adjust current index
         if (currentIndex.value >= posts.value.length) {
           currentIndex.value = Math.max(0, posts.value.length - 1)
         }
         
-        // Emit updated post stats
         emitPostStats()
-        
         closeOptionsMenu()
         emit('post-hidden', currentPost.value.PostID)
         
-        // Reload posts if list becomes empty
-        if (posts.value.length === 0) {
-          await loadPosts()
-        }
+        if (posts.value.length === 0) await loadPosts()
         
       } catch (error) {
         console.error('Hide post failed:', error)
@@ -395,29 +351,22 @@ export default {
       }
     }
 
-    // Existing methods (loadPosts, handleLike, etc.) remain unchanged
+    // Load posts
     const loadPosts = async () => {
       try {
-        // Load ALL posts instead of limit 10
-        const fetchedPosts = await getPosts(1000) // Large number to get all posts
-        // Filter out hidden posts
+        const fetchedPosts = await getPosts(1000)
         posts.value = fetchedPosts.filter(post => !post.Hidden)
-        console.log('Posts loaded:', posts.value.length, 'Total fetched:', fetchedPosts.length)
         
-        // Emit post stats for footer counter
         emitPostStats()
         
         if (user.value) {
           const likedPostIds = await getUserLikedPosts(user.value.uid)
           userLikes.value = new Set(likedPostIds)
-          console.log('User liked posts loaded:', likedPostIds.length)
         }
         
         if (posts.value.length > 0) {
           preloadMedia(0)
-          if (posts.value.length > 1) {
-            preloadMedia(1)
-          }
+          if (posts.value.length > 1) preloadMedia(1)
         }
       } catch (error) {
         console.error('Error loading posts:', error)
@@ -425,7 +374,7 @@ export default {
       }
     }
 
-    // Emit post stats to parent
+    // Emit post stats
     const emitPostStats = () => {
       emit('post-stats-changed', {
         currentIndex: currentIndex.value,
@@ -433,35 +382,32 @@ export default {
       })
     }
 
+    // Handle like
     const handleLike = async () => {
       if (!user.value) {
         showError({ message: 'NOT_AUTHENTICATED' }, 'like')
         return
       }
 
-      if (!currentPost.value.PostID || isLiking.value) {
-        return
-      }
+      if (!currentPost.value.PostID || isLiking.value) return
 
       isLiking.value = true
 
       try {
         const isCurrentlyLiked = isLikedByUser.value
-        
         const result = await togglePostLike(currentPost.value.PostID, user.value.uid)
         
         if (!result.success) {
           if (result.message === 'ALREADY_LIKED') {
-            console.log('User already liked this post')
             userLikes.value.add(currentPost.value.PostID)
             showError({ message: 'ALREADY_LIKED_POST' }, 'like')
           } else if (result.message === 'NOT_LIKED') {
-            console.log('User has not liked this post')
             userLikes.value.delete(currentPost.value.PostID)
           }
           return
         }
 
+        // Update local state
         if (isCurrentlyLiked) {
           userLikes.value.delete(currentPost.value.PostID)
         } else {
@@ -471,15 +417,10 @@ export default {
         const postIndex = posts.value.findIndex(p => p.PostID === currentPost.value.PostID)
         if (postIndex !== -1) {
           const newLikeCount = isCurrentlyLiked 
-            ? (posts.value[postIndex].likes || 0) - 1 
+            ? Math.max(0, (posts.value[postIndex].likes || 0) - 1)
             : (posts.value[postIndex].likes || 0) + 1
-          posts.value[postIndex].likes = Math.max(0, newLikeCount)
+          posts.value[postIndex].likes = newLikeCount
         }
-
-        console.log('Like toggled successfully:', {
-          PostID: currentPost.value.PostID,
-          isLiked: !isCurrentlyLiked
-        })
 
       } catch (error) {
         console.error('Error toggling like:', error)
@@ -489,36 +430,22 @@ export default {
       }
     }
 
-    // Preload media method (unchanged)
+    // Preload media
     const preloadMedia = (index) => {
       const post = posts.value[index]
-      if (!post || preloadedMedia.value.has(post.PostID)) {
-        return
-      }
+      if (!post || preloadedMedia.value.has(post.PostID)) return
 
-      if (post.mediaItems && post.mediaItems.length > 0) {
+      if (post.mediaItems?.length > 0) {
         post.mediaItems.forEach((mediaItem, mediaIndex) => {
           const cacheKey = `${post.PostID}_${mediaIndex}`
           
           if (mediaItem.type === 'image') {
             const img = new Image()
-            img.onload = () => {
-              preloadedMedia.value.set(cacheKey, true)
-              console.log(`Preloaded multi-media image ${mediaIndex + 1} for post:`, post.PostID)
-            }
-            img.onerror = () => {
-              console.error(`Failed to preload multi-media image ${mediaIndex + 1} for post:`, post.PostID)
-            }
+            img.onload = () => preloadedMedia.value.set(cacheKey, true)
             img.src = mediaItem.url
           } else if (mediaItem.type === 'video') {
             const video = document.createElement('video')
-            video.onloadeddata = () => {
-              preloadedMedia.value.set(cacheKey, true)
-              console.log(`Preloaded multi-media video ${mediaIndex + 1} for post:`, post.PostID)
-            }
-            video.onerror = () => {
-              console.error(`Failed to preload multi-media video ${mediaIndex + 1} for post:`, post.PostID)
-            }
+            video.onloadeddata = () => preloadedMedia.value.set(cacheKey, true)
             video.preload = 'metadata'
             video.src = mediaItem.url
           }
@@ -526,39 +453,26 @@ export default {
       } else if (post.MediaURL) {
         if (post.MediaType === 'image') {
           const img = new Image()
-          img.onload = () => {
-            preloadedMedia.value.set(post.PostID, true)
-            console.log('Preloaded single image for post:', post.PostID)
-          }
-          img.onerror = () => {
-            console.error('Failed to preload single image for post:', post.PostID)
-          }
+          img.onload = () => preloadedMedia.value.set(post.PostID, true)
           img.src = post.MediaURL
         } else if (post.MediaType === 'video') {
           const video = document.createElement('video')
-          video.onloadeddata = () => {
-            preloadedMedia.value.set(post.PostID, true)
-            console.log('Preloaded single video for post:', post.PostID)
-          }
-          video.onerror = () => {
-            console.error('Failed to preload single video for post:', post.PostID)
-          }
+          video.onloadeddata = () => preloadedMedia.value.set(post.PostID, true)
           video.preload = 'metadata'
           video.src = post.MediaURL
         }
       }
     }
 
+    // Format timestamp
     const formatTimestamp = (timestamp) => {
       if (!timestamp) return '--:--'
       
       let date
       if (timestamp.toDate) {
         date = timestamp.toDate()
-      } else if (timestamp instanceof Date) {
-        date = timestamp
       } else {
-        date = new Date(timestamp)
+        date = timestamp instanceof Date ? timestamp : new Date(timestamp)
       }
       
       const hours = date.getHours().toString().padStart(2, '0')
@@ -570,24 +484,20 @@ export default {
       return `${hours}:${minutes}, ${day}/${month}/${year}`
     }
 
+    // Handle wheel scroll
     const handleWheel = (event) => {
       if (posts.value.length <= 1) return
       
       event.preventDefault()
       
-      // Close options menu when scrolling
-      if (showOptionsMenu.value) {
-        closeOptionsMenu()
-      }
+      if (showOptionsMenu.value) closeOptionsMenu()
       
       const currentTime = Date.now()
       const timeSinceLastScroll = currentTime - lastScrollTime.value
       
       if (timeSinceLastScroll < scrollCooldown) {
         emit('scroll-warning', true)
-        setTimeout(() => {
-          emit('scroll-warning', false)
-        }, 2000)
+        setTimeout(() => emit('scroll-warning', false), 2000)
         return
       }
       
@@ -608,9 +518,7 @@ export default {
       if (totalPosts === 0) return
 
       resetMediaIndex()
-      closeOptionsMenu() // Close menu when changing posts
-      
-      // Emit updated post stats
+      closeOptionsMenu()
       emitPostStats()
 
       const nextIndex = (newIndex + 1) % totalPosts
@@ -629,7 +537,6 @@ export default {
         try {
           const likedPostIds = await getUserLikedPosts(newUser.uid)
           userLikes.value = new Set(likedPostIds)
-          console.log('User likes reloaded:', likedPostIds.length)
         } catch (error) {
           console.error('Error reloading user likes:', error)
         }
@@ -680,6 +587,7 @@ export default {
 </script>
 
 <style scoped>
+/* CSS code remains the same as original - not included for brevity */
 .feed {
   width: 39.53%;
   height: 26.44rem;
@@ -740,7 +648,7 @@ export default {
   font-weight: 400;
 }
 
-/* Multi-media carousel styles */
+/* Media styles */
 .media-carousel {
   width: 80%;
   height: 18.75rem;

@@ -1,11 +1,10 @@
 <!--
-src/components/HomeLeft.vue - Updated with Friends List
+src/components/HomeLeft.vue - Refactored
 Component sidebar bên trái trang chủ với danh sách bạn bè
 Logic: 
-- Menu buttons với authentication check cho Create Post
+- Menu buttons với authentication check
 - Hiển thị 5 bạn bè đầu tiên với avatar và tên
 - Button "Toàn bộ bạn bè" chuyển đến trang /friends
-- Load friends list từ composable useFriends
 -->
 <template>
   <div class="menu">
@@ -19,14 +18,11 @@ Logic:
       {{ getText('settings') }}
     </button>
 
-    <!-- Separator Line -->
+    <!-- Friends Section -->
     <div v-if="user" class="separator"></div>
-
-    <!-- Friends List Section -->
     <div v-if="user" class="friends-section">
       <h3 class="friends-title">{{ getText('friends') }}</h3>
       
-      <!-- Friends List -->
       <div v-if="isLoading" class="friends-loading">
         {{ getText('loading') }}...
       </div>
@@ -49,7 +45,6 @@ Logic:
         </div>
       </div>
 
-      <!-- View All Friends Button - Only show when have exactly 5 friends -->
       <button 
         v-if="friendsList.length >= 5"
         class="view-all-btn" 
@@ -80,10 +75,8 @@ export default {
     const { getFriends, isLoading } = useFriends()
     const { showError } = useErrorHandler()
 
-    // Reactive data
     const friendsList = ref([])
 
-    // Methods
     const handleCreatePost = () => {
       if (!user.value) {
         showError({ message: 'NOT_AUTHENTICATED' }, 'post')
@@ -92,11 +85,8 @@ export default {
       router.push('/createpost')
     }
 
-    const goToFriends = () => {
-      router.push('/friends')
-    }
+    const goToFriends = () => router.push('/friends')
 
-    // Load friends list (limit 5)
     const loadFriendsList = async () => {
       if (!user.value) {
         friendsList.value = []
@@ -106,21 +96,17 @@ export default {
       try {
         const friends = await getFriends(user.value.uid, 5)
         
-        // Populate user info for friends
         for (const friend of friends) {
           const userInfo = await getUserById(friend.friendId)
           friend.userInfo = userInfo
         }
         
         friendsList.value = friends
-        console.log('Friends list loaded:', friends.length)
       } catch (error) {
-        console.error('Error loading friends list:', error)
         friendsList.value = []
       }
     }
 
-    // Watchers
     watch(user, (newUser) => {
       if (newUser) {
         loadFriendsList()
@@ -129,11 +115,8 @@ export default {
       }
     }, { immediate: true })
 
-    // Lifecycle
     onMounted(() => {
-      if (user.value) {
-        loadFriendsList()
-      }
+      if (user.value) loadFriendsList()
     })
 
     return {
@@ -167,7 +150,6 @@ export default {
   font-size: 0.875rem;
 }
 
-/* Separator Line */
 .separator {
   width: 11.25rem;
   height: 1px;
@@ -175,7 +157,6 @@ export default {
   margin: 0.5rem 0;
 }
 
-/* Friends Section */
 .friends-section {
   width: 11.25rem;
   padding: 0.75rem;

@@ -1,9 +1,10 @@
 <!--
-src/components/Footer.vue - Updated with Post Counter
-Component footer với hiệu ứng làm mờ và hiển thị tổng số bài viết
+src/components/Footer.vue - Refactored
+Component footer với post counter và scroll warning
 Logic: 
-- Hiển thị hướng dẫn cuộn và warning khi cuộn quá nhanh với độ mờ
-- Hiển thị counter bài viết hiện tại/tổng số (vd: 6/15) ở góc phải
+- Hiển thị hướng dẫn cuộn với opacity fade
+- Post counter ở góc phải
+- Scroll warning animation
 -->
 <template>
   <div class="footer">
@@ -14,7 +15,6 @@ Logic:
       {{ getText('scrollTooFast') }}
     </div>
     
-    <!-- Post Counter -->
     <div v-if="totalPosts > 0" class="post-counter">
       {{ currentPostIndex + 1 }}/{{ totalPosts }}
     </div>
@@ -42,10 +42,7 @@ export default {
   },
   setup() {
     const { getText } = useLanguage()
-
-    return {
-      getText
-    }
+    return { getText }
   }
 }
 </script>
@@ -64,13 +61,11 @@ export default {
   font-size: 0.875rem;
   font-weight: 500;
   position: relative;
-  /* UPDATED: Làm mờ footer */
   opacity: 0.7;
   transition: opacity 0.3s ease;
 }
 
 .footer:hover {
-  /* UPDATED: Hiển thị rõ hơn khi hover */
   opacity: 1;
 }
 

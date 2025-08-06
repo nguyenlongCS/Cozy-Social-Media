@@ -37,26 +37,14 @@ export default {
     const { changeTheme } = useTheme()
     const { showError } = useErrorHandler()
 
-    // Methods
     const getAuthButtonText = () => {
-      if (isLoading.value) {
-        return '...'
-      }
-      
-      if (route.name === 'Login') {
-        return getText('back')
-      }
-      
-      if (user.value) {
-        return getText('logout')
-      }
-      
+      if (isLoading.value) return '...'
+      if (route.name === 'Login') return getText('back')
+      if (user.value) return getText('logout')
       return getText('login')
     }
 
-    const handleToggleLanguage = () => {
-      emit('toggle-language')
-    }
+    const handleToggleLanguage = () => emit('toggle-language')
 
     const handleAuthAction = async () => {
       if (route.name === 'Login') {
@@ -67,7 +55,6 @@ export default {
       if (user.value) {
         try {
           await logout()
-          console.log('Logout successful')
         } catch (error) {
           showError(error, 'logout')
         }

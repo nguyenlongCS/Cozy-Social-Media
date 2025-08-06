@@ -1,12 +1,10 @@
 <!--
-src/components/FriendRight.vue
-Component sidebar bên phải cho trang Friends (vị trí phải, tương tự HomeRight)
+src/components/FriendRight.vue - Refactored
+Component sidebar bên phải cho trang Friends
 Logic:
-- 3 buttons: Danh sách bạn bè, Gợi ý kết bạn, Lời mời kết bạn
+- 3 buttons với counter cho mỗi section
 - Emit activeTab để FriendMain biết hiển thị gì
-- Hiển thị counter cho mỗi section
 - Load và update counters khi có thay đổi
-- Design consistent với HomeRight
 -->
 <template>
   <div class="friend-right">
@@ -57,7 +55,6 @@ Logic:
       </button>
     </div>
 
-    <!-- Loading indicator -->
     <div v-if="isLoading" class="loading-section">
       <div class="loading-text">{{ getText('loading') }}...</div>
     </div>
@@ -83,13 +80,11 @@ export default {
     } = useFriends()
     const { getText } = useLanguage()
 
-    // Reactive data
     const activeTab = ref('friends')
     const friendsCount = ref(0)
     const suggestionsCount = ref(0)
     const requestsCount = ref(0)
 
-    // Methods
     const setActiveTab = (tab) => {
       activeTab.value = tab
       emit('tab-changed', tab)
@@ -99,34 +94,23 @@ export default {
       if (!user.value?.uid) return
 
       try {
-        // Load friends count
         const friendsCountResult = await getFriendsCount(user.value.uid)
         friendsCount.value = friendsCountResult
 
-        // Load friend requests count
         const requestsCountResult = await getFriendRequestsCount(user.value.uid)
         requestsCount.value = requestsCountResult
 
-        // Load suggestions count
         const suggestions = await getFriendSuggestions(user.value.uid, 100)
         suggestionsCount.value = suggestions.length
-
-        console.log('Counts loaded:', {
-          friends: friendsCount.value,
-          requests: requestsCount.value,
-          suggestions: suggestionsCount.value
-        })
       } catch (error) {
         console.error('Error loading counts:', error)
       }
     }
 
-    // Update counts (called from parent when data changes)
     const updateCounts = () => {
       loadCounts()
     }
 
-    // Watchers
     watch(user, (newUser) => {
       if (newUser) {
         loadCounts()
@@ -137,16 +121,11 @@ export default {
       }
     }, { immediate: true })
 
-    // Lifecycle
     onMounted(() => {
-      if (user.value) {
-        loadCounts()
-      }
-      // Emit initial tab
+      if (user.value) loadCounts()
       emit('tab-changed', activeTab.value)
     })
 
-    // Expose updateCounts for parent component
     return {
       activeTab,
       friendsCount,
@@ -155,7 +134,7 @@ export default {
       isLoading,
       getText,
       setActiveTab,
-      updateCounts // Expose this method
+      updateCounts
     }
   }
 }
@@ -274,29 +253,8 @@ export default {
 }
 
 @keyframes pulse {
-  0% { 
-    transform: scale(1); 
-    opacity: 1; 
-  }
-  50% { 
-    transform: scale(1.05); 
-    opacity: 0.8; 
-  }
-  100% { 
-    transform: scale(1); 
-    opacity: 1; 
-  }
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .section-title {
-    font-size: 0.8rem;
-  }
-  
-  .section-counter {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.4rem;
-  }
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.05); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
 }
 </style>

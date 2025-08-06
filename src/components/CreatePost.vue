@@ -1,14 +1,12 @@
 <!--
-src/components/CreatePost.vue - Updated with Multi-Media Support
-Component CreatePost - Tạo bài đăng mới với multi-media support như Instagram
+src/components/CreatePost.vue - Refactored
+Component tạo bài đăng với multi-media support
 Logic:
-- Support upload nhiều ảnh/video cùng lúc
-- Carousel preview với navigation dots
-- Individual media controls (remove từng item)
-- Drag & drop reordering
-- Mixed media types (ảnh + video)
-- Enhanced file validation
-- Bulk upload to Firebase Storage
+- Upload nhiều ảnh/video cùng lúc (tối đa 10)
+- Carousel preview với navigation
+- File validation và progress tracking
+- Auto-resize textarea cho caption
+- Business logic đã được tách ra composables
 -->
 <template>
   <div class="create-post">
@@ -31,7 +29,6 @@ Logic:
       
       <!-- Multi-media preview -->
       <div v-else class="media-carousel">
-        <!-- Current media display -->
         <div class="media-container">
           <div class="media-wrapper">
             <img 
@@ -101,7 +98,6 @@ Logic:
         </div>
       </div>
       
-      <!-- File input -->
       <input 
         ref="fileInput" 
         type="file" 
@@ -173,7 +169,7 @@ export default {
     const { createPost, uploadMedia } = useFirestore()
     const { showError, showSuccess } = useErrorHandler()
 
-    // Reactive data
+    // Reactive state
     const caption = ref('')
     const selectedFiles = ref([])
     const currentIndex = ref(0)
@@ -197,7 +193,7 @@ export default {
       return selectedFiles.value[currentIndex.value] || {}
     })
 
-    // Methods
+    // User display methods
     const getCurrentUserDisplayName = () => {
       if (!user.value) return getText('guest')
       const meText = currentLanguage.value === 'vi' ? 'Tôi' : 'Me'
@@ -214,6 +210,7 @@ export default {
       return `${hours}:${minutes}, ${day}/${month}/${year}`
     }
 
+    // Textarea auto-resize
     const adjustTextareaHeight = async () => {
       await nextTick()
       if (captionTextarea.value) {
@@ -223,14 +220,11 @@ export default {
         const newHeight = Math.min(scrollHeight, maxHeight)
         captionTextarea.value.style.height = newHeight + 'px'
         
-        if (scrollHeight > maxHeight) {
-          captionTextarea.value.style.overflowY = 'auto'
-        } else {
-          captionTextarea.value.style.overflowY = 'hidden'
-        }
+        captionTextarea.value.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden'
       }
     }
 
+    // Load user avatar
     const loadUserAvatar = async () => {
       if (!user.value) {
         userAvatar.value = ''
@@ -239,31 +233,23 @@ export default {
 
       try {
         const userProfile = await getUserById(user.value.uid)
-        if (userProfile && userProfile.Avatar) {
-          userAvatar.value = userProfile.Avatar
-        } else {
-          userAvatar.value = user.value.photoURL || ''
-        }
+        userAvatar.value = userProfile?.Avatar || user.value.photoURL || ''
       } catch (error) {
-        console.error('Error loading user avatar:', error)
         userAvatar.value = user.value.photoURL || ''
       }
     }
 
+    // File handling methods
     const triggerFileInput = () => {
-      if (fileInput.value) {
-        fileInput.value.click()
-      }
+      fileInput.value?.click()
     }
 
     const validateFile = (file) => {
-      // Check file size
       if (file.size > MAX_FILE_SIZE) {
         showError({ message: 'FILE_TOO_LARGE' }, 'upload')
         return false
       }
 
-      // Check file type
       if (!ALLOWED_TYPES.some(type => file.type.startsWith(type))) {
         showError({ message: 'INVALID_FILE_TYPE' }, 'upload')
         return false
@@ -276,13 +262,11 @@ export default {
       const files = Array.from(event.target.files)
       if (!files.length) return
 
-      // Check total files limit
       if (selectedFiles.value.length + files.length > MAX_FILES) {
         showError({ message: 'TOO_MANY_FILES' }, 'upload')
         return
       }
 
-      // Validate and process files
       const validFiles = files.filter(validateFile)
       
       validFiles.forEach(file => {
@@ -296,20 +280,15 @@ export default {
         selectedFiles.value.push(fileObj)
       })
 
-      // Reset file input
-      if (fileInput.value) {
-        fileInput.value.value = ''
-      }
-
-      console.log(`Added ${validFiles.length} files. Total: ${selectedFiles.value.length}`)
+      if (fileInput.value) fileInput.value.value = ''
     }
 
+    // Media navigation methods
     const removeMedia = (index) => {
       if (selectedFiles.value[index]) {
         URL.revokeObjectURL(selectedFiles.value[index].url)
         selectedFiles.value.splice(index, 1)
         
-        // Adjust current index
         if (currentIndex.value >= selectedFiles.value.length) {
           currentIndex.value = Math.max(0, selectedFiles.value.length - 1)
         }
@@ -329,17 +308,14 @@ export default {
     }
 
     const previousMedia = () => {
-      if (currentIndex.value > 0) {
-        currentIndex.value--
-      }
+      if (currentIndex.value > 0) currentIndex.value--
     }
 
     const nextMedia = () => {
-      if (currentIndex.value < selectedFiles.value.length - 1) {
-        currentIndex.value++
-      }
+      if (currentIndex.value < selectedFiles.value.length - 1) currentIndex.value++
     }
 
+    // Action handlers
     const handleCancel = () => {
       caption.value = ''
       removeAllMedia()
@@ -386,23 +362,19 @@ export default {
       uploadProgress.value = 0
 
       try {
-        // Upload all media files
         const uploadedMedia = await uploadMultipleMedia()
         
         if (uploadedMedia.length === 0) {
           throw new Error('No media files uploaded successfully')
         }
 
-        // Create post data with multiple media
         const postData = {
           caption: caption.value.trim(),
           authorId: user.value.uid,
           authorName: getCurrentUserDisplayName(),
           authorEmail: user.value.email,
-          // For single media compatibility
           mediaUrl: uploadedMedia[0].url,
           mediaType: uploadedMedia[0].type,
-          // New field for multiple media
           mediaItems: uploadedMedia,
           mediaCount: uploadedMedia.length,
           createdAt: new Date(),
@@ -410,12 +382,9 @@ export default {
           comments: []
         }
 
-        // Save to Firestore
         await createPost(postData)
-
         showSuccess('post')
         
-        // Reset form and navigate home
         caption.value = ''
         removeAllMedia()
         router.push('/')
@@ -429,7 +398,7 @@ export default {
       }
     }
 
-    // Watch user changes
+    // Watchers
     watch(user, (newUser) => {
       if (newUser) {
         loadUserAvatar()
@@ -438,26 +407,18 @@ export default {
       }
     }, { immediate: true })
 
-    // Watch caption changes
-    watch(caption, () => {
-      adjustTextareaHeight()
-    })
+    watch(caption, adjustTextareaHeight)
 
-    // Watch current index bounds
     watch(() => selectedFiles.value.length, (newLength) => {
       if (currentIndex.value >= newLength) {
         currentIndex.value = Math.max(0, newLength - 1)
       }
     })
 
-    // Load avatar on mount
+    // Lifecycle
     onMounted(() => {
-      if (user.value) {
-        loadUserAvatar()
-      }
-      nextTick(() => {
-        adjustTextareaHeight()
-      })
+      if (user.value) loadUserAvatar()
+      nextTick(adjustTextareaHeight)
     })
 
     return {
@@ -753,20 +714,6 @@ export default {
   gap: 0.375rem;
   overflow-x: auto;
   padding: 0.25rem;
-}
-
-.media-thumbnails::-webkit-scrollbar {
-  height: 0.25rem;
-}
-
-.media-thumbnails::-webkit-scrollbar-track {
-  background: rgba(255, 235, 124, 0.2);
-  border-radius: 0.125rem;
-}
-
-.media-thumbnails::-webkit-scrollbar-thumb {
-  background: rgba(255, 235, 124, 0.5);
-  border-radius: 0.125rem;
 }
 
 .thumbnail {

@@ -1,12 +1,53 @@
 <!--
-src/components/LoginMain.vue - Refactored
-Component form đăng nhập/đăng ký
+src/components/LoginMain.checkbox {
+  display: none;
+}
+
+.checkmark {
+  width: 1rem;
+  height: 1rem;
+  border: 0.125rem solid var(--theme-color);
+  border-radius: 0.1875rem;
+  margin-right: 0.5rem;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.checkbox:checked + .checkmark {
+  background: var(--theme-color);
+}
+
+.checkbox:checked + .checkmark::after {
+  content: '';
+  position: absolute;
+  left: 0.1875rem;
+  top: 0.0625rem;
+  width: 0.3125rem;
+  height: 0.625rem;
+  border: solid #000;
+  border-width: 0 0.125rem 0.125rem 0;
+  transform: rotate(45deg);
+}
+
+.forgot-pass {
+  color: var(--theme-color);
+  font-size: 0.75rem;
+  text-decoration: none;
+  transition: opacity 0.3s ease;
+}
+
+.forgot-pass:hover {
+  opacity: 0.7;
+  text-decoration: underline;
+}
+</style>vue - Fixed
+Component form đăng nhập/đăng ký với màu input được fix
 Logic:
 - Toggle giữa tab Login và SignUp
 - Form validation và xử lý submit
-- Remember me functionality với localStorage
+- Remember me functionality
 - Password visibility toggle
-- Firebase authentication integration
+- Fixed: form-input color và autofill styling
 -->
 <template>
   <div class="loginform">
@@ -148,7 +189,7 @@ export default {
     const { getText } = useLanguage()
     const { showError, showSuccess } = useErrorHandler()
 
-    // Reactive data
+    // Reactive state
     const activeTab = ref('login')
     const showLoginPassword = ref(false)
     const showSignupPassword = ref(false)
@@ -166,7 +207,7 @@ export default {
       confirmPassword: ''
     })
 
-    // Methods
+    // Action handlers
     const handleRememberMeChange = () => {
       saveRememberedEmail(loginForm.value.email, loginForm.value.rememberMe)
     }
@@ -175,7 +216,6 @@ export default {
       try {
         saveRememberedEmail(loginForm.value.email, loginForm.value.rememberMe)
         await loginWithEmail(loginForm.value.email, loginForm.value.password)
-        console.log('Login successful')
         router.push('/')
       } catch (error) {
         showError(error, 'login')
@@ -206,7 +246,6 @@ export default {
         
         showSuccess('signup')
         
-        // Reset form and switch to login tab
         activeTab.value = 'login'
         signupForm.value = {
           email: '',
@@ -218,7 +257,7 @@ export default {
       }
     }
 
-    // Lifecycle
+    // Load remembered email on mount
     onMounted(() => {
       const { email, remember } = loadRememberedEmail()
       if (email && remember) {
@@ -325,6 +364,7 @@ export default {
   color: rgba(255, 235, 124, 0.6);
 }
 
+/* FIXED: Autofill styling để giữ màu theme */
 .form-input:-webkit-autofill,
 .form-input:-webkit-autofill:hover,
 .form-input:-webkit-autofill:focus,
@@ -334,12 +374,19 @@ export default {
   background-color: #2B2D42 !important;
   border: 0.125rem solid var(--theme-color) !important;
   transition: background-color 5000s ease-in-out 0s;
+  caret-color: var(--theme-color);
 }
 
+/* FIXED: Firefox autofill styling */
 .form-input:-moz-autofill {
   background-color: #2B2D42 !important;
   color: var(--theme-color) !important;
   border: 0.125rem solid var(--theme-color) !important;
+}
+
+/* FIXED: Ensure autofill text color matches theme */
+.form-input:-webkit-autofill::first-line {
+  color: var(--theme-color) !important;
 }
 
 .toggle-password {
@@ -380,6 +427,15 @@ export default {
   font-size: 0.875rem;
   font-weight: 500;
   margin-top: 1rem;
+  background: var(--theme-color);
+  color: #000;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.login-btn:hover:not(:disabled), .signup-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 0.25rem 0.625rem rgba(255, 235, 124, 0.4);
 }
 
 .login-btn:disabled, .signup-btn:disabled {
