@@ -1,12 +1,7 @@
 /*
-src/composables/usePostActions.js
-Composable quản lý các hành động bài viết: xóa, ẩn, tải xuống, báo cáo, chia sẻ
-Logic:
-- Xóa bài viết hoàn toàn khỏi Firestore (post + comments + likes)
-- Ẩn bài viết khỏi Feed (không xóa dữ liệu)
-- Tải xuống media của bài viết
-- Placeholder cho báo cáo và chia sẻ
-- Kiểm tra quyền sở hữu trước khi thực hiện hành động
+src/composables/usePostActions.js - Refactored
+Post actions: delete, hide, download, report
+Logic: Post management với ownership validation và batch operations
 */
 import { ref } from 'vue'
 import { 
@@ -31,7 +26,7 @@ export function usePostActions() {
   const { showError, showSuccess } = useErrorHandler()
   const { getText } = useLanguage()
 
-  // Kiểm tra quyền sở hữu bài viết
+  // Check post ownership
   const checkPostOwnership = (post, currentUserId) => {
     if (!currentUserId) {
       throw new Error('NOT_AUTHENTICATED')
@@ -42,7 +37,7 @@ export function usePostActions() {
     return true
   }
 
-  // Xóa bài viết hoàn toàn (post + comments + likes)
+  // Delete post completely (post + comments + likes)
   const deletePost = async (post, currentUserId) => {
     if (!post?.PostID) {
       throw new Error('INVALID_POST')
@@ -52,51 +47,33 @@ export function usePostActions() {
     isLoading.value = true
 
     try {
-      // 1. Xóa tất cả comments của post
-      const commentsQuery = query(
-        collection(db, 'comments'),
-        where('PostID', '==', post.PostID)
-      )
-      const commentsSnapshot = await getDocs(commentsQuery)
+      // Get all related data
+      const [commentsSnapshot, likesSnapshot] = await Promise.all([
+        getDocs(query(collection(db, 'comments'), where('PostID', '==', post.PostID))),
+        getDocs(query(collection(db, 'likes'), where('PostID', '==', post.PostID)))
+      ])
 
-      // 2. Xóa tất cả likes của post
-      const likesQuery = query(
-        collection(db, 'likes'),
-        where('PostID', '==', post.PostID)
-      )
-      const likesSnapshot = await getDocs(likesQuery)
-
-      // 3. Sử dụng batch để xóa tất cả cùng lúc
+      // Batch delete
       const batch = writeBatch(db)
 
-      // Thêm post vào batch delete
-      const postRef = doc(db, 'posts', post.PostID)
-      batch.delete(postRef)
+      // Add post to batch
+      batch.delete(doc(db, 'posts', post.PostID))
 
-      // Thêm comments vào batch delete
+      // Add comments to batch
       commentsSnapshot.forEach(commentDoc => {
         batch.delete(doc(db, 'comments', commentDoc.id))
       })
 
-      // Thêm likes vào batch delete
+      // Add likes to batch
       likesSnapshot.forEach(likeDoc => {
         batch.delete(doc(db, 'likes', likeDoc.id))
       })
 
-      // Commit batch delete
       await batch.commit()
-
-      console.log('Post deleted successfully:', {
-        postId: post.PostID,
-        deletedComments: commentsSnapshot.size,
-        deletedLikes: likesSnapshot.size
-      })
-
       showSuccess('deletePost')
       return true
 
     } catch (error) {
-      console.error('Error deleting post:', error)
       showError(error, 'deletePost')
       throw error
     } finally {
@@ -104,7 +81,7 @@ export function usePostActions() {
     }
   }
 
-  // Ẩn bài viết khỏi Feed (soft delete)
+  // Hide post (soft delete)
   const hidePost = async (post, currentUserId) => {
     if (!post?.PostID) {
       throw new Error('INVALID_POST')
@@ -120,12 +97,10 @@ export function usePostActions() {
         HiddenAt: new Date()
       })
 
-      console.log('Post hidden successfully:', post.PostID)
       showSuccess('hidePost')
       return true
 
     } catch (error) {
-      console.error('Error hiding post:', error)
       showError(error, 'hidePost')
       throw error
     } finally {
@@ -133,7 +108,7 @@ export function usePostActions() {
     }
   }
 
-  // Tải xuống media của bài viết
+  // Download post media
   const downloadPostMedia = async (post) => {
     if (!post) {
       throw new Error('INVALID_POST')
@@ -142,12 +117,10 @@ export function usePostActions() {
     try {
       const mediaItems = []
       
-      // Thu thập tất cả media URLs
-      if (post.mediaItems && post.mediaItems.length > 0) {
-        // Multi-media post
+      // Collect media URLs
+      if (post.mediaItems?.length > 0) {
         mediaItems.push(...post.mediaItems)
       } else if (post.MediaURL) {
-        // Single media post
         mediaItems.push({
           url: post.MediaURL,
           type: post.MediaType || 'image'
@@ -159,49 +132,41 @@ export function usePostActions() {
         return
       }
 
-      // Download từng media file
+      // Download each media file
       for (let i = 0; i < mediaItems.length; i++) {
         const media = mediaItems[i]
         await downloadFile(media.url, `post_${post.PostID}_${i + 1}`)
       }
 
-      console.log('Downloaded media for post:', post.PostID)
       showSuccess('downloadMedia')
 
     } catch (error) {
-      console.error('Error downloading media:', error)
       showError(error, 'download')
     }
   }
 
-  // Helper function để download file
+  // Helper function to download file
   const downloadFile = async (url, filename) => {
     try {
       const response = await fetch(url)
       const blob = await response.blob()
       
-      // Tạo download link
       const link = document.createElement('a')
       link.href = URL.createObjectURL(blob)
       link.download = filename
       
-      // Trigger download
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       
-      // Cleanup
       URL.revokeObjectURL(link.href)
     } catch (error) {
-      console.error('Error downloading file:', error)
       throw error
     }
   }
 
-  // Báo cáo bài viết (placeholder)
+  // Report post (placeholder)
   const reportPost = async (post) => {
-    // TODO: Implement report functionality
-    console.log('Report post:', post.PostID)
     alert(getText('reportComingSoon'))
   }
 

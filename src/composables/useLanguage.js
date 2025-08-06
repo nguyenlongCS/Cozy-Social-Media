@@ -1,15 +1,13 @@
 /*
-src/composables/useLanguage.js - Updated with Friends Feature Text
-Composable quản lý ngôn ngữ với text cho chức năng kết bạn
-Added: Translations cho friends, suggestions, friend requests, actions
-Complete translation system cho toàn bộ ứng dụng bao gồm friends feature
+src/composables/useLanguage.js - Refactored
+Language management với complete translations cho toàn bộ app
+Logic: Global language state với localStorage persistence và fallback mechanism
 */
 import { ref } from 'vue'
 
-// Global state để sync giữa các components
 const globalLanguage = ref('vi')
 
-// Load language từ localStorage khi khởi tạo module
+// Load language from localStorage
 const loadLanguageFromStorage = () => {
   try {
     const savedLanguage = localStorage.getItem('appLanguage')
@@ -17,26 +15,26 @@ const loadLanguageFromStorage = () => {
       globalLanguage.value = savedLanguage
     }
   } catch (error) {
-    console.error('Error loading language from localStorage:', error)
+    // Silent fail
   }
 }
 
-// Save language vào localStorage
+// Save language to localStorage
 const saveLanguageToStorage = (language) => {
   try {
     localStorage.setItem('appLanguage', language)
   } catch (error) {
-    console.error('Error saving language to localStorage:', error)
+    // Silent fail
   }
 }
 
-// Initialize language từ storage
+// Initialize language
 loadLanguageFromStorage()
 
-// Complete text translations with Friends feature
+// Complete translations
 const translations = {
   vi: {
-    // ===== AUTHENTICATION =====
+    // Authentication
     login: 'Đăng nhập',
     signup: 'Đăng ký',
     email: 'Email',
@@ -48,7 +46,7 @@ const translations = {
     back: 'Trở về',
     orSignInWith: 'Hoặc đăng nhập bằng',
     
-    // ===== NAVIGATION & MENU =====
+    // Navigation & Menu
     createPost: 'Tạo Bài Đăng',
     explore: 'Khám Phá',
     settings: 'Cài Đặt',
@@ -56,14 +54,13 @@ const translations = {
     home: 'Trang chủ',
     profile: 'Hồ sơ',
     
-    // ===== FRIENDS FEATURE =====
+    // Friends Feature
     friends: 'Bạn bè',
     suggestions: 'Gợi ý kết bạn',
     friendRequests: 'Lời mời kết bạn',
     noFriendsYet: 'Chưa có bạn bè nào',
     noSuggestions: 'Không có gợi ý nào',
     noFriendRequests: 'Không có lời mời nào',
-    selectOption: 'Chọn một tùy chọn',
     friendsSince: 'Bạn bè từ',
     requestSent: 'Gửi lời mời',
     addFriend: 'Kết bạn',
@@ -72,15 +69,18 @@ const translations = {
     reject: 'Từ chối',
     confirmUnfriend: 'Bạn có chắc muốn hủy kết bạn?',
     unknownUser: 'Người dùng không xác định',
+    viewAllFriends: 'Toàn bộ bạn bè',
     
-    // ===== CREATE POST =====
+    // Create Post
     writeCaption: 'Viết chú thích...',
     addMedia: 'Thêm ảnh/video',
     cancel: 'Hủy',
     post: 'Đăng',
     remove: 'Xóa',
+    multiMediaHint: 'Chọn nhiều ảnh/video (tối đa 10)',
+    mediaLimit: 'Tối đa 10 media',
     
-    // ===== USER STATES & SYNC =====
+    // User States
     guest: 'Khách',
     user: 'Người dùng',
     loading: 'Đang tải...',
@@ -88,12 +88,12 @@ const translations = {
     syncing: 'Đang đồng bộ...',
     syncingData: 'Đồng bộ dữ liệu',
     
-    // ===== FEED & POSTS =====
+    // Feed & Posts
     noPosts: 'Chưa có bài viết nào',
     textPost: 'Bài viết văn bản',
     selectPost: 'Chọn bài viết để xem chi tiết',
     
-    // ===== POST DETAILS =====
+    // Post Details
     caption: 'Chú thích',
     noCaption: 'Không có chú thích',
     likes: 'lượt thích',
@@ -102,7 +102,7 @@ const translations = {
     writeComment: 'Viết bình luận...',
     loginToComment: 'Đăng nhập để bình luận',
     
-    // ===== PROFILE PAGE =====
+    // Profile
     clickToUpload: 'Click để tải ảnh',
     noName: 'Chưa có tên',
     signedInWith: 'Đăng nhập bằng',
@@ -117,41 +117,39 @@ const translations = {
     female: 'Nữ',
     other: 'Khác',
     saveChanges: 'Lưu thay đổi',
-    errorLoadingProfile: 'Lỗi tải thông tin',
-    retry: 'Thử lại',
-    loginRequired: 'Yêu cầu đăng nhập',
-    loginToViewProfile: 'Đăng nhập để xem thông tin cá nhân',
+    interests: 'Nội dung quan tâm',
+    noInterestsSelected: 'Chưa chọn nội dung quan tâm nào',
+    selectInterests: 'Chọn nội dung quan tâm',
+    save: 'Lưu',
+    posts: 'Danh sách bài viết',
+    postsComingSoon: 'Tính năng sắp ra mắt',
+    friendsComingSoon: 'Tính năng sắp ra mắt',
     
-    // ===== TIME FORMATS =====
+    // Time formats
     justNow: 'Vừa xong',
     minutesAgo: ' phút trước',
     hoursAgo: ' giờ trước',
     daysAgo: ' ngày trước',
     
-    // ===== FOOTER & INTERACTION =====
+    // Footer & Interaction
     scrollToNext: 'Cuộn để xem bài viết tiếp theo',
     scrollTooFast: 'Thao tác cuộn quá nhanh',
-
-    // ===== MULTI-MEDIA SUPPORT =====
-    multiMediaHint: 'Chọn nhiều ảnh/video (tối đa 10)',
-    mediaLimit: 'Tối đa 10 media',
-    tooManyFiles: 'Quá nhiều files! Tối đa 10 media.',
     
-    // ===== SUCCESS MESSAGES =====
+    // Success Messages
     loginSuccess: 'Đăng nhập thành công!',
     signupSuccess: 'Đăng ký thành công!',
     logoutSuccess: 'Đăng xuất thành công!',
     resetEmailSent: 'Email đặt lại mật khẩu đã được gửi!',
     postSuccess: 'Đăng bài thành công!',
     profileSuccess: 'Cập nhật thông tin thành công!',
-    syncSuccess: 'Đồng bộ dữ liệu thành công!',
+    deletePostSuccess: 'Đã xóa bài viết!',
+    hidePostSuccess: 'Đã ẩn bài viết!',
+    downloadMediaSuccess: 'Tải xuống thành công!',
     friendRequestSent: 'Đã gửi lời mời kết bạn!',
     friendRequestAccepted: 'Đã chấp nhận lời mời kết bạn!',
     friendRequestRejected: 'Đã từ chối lời mời kết bạn!',
-    unfriend: 'Hủy kết bạn',
-    viewAllFriends: 'Toàn bộ bạn bè',
     
-    // ===== ERROR MESSAGES - AUTHENTICATION =====
+    // Error Messages
     fillAllFields: 'Vui lòng nhập đầy đủ thông tin!',
     passwordMismatch: 'Mật khẩu không khớp!',
     weakPassword: 'Mật khẩu phải có ít nhất 6 ký tự!',
@@ -160,67 +158,43 @@ const translations = {
     wrongPassword: 'Mật khẩu không đúng!',
     invalidEmail: 'Email không hợp lệ!',
     emailInUse: 'Email đã được sử dụng!',
-    loginFailed: 'Đăng nhập thất bại!',
-    signupFailed: 'Đăng ký thất bại!',
-    logoutFailed: 'Đăng xuất thất bại!',
-    resetEmailFailed: 'Gửi email thất bại!',
-
-    // ===== PROFILE HOME RIGHT =====
-    interests: 'Nội dung quan tâm',
-    noInterestsSelected: 'Chưa chọn nội dung quan tâm nào',
-    selectInterests: 'Chọn nội dung quan tâm',
-    posts: 'Danh sách bài viết',
-    postsComingSoon: 'Tính năng sắp ra mắt',
-    friendsComingSoon: 'Tính năng sắp ra mắt',
-    save: 'Lưu',
-    
-    // ===== ERROR MESSAGES - SOCIAL LOGIN =====
-    googleLoginFailed: 'Đăng nhập Google thất bại!',
-    facebookLoginFailed: 'Đăng nhập Facebook thất bại!',
     loginCancelled: 'Đăng nhập bị hủy!',
     popupBlocked: 'Popup bị chặn! Vui lòng cho phép popup.',
-    accountExistsWithDifferentCredential: 'Email đã được sử dụng với phương thức đăng nhập khác!',
-    authDomainConfigRequired: 'Cấu hình domain chưa đúng!',
-    operationNotAllowed: 'Đăng nhập Facebook chưa được kích hoạt!',
     
-    // ===== ERROR MESSAGES - POSTS & MEDIA =====
-    postFailed: 'Đăng bài thất bại!',
     fileTooLarge: 'File quá lớn! Tối đa 10MB.',
     invalidFileType: 'Loại file không hợp lệ! Chỉ chấp nhận ảnh/video.',
+    tooManyFiles: 'Quá nhiều files! Tối đa 10 media.',
     missingCaption: 'Vui lòng nhập chú thích!',
     missingMedia: 'Vui lòng chọn ảnh hoặc video!',
     notAuthenticated: 'Vui lòng đăng nhập!',
-    loadPostsFailed: 'Tải bài viết thất bại!',
+    permissionDenied: 'Không có quyền thực hiện!',
     
-    // ===== ERROR MESSAGES - PROFILE =====
     avatarTooLarge: 'Ảnh đại diện quá lớn! Tối đa 5MB.',
     invalidAvatarType: 'Loại file không hợp lệ! Chỉ chấp nhận ảnh.',
-    profileUpdateFailed: 'Cập nhật thông tin thất bại!',
     
-    // ===== ERROR MESSAGES - INTERACTIONS =====
-    likeFailed: 'Thích bài viết thất bại!',
-    commentFailed: 'Thêm bình luận thất bại!',
-    loadCommentsFailed: 'Tải bình luận thất bại!',
     alreadyLikedPost: 'Bạn đã thích bài viết này!',
     
-    // ===== ERROR MESSAGES - FRIENDS =====
-    loadFriends: 'Tải danh sách bạn bè thất bại!',
-    loadSuggestions: 'Tải gợi ý kết bạn thất bại!',
-    loadRequests: 'Tải lời mời kết bạn thất bại!',
+    // Default errors
+    loginFailed: 'Đăng nhập thất bại!',
+    signupFailed: 'Đăng ký thất bại!',
+    googleLoginFailed: 'Đăng nhập Google thất bại!',
+    facebookLoginFailed: 'Đăng nhập Facebook thất bại!',
+    postFailed: 'Đăng bài thất bại!',
+    profileUpdateFailed: 'Cập nhật thông tin thất bại!',
+    likeFailed: 'Thích bài viết thất bại!',
+    commentFailed: 'Thêm bình luận thất bại!',
     sendRequest: 'Gửi lời mời kết bạn thất bại!',
     acceptRequest: 'Chấp nhận lời mời thất bại!',
-    rejectRequest: 'Từ chối lời mời thất bại!',
+    deletePostFailed: 'Xóa bài viết thất bại!',
+    hidePostFailed: 'Ẩn bài viết thất bại!',
+    downloadMediaFailed: 'Tải xuống thất bại!',
+    reportComingSoon: 'Tính năng báo cáo sắp ra mắt!',
     
-    // ===== ERROR MESSAGES - SYNC =====
-    syncFailed: 'Đồng bộ dữ liệu thất bại!',
-    
-    // ===== DEFAULT & FALLBACK =====
-    defaultError: 'Có lỗi xảy ra!',
-    unknownError: 'Lỗi không xác định!'
+    defaultError: 'Có lỗi xảy ra!'
   },
   
   en: {
-    // ===== AUTHENTICATION =====
+    // Authentication
     login: 'Login',
     signup: 'Sign Up',
     email: 'Email',
@@ -232,7 +206,7 @@ const translations = {
     back: 'Back',
     orSignInWith: 'Or sign in with',
     
-    // ===== NAVIGATION & MENU =====
+    // Navigation & Menu
     createPost: 'Create Post',
     explore: 'Explore',
     settings: 'Settings',
@@ -240,14 +214,13 @@ const translations = {
     home: 'Home',
     profile: 'Profile',
     
-    // ===== FRIENDS FEATURE =====
+    // Friends Feature
     friends: 'Friends',
     suggestions: 'Friend Suggestions',
     friendRequests: 'Friend Requests',
     noFriendsYet: 'No friends yet',
     noSuggestions: 'No suggestions available',
     noFriendRequests: 'No friend requests',
-    selectOption: 'Select an option',
     friendsSince: 'Friends since',
     requestSent: 'Request sent',
     addFriend: 'Add Friend',
@@ -256,15 +229,18 @@ const translations = {
     reject: 'Reject',
     confirmUnfriend: 'Are you sure you want to unfriend?',
     unknownUser: 'Unknown User',
+    viewAllFriends: 'View All Friends',
     
-    // ===== CREATE POST =====
+    // Create Post
     writeCaption: 'Write a caption...',
     addMedia: 'Add photo/video',
     cancel: 'Cancel',
     post: 'Post',
     remove: 'Remove',
+    multiMediaHint: 'Select multiple photos/videos (max 10)',
+    mediaLimit: 'Max 10 media',
     
-    // ===== USER STATES & SYNC =====
+    // User States
     guest: 'Guest',
     user: 'User',
     loading: 'Loading...',
@@ -272,12 +248,12 @@ const translations = {
     syncing: 'Syncing...',
     syncingData: 'Syncing data',
     
-    // ===== FEED & POSTS =====
+    // Feed & Posts
     noPosts: 'No posts yet',
     textPost: 'Text post',
     selectPost: 'Select a post to view details',
     
-    // ===== POST DETAILS =====
+    // Post Details
     caption: 'Caption',
     noCaption: 'No caption',
     likes: 'likes',
@@ -286,7 +262,7 @@ const translations = {
     writeComment: 'Write a comment...',
     loginToComment: 'Login to comment',
     
-    // ===== PROFILE PAGE =====
+    // Profile
     clickToUpload: 'Click to upload',
     noName: 'No Name',
     signedInWith: 'Signed in with',
@@ -301,50 +277,39 @@ const translations = {
     female: 'Female',
     other: 'Other',
     saveChanges: 'Save Changes',
-    errorLoadingProfile: 'Error loading profile',
-    retry: 'Retry',
-    loginRequired: 'Login Required',
-    loginToViewProfile: 'Login to view your profile',
+    interests: 'Interests',
+    noInterestsSelected: 'No interests selected',
+    selectInterests: 'Select Interests',
+    save: 'Save',
+    posts: 'Posts',
+    postsComingSoon: 'Coming Soon',
+    friendsComingSoon: 'Coming Soon',
     
-    // ===== TIME FORMATS =====
+    // Time formats
     justNow: 'Just now',
     minutesAgo: 'm ago',
     hoursAgo: 'h ago',
     daysAgo: 'd ago',
     
-    // ===== FOOTER & INTERACTION =====
+    // Footer & Interaction
     scrollToNext: 'Scroll to see next post',
     scrollTooFast: 'Scrolling too fast',
     
-    // ===== PROFILE HOME RIGHT =====
-    interests: 'Interests',
-    noInterestsSelected: 'No interests selected',
-    selectInterests: 'Select Interests',
-    posts: 'Posts',
-    postsComingSoon: 'Coming Soon',
-    friendsComingSoon: 'Coming Soon',
-    save: 'Save',
-
-    // ===== MULTI-MEDIA SUPPORT =====
-    multiMediaHint: 'Select multiple photos/videos (max 10)',
-    mediaLimit: 'Max 10 media',
-    tooManyFiles: 'Too many files! Maximum 10 media allowed.',
-    
-    // ===== SUCCESS MESSAGES =====
+    // Success Messages
     loginSuccess: 'Login successful!',
     signupSuccess: 'Registration successful!',
     logoutSuccess: 'Logout successful!',
     resetEmailSent: 'Password reset email sent!',
     postSuccess: 'Post created successfully!',
     profileSuccess: 'Profile updated successfully!',
-    syncSuccess: 'Data sync completed!',
+    deletePostSuccess: 'Post deleted successfully!',
+    hidePostSuccess: 'Post hidden successfully!',
+    downloadMediaSuccess: 'Download completed!',
     friendRequestSent: 'Friend request sent!',
     friendRequestAccepted: 'Friend request accepted!',
     friendRequestRejected: 'Friend request rejected!',
-    unfriend: 'Unfriended',
-    viewAllFriends: 'View All Friends',
     
-    // ===== ERROR MESSAGES - AUTHENTICATION =====
+    // Error Messages
     fillAllFields: 'Please fill in all fields!',
     passwordMismatch: 'Passwords do not match!',
     weakPassword: 'Password must be at least 6 characters!',
@@ -353,108 +318,66 @@ const translations = {
     wrongPassword: 'Wrong password!',
     invalidEmail: 'Invalid email!',
     emailInUse: 'Email already in use!',
-    loginFailed: 'Login failed!',
-    signupFailed: 'Registration failed!',
-    logoutFailed: 'Logout failed!',
-    resetEmailFailed: 'Failed to send email!',
-    
-    // ===== ERROR MESSAGES - SOCIAL LOGIN =====
-    googleLoginFailed: 'Google login failed!',
-    facebookLoginFailed: 'Facebook login failed!',
     loginCancelled: 'Login cancelled!',
     popupBlocked: 'Popup blocked! Please allow popups.',
-    accountExistsWithDifferentCredential: 'Email already used with different sign-in method!',
-    authDomainConfigRequired: 'Auth domain configuration required!',
-    operationNotAllowed: 'Facebook sign-in not enabled!',
     
-    // ===== ERROR MESSAGES - POSTS & MEDIA =====
-    postFailed: 'Failed to create post!',
     fileTooLarge: 'File too large! Maximum 10MB.',
     invalidFileType: 'Invalid file type! Only images/videos allowed.',
+    tooManyFiles: 'Too many files! Maximum 10 media allowed.',
     missingCaption: 'Please enter a caption!',
     missingMedia: 'Please select a photo or video!',
     notAuthenticated: 'Please login first!',
-    loadPostsFailed: 'Failed to load posts!',
+    permissionDenied: 'Permission denied!',
     
-    // ===== ERROR MESSAGES - PROFILE =====
     avatarTooLarge: 'Avatar too large! Maximum 5MB.',
     invalidAvatarType: 'Invalid file type! Only images allowed.',
-    profileUpdateFailed: 'Failed to update profile!',
     
-    // ===== ERROR MESSAGES - INTERACTIONS =====
-    likeFailed: 'Failed to like post!',
-    commentFailed: 'Failed to add comment!',
-    loadCommentsFailed: 'Failed to load comments!',
     alreadyLikedPost: 'You already liked this post!',
     
-    // ===== ERROR MESSAGES - FRIENDS =====
-    loadFriends: 'Failed to load friends!',
-    loadSuggestions: 'Failed to load suggestions!',
-    loadRequests: 'Failed to load friend requests!',
+    // Default errors
+    loginFailed: 'Login failed!',
+    signupFailed: 'Registration failed!',
+    googleLoginFailed: 'Google login failed!',
+    facebookLoginFailed: 'Facebook login failed!',
+    postFailed: 'Failed to create post!',
+    profileUpdateFailed: 'Failed to update profile!',
+    likeFailed: 'Failed to like post!',
+    commentFailed: 'Failed to add comment!',
     sendRequest: 'Failed to send friend request!',
     acceptRequest: 'Failed to accept request!',
-    rejectRequest: 'Failed to reject request!',
+    deletePostFailed: 'Failed to delete post!',
+    hidePostFailed: 'Failed to hide post!',
+    downloadMediaFailed: 'Download failed!',
+    reportComingSoon: 'Report feature coming soon!',
     
-    // ===== ERROR MESSAGES - SYNC =====
-    syncFailed: 'Data sync failed!',
-    
-    // ===== DEFAULT & FALLBACK =====
-    defaultError: 'An error occurred!',
-    unknownError: 'Unknown error!'
+    defaultError: 'An error occurred!'
   }
 }
 
 export function useLanguage() {
-  // Toggle ngôn ngữ
   const toggleLanguage = () => {
     const newLanguage = globalLanguage.value === 'vi' ? 'en' : 'vi'
     setLanguage(newLanguage)
   }
 
-  // Set ngôn ngữ cụ thể
   const setLanguage = (lang) => {
     if (lang === 'vi' || lang === 'en') {
       globalLanguage.value = lang
       saveLanguageToStorage(lang)
-      console.log('Language changed to:', lang)
     }
   }
 
-  // Get text by key với fallback mechanism
   const getText = (key) => {
     const currentTexts = translations[globalLanguage.value]
-    const fallbackTexts = translations['en'] // English as fallback
+    const fallbackTexts = translations['en']
     
-    // Trả về text từ ngôn ngữ hiện tại, nếu không có thì dùng English, cuối cùng là key
     return currentTexts[key] || fallbackTexts[key] || key
-  }
-
-  // Get available languages
-  const getAvailableLanguages = () => {
-    return Object.keys(translations)
-  }
-
-  // Check if language is supported
-  const isLanguageSupported = (lang) => {
-    return translations.hasOwnProperty(lang)
-  }
-
-  // Get language display name
-  const getLanguageDisplayName = (lang = globalLanguage.value) => {
-    const displayNames = {
-      'vi': 'Tiếng Việt',
-      'en': 'English'
-    }
-    return displayNames[lang] || lang
   }
 
   return {
     currentLanguage: globalLanguage,
     toggleLanguage,
     setLanguage,
-    getText,
-    getAvailableLanguages,
-    isLanguageSupported,
-    getLanguageDisplayName
+    getText
   }
 }

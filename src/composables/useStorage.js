@@ -1,67 +1,49 @@
 /*
-Composable quản lý localStorage
-Centralize logic lưu trữ và lấy dữ liệu từ localStorage
-Handle errors và provide safe storage operations
+src/composables/useStorage.js - Refactored
+Composable quản lý localStorage với safe operations
+Logic: Centralize localStorage với error handling và remember me functionality
 */
 import { ref } from 'vue'
 
 export function useStorage() {
-  // Lưu dữ liệu vào localStorage
+  const rememberedEmail = ref('')
+  const rememberMe = ref(false)
+
+  // Safe localStorage operations với error handling
   const setItem = (key, value) => {
     try {
       localStorage.setItem(key, JSON.stringify(value))
       return true
     } catch (error) {
-      console.error('Error saving to localStorage:', error)
       return false
     }
   }
 
-  // Lấy dữ liệu từ localStorage
   const getItem = (key, defaultValue = null) => {
     try {
       const item = localStorage.getItem(key)
       return item ? JSON.parse(item) : defaultValue
     } catch (error) {
-      console.error('Error reading from localStorage:', error)
       return defaultValue
     }
   }
 
-  // Xóa item từ localStorage
   const removeItem = (key) => {
     try {
       localStorage.removeItem(key)
       return true
     } catch (error) {
-      console.error('Error removing from localStorage:', error)
       return false
     }
   }
 
-  // Xóa tất cả localStorage
-  const clear = () => {
-    try {
-      localStorage.clear()
-      return true
-    } catch (error) {
-      console.error('Error clearing localStorage:', error)
-      return false
-    }
-  }
-
-  // Reactive storage cho remembered email
-  const rememberedEmail = ref('')
-  const rememberMe = ref(false)
-
-  // Load remembered email
+  // Remember email functionality
   const loadRememberedEmail = () => {
     rememberedEmail.value = getItem('rememberedEmail', '')
     rememberMe.value = getItem('rememberMe', false)
     return { email: rememberedEmail.value, remember: rememberMe.value }
   }
 
-  // Save remembered email
   const saveRememberedEmail = (email, remember) => {
     if (remember && email) {
       setItem('rememberedEmail', email)
@@ -80,7 +62,6 @@ export function useStorage() {
     setItem,
     getItem,
     removeItem,
-    clear,
     rememberedEmail,
     rememberMe,
     loadRememberedEmail,

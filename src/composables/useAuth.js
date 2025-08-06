@@ -1,11 +1,7 @@
 /*
-src/composables/useAuth.js - Fixed Avatar Override Issue
-Composable quản lý authentication với fix cho avatar override
-Logic:
-- FIX: Không ghi đè avatar đã được user tùy chỉnh
-- Chỉ sync avatar từ Firebase Auth khi user chưa có custom avatar
-- Smart avatar handling: ưu tiên custom avatar > Firebase Auth avatar
-- Preserve user customizations khi re-authenticate
+src/composables/useAuth.js - Refactored
+Authentication với smart avatar handling và session management
+Logic: Firebase Auth với user sync và avatar preservation
 */
 import { ref, onMounted, onUnmounted } from 'vue'
 import { 
@@ -26,53 +22,37 @@ export function useAuth() {
   const isLoading = ref(false)
   const error = ref(null)
   const { syncUserToFirestore } = useUsers()
+  
   let unsubscribe = null
-
-  // Track nếu đây là login session mới để quyết định có sync hay không
   let isNewLoginSession = false
 
-  // Helper function để sync user sau khi authentication thành công
+  // Handle successful authentication
   const handleSuccessfulAuth = async (firebaseUser, forceSync = false) => {
-    // Chỉ sync nếu đây là login mới hoặc được force
     if (forceSync || isNewLoginSession) {
       try {
         await syncUserToFirestore(firebaseUser)
-        console.log('User synced to Firestore (new login):', firebaseUser.uid)
       } catch (syncError) {
-        console.error('Error syncing user to Firestore:', syncError)
+        // Silent fail để không break login
       }
-      isNewLoginSession = false // Reset flag
+      isNewLoginSession = false
     }
-    
     return firebaseUser
   }
 
-  // Khởi tạo listener theo dõi trạng thái auth
+  // Initialize auth state listener
   const initAuthListener = () => {
     unsubscribe = onAuthStateChanged(auth, (authUser) => {
       const wasLoggedOut = !user.value
       user.value = authUser
       
-      if (authUser) {
-        console.log('Auth state changed: User logged in', authUser.uid)
-        
-        // Chỉ sync nếu đây là session mới (từ logged out → logged in)
-        // Không sync nếu chỉ là page refresh với existing session
-        if (wasLoggedOut) {
-          console.log('New login session detected')
-          isNewLoginSession = true
-          handleSuccessfulAuth(authUser)
-        } else {
-          console.log('Existing session maintained - no sync needed')
-        }
-      } else {
-        console.log('Auth state changed: User logged out')
-        isNewLoginSession = false
+      if (authUser && wasLoggedOut) {
+        isNewLoginSession = true
+        handleSuccessfulAuth(authUser)
       }
     })
   }
 
-  // Đăng nhập với email/password
+  // Email/password login
   const loginWithEmail = async (email, password) => {
     if (!email || !password) {
       throw new Error('MISSING_FIELDS')
@@ -80,11 +60,10 @@ export function useAuth() {
 
     isLoading.value = true
     error.value = null
-    isNewLoginSession = true // Đánh dấu đây là login session mới
+    isNewLoginSession = true
     
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
-      // handleSuccessfulAuth sẽ được gọi trong onAuthStateChanged
       return userCredential.user
     } catch (err) {
       error.value = err
@@ -95,27 +74,24 @@ export function useAuth() {
     }
   }
 
-  // Đăng ký với email/password
+  // Email/password signup
   const signupWithEmail = async (email, password, confirmPassword) => {
     if (!email || !password || !confirmPassword) {
       throw new Error('MISSING_FIELDS')
     }
-
     if (password !== confirmPassword) {
       throw new Error('PASSWORD_MISMATCH')
     }
-
     if (password.length < 6) {
       throw new Error('WEAK_PASSWORD')
     }
 
     isLoading.value = true
     error.value = null
-    isNewLoginSession = true // Đánh dấu đây là signup session mới
+    isNewLoginSession = true
     
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password)
-      // Force sync cho user mới đăng ký
       await handleSuccessfulAuth(userCredential.user, true)
       return userCredential.user
     } catch (err) {
@@ -127,11 +103,11 @@ export function useAuth() {
     }
   }
 
-  // Đăng nhập với Google
+  // Google login
   const loginWithGoogle = async () => {
     isLoading.value = true
     error.value = null
-    isNewLoginSession = true // Đánh dấu đây là login session mới
+    isNewLoginSession = true
     
     try {
       const provider = new GoogleAuthProvider()
@@ -139,7 +115,6 @@ export function useAuth() {
       provider.addScope('profile')
       
       const result = await signInWithPopup(auth, provider)
-      // Force sync cho Google login (có thể là user mới)
       await handleSuccessfulAuth(result.user, true)
       return result.user
     } catch (err) {
@@ -151,11 +126,11 @@ export function useAuth() {
     }
   }
 
-  // Đăng nhập với Facebook
+  // Facebook login
   const loginWithFacebook = async () => {
     isLoading.value = true
     error.value = null
-    isNewLoginSession = true // Đánh dấu đây là login session mới
+    isNewLoginSession = true
     
     try {
       const provider = new FacebookAuthProvider()
@@ -166,7 +141,6 @@ export function useAuth() {
       })
       
       const result = await signInWithPopup(auth, provider)
-      // Force sync cho Facebook login (có thể là user mới)
       await handleSuccessfulAuth(result.user, true)
       return result.user
     } catch (err) {
@@ -178,7 +152,7 @@ export function useAuth() {
     }
   }
 
-  // Gửi email reset password
+  // Password reset
   const resetPassword = async (email) => {
     if (!email) {
       throw new Error('MISSING_EMAIL')
@@ -197,7 +171,7 @@ export function useAuth() {
     }
   }
 
-  // Đăng xuất
+  // Logout
   const logout = async () => {
     isLoading.value = true
     error.value = null
@@ -213,28 +187,16 @@ export function useAuth() {
     }
   }
 
-  // Cleanup listener
-  const cleanup = () => {
-    if (unsubscribe) {
-      unsubscribe()
-    }
-  }
-
-  // Auto setup và cleanup
+  // Lifecycle
   onMounted(() => {
     initAuthListener()
   })
 
   onUnmounted(() => {
-    cleanup()
-  })
-
-  // Force sync current user to Firestore (for debugging)
-  const forceSyncCurrentUser = async () => {
-    if (user.value) {
-      await syncUserToFirestore(user.value)
+    if (unsubscribe) {
+      unsubscribe()
     }
-  }
+  })
 
   return {
     user,
@@ -245,9 +207,6 @@ export function useAuth() {
     loginWithGoogle,
     loginWithFacebook,
     resetPassword,
-    logout,
-    initAuthListener,
-    cleanup,
-    forceSyncCurrentUser
+    logout
   }
 }
