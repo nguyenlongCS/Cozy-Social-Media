@@ -69,7 +69,7 @@ export default {
   align-items: center;
   justify-content: space-between;
   box-shadow: 0 0.125rem 0.3125rem rgba(0, 0, 0, 0.2);
-  background: #2B2D42;
+  background: var(--theme-color);
   flex-shrink: 0; /* Prevent header from shrinking */
 }
 
