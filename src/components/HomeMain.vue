@@ -1,12 +1,7 @@
 <!--
 src/components/HomeMain.vue - Refactored
 Component Feed chính với options menu cho bài viết
-Logic:
-- Hiển thị posts với multi-media carousel support
-- Options menu với các chức năng: xóa, ẩn, tải xuống, báo cáo
-- Like/unlike posts với validation
-- Wheel scrolling với cooldown protection
-- Emit events cho parent component
+Logic: Hiển thị posts với multi-media carousel, like/unlike, wheel scrolling, post actions
 -->
 <template>
   <div class="feed">
@@ -61,8 +56,14 @@ Logic:
                class="post-media">
           <video v-else-if="currentMedia.type === 'video'" 
                  :src="currentMedia.url" 
+                 class="post-media"
                  controls
-                 class="post-media">
+                 autoplay
+                 muted
+                 loop
+                 playsinline
+                 @click="toggleVideoPlayPause"
+                 @error="handleVideoError">
           </video>
           
           <!-- Navigation controls -->
@@ -110,8 +111,14 @@ Logic:
              class="post-media">
         <video v-else-if="currentPost.MediaType === 'video'" 
                :src="currentPost.MediaURL" 
+               class="post-media"
                controls
-               class="post-media">
+               autoplay
+               muted
+               loop
+               playsinline
+               @click="toggleVideoPlayPause"
+               @error="handleVideoError">
         </video>
       </div>
       
@@ -188,7 +195,7 @@ Logic:
 </template>
 
 <script>
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import { useFirestore } from '@/composables/useFirestore'
 import { useLanguage } from '@/composables/useLanguage'
 import { useErrorHandler } from '@/composables/useErrorHandler'
@@ -215,7 +222,6 @@ export default {
     const posts = ref([])
     const currentIndex = ref(0)
     const currentMediaIndex = ref(0)
-    const preloadedMedia = ref(new Map())
     const lastScrollTime = ref(0)
     const scrollCooldown = 300
     const isLiking = ref(false)
@@ -261,6 +267,22 @@ export default {
       currentMediaIndex.value = 0
     }
 
+    // Video controls
+    const toggleVideoPlayPause = (event) => {
+      const video = event.target
+      if (video.paused) {
+        video.play()
+      } else {
+        video.pause()
+      }
+    }
+
+    const handleVideoError = (event) => {
+      const video = event.target
+      video.setAttribute('controls', 'true')
+      video.removeAttribute('autoplay')
+    }
+
     // Options menu
     const toggleOptionsMenu = () => {
       showOptionsMenu.value = !showOptionsMenu.value
@@ -300,7 +322,7 @@ export default {
         if (posts.value.length === 0) await loadPosts()
         
       } catch (error) {
-        console.error('Delete post failed:', error)
+        // Error handled in composable
       }
     }
 
@@ -325,7 +347,7 @@ export default {
         if (posts.value.length === 0) await loadPosts()
         
       } catch (error) {
-        console.error('Hide post failed:', error)
+        // Error handled in composable
       }
     }
 
@@ -336,7 +358,7 @@ export default {
         await downloadPostMedia(currentPost.value)
         closeOptionsMenu()
       } catch (error) {
-        console.error('Download media failed:', error)
+        // Error handled in composable
       }
     }
 
@@ -347,7 +369,7 @@ export default {
         await reportPost(currentPost.value)
         closeOptionsMenu()
       } catch (error) {
-        console.error('Report post failed:', error)
+        // Error handled in composable
       }
     }
 
@@ -363,13 +385,7 @@ export default {
           const likedPostIds = await getUserLikedPosts(user.value.uid)
           userLikes.value = new Set(likedPostIds)
         }
-        
-        if (posts.value.length > 0) {
-          preloadMedia(0)
-          if (posts.value.length > 1) preloadMedia(1)
-        }
       } catch (error) {
-        console.error('Error loading posts:', error)
         showError(error, 'loadPosts')
       }
     }
@@ -423,44 +439,9 @@ export default {
         }
 
       } catch (error) {
-        console.error('Error toggling like:', error)
         showError(error, 'like')
       } finally {
         isLiking.value = false
-      }
-    }
-
-    // Preload media
-    const preloadMedia = (index) => {
-      const post = posts.value[index]
-      if (!post || preloadedMedia.value.has(post.PostID)) return
-
-      if (post.mediaItems?.length > 0) {
-        post.mediaItems.forEach((mediaItem, mediaIndex) => {
-          const cacheKey = `${post.PostID}_${mediaIndex}`
-          
-          if (mediaItem.type === 'image') {
-            const img = new Image()
-            img.onload = () => preloadedMedia.value.set(cacheKey, true)
-            img.src = mediaItem.url
-          } else if (mediaItem.type === 'video') {
-            const video = document.createElement('video')
-            video.onloadeddata = () => preloadedMedia.value.set(cacheKey, true)
-            video.preload = 'metadata'
-            video.src = mediaItem.url
-          }
-        })
-      } else if (post.MediaURL) {
-        if (post.MediaType === 'image') {
-          const img = new Image()
-          img.onload = () => preloadedMedia.value.set(post.PostID, true)
-          img.src = post.MediaURL
-        } else if (post.MediaType === 'video') {
-          const video = document.createElement('video')
-          video.onloadeddata = () => preloadedMedia.value.set(post.PostID, true)
-          video.preload = 'metadata'
-          video.src = post.MediaURL
-        }
       }
     }
 
@@ -513,19 +494,10 @@ export default {
     }
 
     // Watchers
-    watch(currentIndex, (newIndex) => {
-      const totalPosts = posts.value.length
-      if (totalPosts === 0) return
-
+    watch(currentIndex, () => {
       resetMediaIndex()
       closeOptionsMenu()
       emitPostStats()
-
-      const nextIndex = (newIndex + 1) % totalPosts
-      preloadMedia(nextIndex)
-
-      const prevIndex = newIndex === 0 ? totalPosts - 1 : newIndex - 1
-      preloadMedia(prevIndex)
     })
 
     watch(currentPost, (newPost) => {
@@ -538,7 +510,7 @@ export default {
           const likedPostIds = await getUserLikedPosts(newUser.uid)
           userLikes.value = new Set(likedPostIds)
         } catch (error) {
-          console.error('Error reloading user likes:', error)
+          // Silent fail
         }
       } else {
         userLikes.value.clear()
@@ -576,6 +548,8 @@ export default {
       handleLike,
       previousMedia,
       nextMedia,
+      toggleVideoPlayPause,
+      handleVideoError,
       toggleOptionsMenu,
       handleDeletePost,
       handleHidePost,
@@ -587,7 +561,6 @@ export default {
 </script>
 
 <style scoped>
-/* CSS code remains the same as original - not included for brevity */
 .feed {
   width: 39.53%;
   height: 26.44rem;
@@ -685,6 +658,127 @@ export default {
   height: auto;
   object-fit: contain;
   border-radius: 0.9375rem;
+}
+
+/* Video autoplay styles */
+video.post-media {
+  cursor: pointer;
+}
+
+video.post-media:hover {
+  opacity: 0.95;
+}
+
+/* Webkit browsers (Chrome, Safari) - Hide all controls by default */
+video.post-media::-webkit-media-controls {
+  display: none !important;
+}
+
+video.post-media::-webkit-media-controls-panel {
+  display: none !important;
+}
+
+video.post-media::-webkit-media-controls-play-button {
+  display: none !important;
+}
+
+video.post-media::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}
+
+video.post-media::-webkit-media-controls-timeline {
+  display: none !important;
+}
+
+video.post-media::-webkit-media-controls-volume-slider {
+  display: none !important;
+}
+
+video.post-media::-webkit-media-controls-current-time-display {
+  display: none !important;
+}
+
+video.post-media::-webkit-media-controls-time-remaining-display {
+  display: none !important;
+}
+
+video.post-media::-webkit-media-controls-mute-button {
+  display: none !important;
+}
+
+video.post-media::-webkit-media-controls-fullscreen-button {
+  display: none !important;
+}
+
+/* Show all controls on hover or focus */
+video.post-media:hover::-webkit-media-controls,
+video.post-media:focus::-webkit-media-controls {
+  display: flex !important;
+}
+
+video.post-media:hover::-webkit-media-controls-panel,
+video.post-media:focus::-webkit-media-controls-panel {
+  display: flex !important;
+}
+
+video.post-media:hover::-webkit-media-controls-play-button,
+video.post-media:focus::-webkit-media-controls-play-button {
+  display: flex !important;
+}
+
+video.post-media:hover::-webkit-media-controls-timeline,
+video.post-media:focus::-webkit-media-controls-timeline {
+  display: flex !important;
+}
+
+video.post-media:hover::-webkit-media-controls-volume-slider,
+video.post-media:focus::-webkit-media-controls-volume-slider {
+  display: flex !important;
+}
+
+video.post-media:hover::-webkit-media-controls-current-time-display,
+video.post-media:focus::-webkit-media-controls-current-time-display {
+  display: flex !important;
+}
+
+video.post-media:hover::-webkit-media-controls-time-remaining-display,
+video.post-media:focus::-webkit-media-controls-time-remaining-display {
+  display: flex !important;
+}
+
+video.post-media:hover::-webkit-media-controls-mute-button,
+video.post-media:focus::-webkit-media-controls-mute-button {
+  display: flex !important;
+}
+
+video.post-media:hover::-webkit-media-controls-fullscreen-button,
+video.post-media:focus::-webkit-media-controls-fullscreen-button {
+  display: flex !important;
+}
+
+/* Firefox */
+video.post-media::-moz-media-controls {
+  opacity: 0 !important;
+  transition: opacity 0.3s ease;
+}
+
+video.post-media:hover::-moz-media-controls,
+video.post-media:focus::-moz-media-controls {
+  opacity: 1 !important;
+}
+
+@media (max-width: 768px) {
+  video.post-media::-webkit-media-controls {
+    display: block !important;
+  }
+  
+  video.post-media::-webkit-media-controls-panel {
+    display: flex !important;
+  }
+  
+  video.post-media::-moz-media-controls {
+    opacity: 1;
+  }
 }
 
 .media-controls {
@@ -934,7 +1028,6 @@ export default {
   background-image: url('@/icons/report.png');
 }
 
-/* Special colors for critical actions */
 .delete-option {
   color: #ff6b6b;
 }

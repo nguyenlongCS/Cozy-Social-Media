@@ -1,12 +1,7 @@
 <!--
 src/components/CreatePost.vue - Refactored
 Component tạo bài đăng với multi-media support
-Logic:
-- Upload nhiều ảnh/video cùng lúc (tối đa 10)
-- Carousel preview với navigation
-- File validation và progress tracking
-- Auto-resize textarea cho caption
-- Business logic đã được tách ra composables
+Logic: Upload media files, preview carousel, auto-resize textarea, submit post
 -->
 <template>
   <div class="create-post">
@@ -40,8 +35,14 @@ Logic:
             <video 
               v-else-if="currentMedia.type.startsWith('video/')" 
               :src="currentMedia.url" 
-              controls
               class="preview-media"
+              controls
+              autoplay
+              muted
+              loop
+              playsinline
+              @click="toggleVideoPlayPause"
+              @error="handleVideoError"
             />
           </div>
           
@@ -182,7 +183,6 @@ export default {
     // Constants
     const MAX_FILES = 10
     const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-    const ALLOWED_TYPES = ['image/', 'video/']
 
     // Computed properties
     const canPost = computed(() => {
@@ -210,20 +210,6 @@ export default {
       return `${hours}:${minutes}, ${day}/${month}/${year}`
     }
 
-    // Textarea auto-resize
-    const adjustTextareaHeight = async () => {
-      await nextTick()
-      if (captionTextarea.value) {
-        captionTextarea.value.style.height = 'auto'
-        const scrollHeight = captionTextarea.value.scrollHeight
-        const maxHeight = 150
-        const newHeight = Math.min(scrollHeight, maxHeight)
-        captionTextarea.value.style.height = newHeight + 'px'
-        
-        captionTextarea.value.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden'
-      }
-    }
-
     // Load user avatar
     const loadUserAvatar = async () => {
       if (!user.value) {
@@ -239,7 +225,25 @@ export default {
       }
     }
 
-    // File handling methods
+    // Textarea auto-resize
+    const adjustTextareaHeight = async () => {
+      await nextTick()
+      if (captionTextarea.value) {
+        captionTextarea.value.style.height = 'auto'
+        const scrollHeight = captionTextarea.value.scrollHeight
+        const maxHeight = 150
+        const newHeight = Math.min(scrollHeight, maxHeight)
+        captionTextarea.value.style.height = newHeight + 'px'
+        
+        if (scrollHeight > maxHeight) {
+          captionTextarea.value.style.overflowY = 'auto'
+        } else {
+          captionTextarea.value.style.overflowY = 'hidden'
+        }
+      }
+    }
+
+    // File handling
     const triggerFileInput = () => {
       fileInput.value?.click()
     }
@@ -250,7 +254,7 @@ export default {
         return false
       }
 
-      if (!ALLOWED_TYPES.some(type => file.type.startsWith(type))) {
+      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
         showError({ message: 'INVALID_FILE_TYPE' }, 'upload')
         return false
       }
@@ -283,7 +287,7 @@ export default {
       if (fileInput.value) fileInput.value.value = ''
     }
 
-    // Media navigation methods
+    // Media navigation
     const removeMedia = (index) => {
       if (selectedFiles.value[index]) {
         URL.revokeObjectURL(selectedFiles.value[index].url)
@@ -315,13 +319,23 @@ export default {
       if (currentIndex.value < selectedFiles.value.length - 1) currentIndex.value++
     }
 
-    // Action handlers
-    const handleCancel = () => {
-      caption.value = ''
-      removeAllMedia()
-      router.push('/')
+    // Video controls
+    const toggleVideoPlayPause = (event) => {
+      const video = event.target
+      if (video.paused) {
+        video.play()
+      } else {
+        video.pause()
+      }
     }
 
+    const handleVideoError = (event) => {
+      const video = event.target
+      video.setAttribute('controls', 'true')
+      video.removeAttribute('autoplay')
+    }
+
+    // Upload multiple media
     const uploadMultipleMedia = async () => {
       const uploadPromises = selectedFiles.value.map(async (fileObj, index) => {
         try {
@@ -334,13 +348,19 @@ export default {
             name: fileObj.name
           }
         } catch (error) {
-          console.error(`Failed to upload file ${fileObj.name}:`, error)
           return null
         }
       })
 
       const results = await Promise.all(uploadPromises)
       return results.filter(result => result !== null)
+    }
+
+    // Action handlers
+    const handleCancel = () => {
+      caption.value = ''
+      removeAllMedia()
+      router.push('/')
     }
 
     const handlePost = async () => {
@@ -390,7 +410,6 @@ export default {
         router.push('/')
 
       } catch (error) {
-        console.error('Error creating post:', error)
         showError(error, 'post')
       } finally {
         isUploading.value = false
@@ -443,6 +462,8 @@ export default {
       removeCurrentMedia,
       previousMedia,
       nextMedia,
+      toggleVideoPlayPause,
+      handleVideoError,
       handleCancel,
       handlePost
     }
@@ -575,6 +596,85 @@ export default {
   border-radius: 0.5rem;
 }
 
+/* Video autoplay styles */
+video.preview-media {
+  cursor: pointer;
+}
+
+video.preview-media:hover {
+  opacity: 0.95;
+}
+
+/* Webkit browsers (Chrome, Safari) */
+video.preview-media::-webkit-media-controls {
+  display: none !important;
+}
+
+video.preview-media::-webkit-media-controls-panel {
+  display: none !important;
+}
+
+video.preview-media::-webkit-media-controls-play-button {
+  display: none !important;
+}
+
+video.preview-media::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}
+
+video.preview-media::-webkit-media-controls-timeline {
+  display: none !important;
+}
+
+video.preview-media::-webkit-media-controls-volume-slider {
+  display: none !important;
+}
+
+/* Show all controls on hover */
+video.preview-media:hover::-webkit-media-controls {
+  display: flex !important;
+}
+
+video.preview-media:hover::-webkit-media-controls-panel {
+  display: flex !important;
+}
+
+video.preview-media:hover::-webkit-media-controls-play-button {
+  display: flex !important;
+}
+
+video.preview-media:hover::-webkit-media-controls-timeline {
+  display: flex !important;
+}
+
+video.preview-media:hover::-webkit-media-controls-volume-slider {
+  display: flex !important;
+}
+
+/* Firefox */
+video.preview-media::-moz-media-controls {
+  opacity: 0 !important;
+  transition: opacity 0.3s ease;
+}
+
+video.preview-media:hover::-moz-media-controls {
+  opacity: 1 !important;
+}
+
+@media (max-width: 768px) {
+  video.preview-media::-webkit-media-controls {
+    display: block !important;
+  }
+  
+  video.preview-media::-webkit-media-controls-panel {
+    display: flex !important;
+  }
+  
+  video.preview-media::-moz-media-controls {
+    opacity: 1;
+  }
+}
+
 .media-controls {
   position: absolute;
   top: 0;
@@ -662,7 +762,6 @@ export default {
   cursor: not-allowed;
 }
 
-/* Media Dots */
 .media-dots {
   position: absolute;
   bottom: 0.5rem;
@@ -706,7 +805,6 @@ export default {
   margin-left: 0.25rem;
 }
 
-/* Media Thumbnails */
 .media-thumbnails {
   width: 80%;
   margin-top: 0.5rem;
