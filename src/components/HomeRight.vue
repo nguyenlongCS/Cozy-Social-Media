@@ -404,9 +404,13 @@ export default {
 .like-icon {
   width: 1.25rem;
   height: 1.25rem;
-  background: url('@/icons/like.png') center/cover;
-  filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
+  background-color: var(--theme-color);
+  -webkit-mask: url('@/icons/like.png') no-repeat center;
+  mask: url('@/icons/like.png') no-repeat center;
+  -webkit-mask-size: cover;
+  mask-size: cover;
 }
+
 
 .likes-count {
   font-size: 0.75rem;
@@ -556,8 +560,11 @@ export default {
 .send-icon {
   width: 1rem;
   height: 1rem;
-  background: url('@/icons/send.png') center/cover;
-  filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
+  background-color: var(--theme-color);
+  -webkit-mask: url('@/icons/send.png') no-repeat center;
+  mask: url('@/icons/send.png') no-repeat center;
+  -webkit-mask-size: cover;
+  mask-size: cover;
 }
 
 .emoji-picker {

@@ -153,15 +153,15 @@ export default {
 .separator {
   width: 11.25rem;
   height: 1px;
-  background: rgba(255, 235, 124, 0.2);
+  background: var(--theme-color);
   margin: 0.5rem 0;
 }
 
 .friends-section {
   width: 11.25rem;
   padding: 0.75rem;
-  background: rgba(255, 235, 124, 0.05);
-  border: 1px solid rgba(255, 235, 124, 0.2);
+  background: #2B2D42;
+  border: 1px solid var(--theme-color);
   border-radius: 0.5rem;
 }
 

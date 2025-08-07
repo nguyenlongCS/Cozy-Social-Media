@@ -67,6 +67,10 @@ export default {
   noComments: 'Chưa có bình luận nào',
   writeComment: 'Viết bình luận...',
   loginToComment: 'Đăng nhập để bình luận',
+  downloadMedia: 'Tải Xuống',
+  reportPost: 'Báo Cáo',
+  deletePost: 'Xóa Bài Viết',
+  hidePost: 'Ẩn Bài Viết',
 
   // Profile
   clickToUpload: 'Click để tải ảnh',

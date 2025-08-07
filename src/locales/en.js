@@ -67,6 +67,10 @@ export default {
   noComments: 'No comments yet',
   writeComment: 'Write a comment...',
   loginToComment: 'Login to comment',
+  downloadMedia: 'Download',
+  reportPost: 'Report',
+  deletePost: 'Delete Post',
+  hidePost: 'Hide Post',
 
   // Profile
   clickToUpload: 'Click to upload',
