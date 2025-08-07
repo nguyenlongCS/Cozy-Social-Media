@@ -1,0 +1,172 @@
+// locales/vi.js
+export default {
+  // Authentication
+  login: 'Đăng nhập',
+  signup: 'Đăng ký',
+  email: 'Email',
+  password: 'Mật khẩu',
+  confirmPassword: 'Xác nhận mật khẩu',
+  rememberMe: 'Ghi nhớ đăng nhập',
+  forgotPassword: 'Quên mật khẩu?',
+  logout: 'Đăng xuất',
+  back: 'Trở về',
+  orSignInWith: 'Hoặc đăng nhập bằng',
+
+  // Navigation & Menu
+  createPost: 'Tạo Bài Đăng',
+  explore: 'Khám Phá',
+  settings: 'Cài Đặt',
+  search: 'Tìm kiếm...',
+  home: 'Trang chủ',
+  profile: 'Hồ sơ',
+
+  // Friends Feature
+  friends: 'Bạn bè',
+  suggestions: 'Gợi ý kết bạn',
+  friendRequests: 'Lời mời kết bạn',
+  noFriendsYet: 'Chưa có bạn bè nào',
+  noSuggestions: 'Không có gợi ý nào',
+  noFriendRequests: 'Không có lời mời nào',
+  friendsSince: 'Bạn bè từ',
+  requestSent: 'Gửi lời mời',
+  addFriend: 'Kết bạn',
+  unfriend: 'Hủy kết bạn',
+  accept: 'Chấp nhận',
+  reject: 'Từ chối',
+  confirmUnfriend: 'Bạn có chắc muốn hủy kết bạn?',
+  unknownUser: 'Người dùng không xác định',
+  viewAllFriends: 'Toàn bộ bạn bè',
+
+  // Create Post
+  writeCaption: 'Viết chú thích...',
+  addMedia: 'Thêm ảnh/video',
+  cancel: 'Hủy',
+  post: 'Đăng',
+  remove: 'Xóa',
+  multiMediaHint: 'Chọn nhiều ảnh/video (tối đa 10)',
+  mediaLimit: 'Tối đa 10 media',
+
+  // User States
+  guest: 'Khách',
+  user: 'Người dùng',
+  loading: 'Đang tải...',
+  saving: 'Đang lưu...',
+  syncing: 'Đang đồng bộ...',
+  syncingData: 'Đồng bộ dữ liệu',
+
+  // Feed & Posts
+  noPosts: 'Chưa có bài viết nào',
+  textPost: 'Bài viết văn bản',
+  selectPost: 'Chọn bài viết để xem chi tiết',
+
+  // Post Details
+  caption: 'Chú thích',
+  noCaption: 'Không có chú thích',
+  likes: 'lượt thích',
+  comments: 'Bình luận',
+  noComments: 'Chưa có bình luận nào',
+  writeComment: 'Viết bình luận...',
+  loginToComment: 'Đăng nhập để bình luận',
+
+  // Profile
+  clickToUpload: 'Click để tải ảnh',
+  noName: 'Chưa có tên',
+  signedInWith: 'Đăng nhập bằng',
+  joinedOn: 'Tham gia vào',
+  userName: 'Tên người dùng',
+  enterUserName: 'Nhập tên người dùng...',
+  bio: 'Tiểu sử',
+  enterBio: 'Nhập tiểu sử...',
+  gender: 'Giới tính',
+  selectGender: 'Chọn giới tính',
+  male: 'Nam',
+  female: 'Nữ',
+  other: 'Khác',
+  saveChanges: 'Lưu thay đổi',
+  interests: 'Nội dung quan tâm',
+  noInterestsSelected: 'Chưa chọn nội dung quan tâm nào',
+  selectInterests: 'Chọn nội dung quan tâm',
+  save: 'Lưu',
+  posts: 'Danh sách bài viết',
+  postsComingSoon: 'Tính năng sắp ra mắt',
+  friendsComingSoon: 'Tính năng sắp ra mắt',
+
+  // Messages
+  noMessagesYet: 'Chưa có tin nhắn nào',
+  sendFirstMessage: 'Hãy gửi tin nhắn đầu tiên!',
+  typeMessage: 'Nhập tin nhắn...',
+  searchUsers: 'Tìm kiếm người dùng',
+  selectConversation: 'Chọn cuộc trò chuyện',
+  chooseConversationToStart: 'Chọn một cuộc trò chuyện để bắt đầu',
+  messages: 'Tin nhắn',
+  noConversationsYet: 'Chưa có cuộc trò chuyện nào',
+  searchUsersToStart: 'Tìm người để bắt đầu trò chuyện',
+  online: 'Đang hoạt động',
+
+  // Time formats
+  justNow: 'Vừa xong',
+  minutesAgo: ' phút trước',
+  hoursAgo: ' giờ trước',
+  daysAgo: ' ngày trước',
+
+  // Footer & Interaction
+  scrollToNext: 'Cuộn để xem bài viết tiếp theo',
+  scrollTooFast: 'Thao tác cuộn quá nhanh',
+
+  // Success Messages
+  loginSuccess: 'Đăng nhập thành công!',
+  signupSuccess: 'Đăng ký thành công!',
+  logoutSuccess: 'Đăng xuất thành công!',
+  resetEmailSent: 'Email đặt lại mật khẩu đã được gửi!',
+  postSuccess: 'Đăng bài thành công!',
+  profileSuccess: 'Cập nhật thông tin thành công!',
+  deletePostSuccess: 'Đã xóa bài viết!',
+  hidePostSuccess: 'Đã ẩn bài viết!',
+  downloadMediaSuccess: 'Tải xuống thành công!',
+  friendRequestSent: 'Đã gửi lời mời kết bạn!',
+  friendRequestAccepted: 'Đã chấp nhận lời mời kết bạn!',
+  friendRequestRejected: 'Đã từ chối lời mời kết bạn!',
+
+  // Error Messages
+  fillAllFields: 'Vui lòng nhập đầy đủ thông tin!',
+  passwordMismatch: 'Mật khẩu không khớp!',
+  weakPassword: 'Mật khẩu phải có ít nhất 6 ký tự!',
+  enterEmail: 'Vui lòng nhập email!',
+  emailNotFound: 'Email không tồn tại!',
+  wrongPassword: 'Mật khẩu không đúng!',
+  invalidEmail: 'Email không hợp lệ!',
+  emailInUse: 'Email đã được sử dụng!',
+  loginCancelled: 'Đăng nhập bị hủy!',
+  popupBlocked: 'Popup bị chặn! Vui lòng cho phép popup.',
+
+  fileTooLarge: 'File quá lớn! Tối đa 10MB.',
+  invalidFileType: 'Loại file không hợp lệ! Chỉ chấp nhận ảnh/video.',
+  tooManyFiles: 'Quá nhiều files! Tối đa 10 media.',
+  missingCaption: 'Vui lòng nhập chú thích!',
+  missingMedia: 'Vui lòng chọn ảnh hoặc video!',
+  notAuthenticated: 'Vui lòng đăng nhập!',
+  permissionDenied: 'Không có quyền thực hiện!',
+
+  avatarTooLarge: 'Ảnh đại diện quá lớn! Tối đa 5MB.',
+  invalidAvatarType: 'Loại file không hợp lệ! Chỉ chấp nhận ảnh.',
+
+  alreadyLikedPost: 'Bạn đã thích bài viết này!',
+
+  // Default errors
+  loginFailed: 'Đăng nhập thất bại!',
+  signupFailed: 'Đăng ký thất bại!',
+  googleLoginFailed: 'Đăng nhập Google thất bại!',
+  facebookLoginFailed: 'Đăng nhập Facebook thất bại!',
+  postFailed: 'Đăng bài thất bại!',
+  profileUpdateFailed: 'Cập nhật thông tin thất bại!',
+  likeFailed: 'Thích bài viết thất bại!',
+  commentFailed: 'Thêm bình luận thất bại!',
+  sendRequest: 'Gửi lời mời kết bạn thất bại!',
+  acceptRequest: 'Chấp nhận lời mời thất bại!',
+  deletePostFailed: 'Xóa bài viết thất bại!',
+  hidePostFailed: 'Ẩn bài viết thất bại!',
+  downloadMediaFailed: 'Tải xuống thất bại!',
+  reportComingSoon: 'Tính năng báo cáo sắp ra mắt!',
+
+  defaultError: 'Có lỗi xảy ra!'
+}

@@ -1,14 +1,15 @@
 <!--
-src/components/NavMid.vue - Refactored
+src/components/NavMid.vue - Updated with Messages Navigation
 Component navigation giữa header
 Logic: Hiển thị 5 navigation buttons với navigation logic đơn giản
+Added: goToMessages function và mess-button click handler
 -->
 <template>
   <div class="nav-mid">
     <button v-if="!isLoginPage" class="profile-button btn" @click="goToProfile"></button>
     <button v-if="!isLoginPage" class="friends-button btn" @click="goToFriends"></button>
     <button v-if="!isLoginPage" class="home-button btn" @click="goToHome"></button>
-    <button v-if="!isLoginPage" class="mess-button btn"></button>
+    <button v-if="!isLoginPage" class="mess-button btn" @click="goToMessages"></button>
     <button v-if="!isLoginPage" class="notification-button btn"></button>
   </div>
 </template>
@@ -28,12 +29,14 @@ export default {
     const goToHome = () => router.push('/')
     const goToProfile = () => router.push('/profile')
     const goToFriends = () => router.push('/friends')
+    const goToMessages = () => router.push('/messages')
 
     return {
       isLoginPage,
       goToHome,
       goToProfile,
-      goToFriends
+      goToFriends,
+      goToMessages
     }
   }
 }

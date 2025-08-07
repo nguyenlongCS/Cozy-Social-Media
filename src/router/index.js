@@ -1,7 +1,7 @@
 /*
-src/router/index.js - Updated with Friends Route
+src/router/index.js - Updated with Messages Route
 Router configuration với base URL và fallback routing
-Added: /friends route cho chức năng kết bạn
+Added: /messages route cho chức năng nhắn tin
 */
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/view/Home.vue'
@@ -9,6 +9,7 @@ import Login from '@/view/Login.vue'
 import CreatePost from '@/view/CreatePost.vue'
 import Profile from '@/view/Profile.vue'
 import Friends from '@/view/Friends.vue'
+import Messages from '@/view/Messages.vue'
 
 const routes = [
   {
@@ -35,6 +36,11 @@ const routes = [
     path: '/friends',
     name: 'Friends',
     component: Friends
+  },
+  {
+    path: '/messages',
+    name: 'Messages',
+    component: Messages
   },
   // Catch-all route for 404 errors
   {

@@ -1,7 +1,8 @@
 /*
-src/composables/useErrorHandler.js - Refactored
+src/composables/useErrorHandler.js - Updated with Messages Error Handling
 Centralized error handling với consistent messaging
 Logic: Map error codes to message keys với context-specific handling
+Added: Messages-related error contexts và mapping
 */
 import { useLanguage } from './useLanguage'
 
@@ -41,11 +42,19 @@ export function useErrorHandler() {
     
     // Friends errors
     'INVALID_FRIEND_REQUEST': 'sendRequest',
-    'FRIENDSHIP_ALREADY_EXISTS': 'sendRequest'
+    'FRIENDSHIP_ALREADY_EXISTS': 'sendRequest',
+    
+    // Messages errors
+    'MISSING_MESSAGE_DATA': 'messageFailed',
+    'CANNOT_MESSAGE_YOURSELF': 'messageFailed',
+    'USER_NOT_FOUND': 'messageFailed',
+    'NO_USER_PROVIDED': 'messageFailed',
+    'INVALID_REQUEST_ID': 'messageFailed'
   }
 
   // Context-specific error handling
   const contextErrorMap = {
+    signup: { 'defaultError': 'signupFailed' },
     signup: { 'defaultError': 'signupFailed' },
     google: { 'defaultError': 'googleLoginFailed' },
     facebook: { 'defaultError': 'facebookLoginFailed' },
@@ -58,7 +67,12 @@ export function useErrorHandler() {
     comment: { 'defaultError': 'commentFailed' },
     sendRequest: { 'defaultError': 'sendRequest' },
     acceptRequest: { 'defaultError': 'acceptRequest' },
-    unfriend: { 'defaultError': 'unfriend' }
+    unfriend: { 'defaultError': 'unfriend' },
+    // Messages contexts
+    message: { 'defaultError': 'messageFailed' },
+    loadMessages: { 'defaultError': 'loadMessagesFailed' },
+    loadConversations: { 'defaultError': 'loadConversationsFailed' },
+    search: { 'defaultError': 'searchFailed' }
   }
 
   // Success message mapping
@@ -75,7 +89,9 @@ export function useErrorHandler() {
     friendRequestSent: 'friendRequestSent',
     friendRequestAccepted: 'friendRequestAccepted',
     friendRequestRejected: 'friendRequestRejected',
-    unfriend: 'unfriend'
+    unfriend: 'unfriend',
+    // Messages success
+    message: 'messageSuccess'
   }
 
   const handleError = (error, context = 'login') => {
