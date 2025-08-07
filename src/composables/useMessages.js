@@ -2,6 +2,7 @@
 src/composables/useMessages.js - Real-time Fixed
 Messages system với proper real-time updates và message loading
 Logic: Fix real-time listeners và message display issues
+Fixed: Message loading và real-time sync problems
 */
 import { ref, computed } from 'vue'
 import { 
@@ -201,7 +202,7 @@ export function useMessages() {
     }
   }
 
-  // Get messages for specific conversation
+  // Get messages for specific conversation - FIXED: Ensure messages are loaded and stored
   const getConversationMessages = async (userId, partnerId) => {
     if (!userId || !partnerId) {
       console.log('Missing userId or partnerId')
@@ -263,6 +264,9 @@ export function useMessages() {
       })
 
       console.log('Total conversation messages:', messages.length)
+      console.log('First few messages:', messages.slice(0, 3))
+      
+      // FIXED: Always update currentMessages and activeConversationId
       currentMessages.value = messages
       activeConversationId.value = partnerId
       
@@ -388,7 +392,7 @@ export function useMessages() {
     }
   }
 
-  // Setup real-time conversations listener (FIXED)
+  // Setup real-time conversations listener
   const setupConversationsListener = (userId) => {
     if (!userId) return
 
@@ -446,7 +450,7 @@ export function useMessages() {
     getConversations(userId)
   }
 
-  // Setup real-time messages listener for active conversation (FIXED)
+  // Setup real-time messages listener for active conversation - FIXED
   const setupMessagesListener = (userId, partnerId) => {
     if (!userId || !partnerId) return
 
@@ -459,7 +463,9 @@ export function useMessages() {
 
     const messagesCollection = collection(db, 'messages')
     
-    // Listen to sent messages
+    // Create combined query for both sent and received messages
+    // We'll use two separate listeners for better performance
+    
     const sentQuery = query(
       messagesCollection,
       and(where('senderId', '==', userId), where('receiverId', '==', partnerId)),
@@ -467,7 +473,6 @@ export function useMessages() {
       limit(200)
     )
 
-    // Listen to received messages
     const receivedQuery = query(
       messagesCollection,
       and(where('senderId', '==', partnerId), where('receiverId', '==', userId)),
@@ -477,17 +482,49 @@ export function useMessages() {
 
     let sentUnsubscribe = null
     let receivedUnsubscribe = null
+    let messagesCache = new Map()
+
+    const updateMessagesFromCache = () => {
+      const allMessages = Array.from(messagesCache.values())
+      allMessages.sort((a, b) => {
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
+        return dateA - dateB
+      })
+      
+      console.log('Updated messages cache, total:', allMessages.length)
+      currentMessages.value = allMessages
+      activeConversationId.value = partnerId
+    }
 
     sentUnsubscribe = onSnapshot(sentQuery, (snapshot) => {
-      console.log('Sent messages in conversation updated, count:', snapshot.size)
-      refreshMessagesFromSnapshot(userId, partnerId)
+      console.log('Sent messages updated, count:', snapshot.size)
+      
+      // Update cache with sent messages
+      snapshot.forEach(doc => {
+        messagesCache.set(doc.id, {
+          id: doc.id,
+          ...doc.data()
+        })
+      })
+      
+      updateMessagesFromCache()
     }, (error) => {
       console.error('Error in sent messages listener:', error)
     })
 
     receivedUnsubscribe = onSnapshot(receivedQuery, (snapshot) => {
-      console.log('Received messages in conversation updated, count:', snapshot.size)
-      refreshMessagesFromSnapshot(userId, partnerId)
+      console.log('Received messages updated, count:', snapshot.size)
+      
+      // Update cache with received messages
+      snapshot.forEach(doc => {
+        messagesCache.set(doc.id, {
+          id: doc.id,
+          ...doc.data()
+        })
+      })
+      
+      updateMessagesFromCache()
     }, (error) => {
       console.error('Error in received messages listener:', error)
     })
@@ -495,6 +532,7 @@ export function useMessages() {
     messagesUnsubscribe = () => {
       if (sentUnsubscribe) sentUnsubscribe()
       if (receivedUnsubscribe) receivedUnsubscribe()
+      messagesCache.clear()
       console.log('Messages listeners cleaned up')
     }
 
@@ -508,15 +546,6 @@ export function useMessages() {
       await getConversations(userId)
     } catch (error) {
       console.error('Error refreshing conversations:', error)
-    }
-  }
-
-  // Helper function to refresh messages from snapshots
-  const refreshMessagesFromSnapshot = async (userId, partnerId) => {
-    try {
-      await getConversationMessages(userId, partnerId)
-    } catch (error) {
-      console.error('Error refreshing messages:', error)
     }
   }
 
