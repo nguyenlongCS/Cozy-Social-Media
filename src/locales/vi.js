@@ -102,6 +102,7 @@ export default {
   noConversationsYet: 'Chưa có cuộc trò chuyện nào',
   searchUsersToStart: 'Tìm người để bắt đầu trò chuyện',
   online: 'Đang hoạt động',
+  you: 'Bạn',
 
   // Time formats
   justNow: 'Vừa xong',

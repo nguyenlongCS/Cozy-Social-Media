@@ -102,6 +102,7 @@ export default {
   noConversationsYet: 'No conversations yet',
   searchUsersToStart: 'Search users to start chatting',
   online: 'online',
+  you: 'you',
 
   // Time formats
   justNow: 'Just now',
