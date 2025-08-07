@@ -21,7 +21,7 @@ export default {
   profile: 'Hồ sơ',
 
   // Friends Feature
-  friends: 'Bạn bè',
+  friends: 'Danh Sách Bạn Bè',
   suggestions: 'Gợi ý kết bạn',
   friendRequests: 'Lời mời kết bạn',
   noFriendsYet: 'Chưa có bạn bè nào',

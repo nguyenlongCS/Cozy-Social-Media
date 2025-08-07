@@ -21,7 +21,7 @@ export default {
   profile: 'Profile',
 
   // Friends Feature
-  friends: 'Friends',
+  friends: 'Friends List',
   suggestions: 'Friend Suggestions',
   friendRequests: 'Friend Requests',
   noFriendsYet: 'No friends yet',
