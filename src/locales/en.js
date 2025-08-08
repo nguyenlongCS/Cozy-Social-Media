@@ -103,6 +103,7 @@ export default {
   selectConversation: 'Select a conversation',
   chooseConversationToStart: 'Choose a conversation to start',
   messages: 'Messages',
+  noUsersFound: 'No User Found',
   noConversationsYet: 'No conversations yet',
   searchUsersToStart: 'Search users to start chatting',
   online: 'online',

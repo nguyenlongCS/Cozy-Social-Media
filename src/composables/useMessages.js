@@ -1,24 +1,33 @@
 /*
-src/composables/useMessages.js - Real-time Fixed
-Messages system với proper real-time updates và message loading
-Logic: Fix real-time listeners và message display issues
-Fixed: Message loading và real-time sync problems
+src/composables/useMessages.js
+Messages system với Firebase Realtime Database cho realtime updates
+Logic: CRUD operations và real-time listeners với RTDB structure
 */
+
 import { ref, computed } from 'vue'
+import { 
+  ref as dbRef, 
+  push, 
+  set,
+  get,
+  query,
+  orderByChild,
+  equalTo,
+  limitToLast,
+  onValue,
+  off,
+  serverTimestamp,
+  update
+} from 'firebase/database'
 import { 
   getFirestore, 
   collection, 
-  addDoc, 
-  query,
+  query as firestoreQuery,
   where,
-  orderBy,
-  onSnapshot,
-  getDocs,
   limit,
-  and,
-  doc,
-  updateDoc
+  getDocs
 } from 'firebase/firestore'
+import { rtdb } from '@/firebase/config'
 import app from '@/firebase/config'
 import { useUsers } from './useUsers'
 
@@ -33,10 +42,10 @@ export function useMessages() {
   const { getUserById } = useUsers()
   
   // Realtime listeners
-  let conversationsUnsubscribe = null
-  let messagesUnsubscribe = null
+  let conversationsListeners = []
+  let messagesListener = null
 
-  // Send message
+  // Send message với Realtime Database
   const sendMessage = async (senderId, receiverId, content) => {
     if (!senderId || !receiverId || !content?.trim()) {
       throw new Error('MISSING_MESSAGE_DATA')
@@ -50,7 +59,7 @@ export function useMessages() {
     error.value = null
 
     try {
-      // Get sender info
+      // Get user info
       const senderInfo = await getUserById(senderId)
       const receiverInfo = await getUserById(receiverId)
       
@@ -58,8 +67,11 @@ export function useMessages() {
         throw new Error('USER_NOT_FOUND')
       }
 
-      // Create message
-      const messagesCollection = collection(db, 'messages')
+      // Create conversation ID (consistent ordering)
+      const conversationId = [senderId, receiverId].sort().join('_')
+      
+      // Create message data with current timestamp
+      const currentTimestamp = Date.now()
       const messageData = {
         senderId: senderId,
         receiverId: receiverId,
@@ -68,326 +80,334 @@ export function useMessages() {
         receiverName: receiverInfo.UserName || 'Unknown',
         receiverAvatar: receiverInfo.Avatar || null,
         content: content.trim(),
-        createdAt: new Date(),
+        timestamp: currentTimestamp,
         isRead: false
       }
 
-      const docRef = await addDoc(messagesCollection, messageData)
-      
-      console.log('Message sent successfully:', docRef.id)
+      // Save to messages node
+      const messagesRef = dbRef(rtdb, 'messages')
+      const newMessageRef = push(messagesRef)
+      await set(newMessageRef, messageData)
+
+      // Get current unread count for receiver
+      const receiverConvRef = dbRef(rtdb, `conversations/${receiverId}/${senderId}`)
+      const receiverConvSnapshot = await get(receiverConvRef)
+      const currentUnreadCount = receiverConvSnapshot.exists() ? 
+        (receiverConvSnapshot.val().unreadCount || 0) : 0
+
+      // Update conversations for both users with current timestamp
+      const updates = {}
+      updates[`conversations/${senderId}/${receiverId}`] = {
+        partnerId: receiverId,
+        partnerName: receiverInfo.UserName || 'Unknown',
+        partnerAvatar: receiverInfo.Avatar || null,
+        lastMessage: {
+          content: content.trim(),
+          timestamp: currentTimestamp,
+          senderId: senderId
+        },
+        unreadCount: 0, // Sender doesn't have unread
+        updatedAt: currentTimestamp
+      }
+
+      updates[`conversations/${receiverId}/${senderId}`] = {
+        partnerId: senderId,
+        partnerName: senderInfo.UserName || 'Unknown',
+        partnerAvatar: senderInfo.Avatar || null,
+        lastMessage: {
+          content: content.trim(),
+          timestamp: currentTimestamp,
+          senderId: senderId
+        },
+        unreadCount: currentUnreadCount + 1,
+        updatedAt: currentTimestamp
+      }
+
       return {
-        id: docRef.id,
+        id: newMessageRef.key,
         ...messageData
       }
     } catch (err) {
       error.value = err
-      console.error('Error sending message:', err)
       throw err
     } finally {
       isLoading.value = false
     }
   }
 
-  // Get conversations for current user
+  // Get conversations từ Realtime Database
   const getConversations = async (userId) => {
     if (!userId) return []
 
-    console.log('Loading conversations for user:', userId)
     isLoading.value = true
     error.value = null
 
     try {
-      const messagesCollection = collection(db, 'messages')
-      
-      // Get sent messages
-      const sentQuery = query(
-        messagesCollection,
-        where('senderId', '==', userId),
-        orderBy('createdAt', 'desc'),
-        limit(200)
-      )
+      const userConversationsRef = dbRef(rtdb, `conversations/${userId}`)
+      const snapshot = await get(userConversationsRef)
 
-      // Get received messages  
-      const receivedQuery = query(
-        messagesCollection,
-        where('receiverId', '==', userId),
-        orderBy('createdAt', 'desc'),
-        limit(200)
-      )
+      if (!snapshot.exists()) {
+        conversations.value = []
+        return []
+      }
 
-      const [sentSnapshot, receivedSnapshot] = await Promise.all([
-        getDocs(sentQuery),
-        getDocs(receivedQuery)
-      ])
+      const conversationsData = snapshot.val()
+      const conversationsList = Object.entries(conversationsData).map(([partnerId, data]) => ({
+        partnerId,
+        partnerName: data.partnerName,
+        partnerAvatar: data.partnerAvatar,
+        lastMessage: data.lastMessage || { content: '', timestamp: Date.now() },
+        unreadCount: data.unreadCount || 0,
+        updatedAt: data.updatedAt
+      }))
 
-      console.log('Sent messages:', sentSnapshot.size)
-      console.log('Received messages:', receivedSnapshot.size)
-
-      const messagesMap = new Map()
-
-      // Process sent messages
-      sentSnapshot.forEach((doc) => {
-        const message = { id: doc.id, ...doc.data() }
-        const partnerId = message.receiverId
-        const partnerName = message.receiverName
-        const partnerAvatar = message.receiverAvatar
-
-        if (!messagesMap.has(partnerId)) {
-          messagesMap.set(partnerId, {
-            partnerId,
-            partnerName,
-            partnerAvatar,
-            lastMessage: message,
-            unreadCount: 0,
-            messages: []
-          })
-        }
-
-        const conversation = messagesMap.get(partnerId)
-        conversation.messages.push(message)
-
-        if (message.createdAt > conversation.lastMessage.createdAt) {
-          conversation.lastMessage = message
-        }
+      // Sort by last message timestamp
+      conversationsList.sort((a, b) => {
+        const timeA = a.lastMessage.timestamp || 0
+        const timeB = b.lastMessage.timestamp || 0
+        return timeB - timeA
       })
 
-      // Process received messages
-      receivedSnapshot.forEach((doc) => {
-        const message = { id: doc.id, ...doc.data() }
-        const partnerId = message.senderId
-        const partnerName = message.senderName
-        const partnerAvatar = message.senderAvatar
-
-        if (!messagesMap.has(partnerId)) {
-          messagesMap.set(partnerId, {
-            partnerId,
-            partnerName,
-            partnerAvatar,
-            lastMessage: message,
-            unreadCount: 0,
-            messages: []
-          })
-        }
-
-        const conversation = messagesMap.get(partnerId)
-        conversation.messages.push(message)
-
-        // Count unread messages (received by current user)
-        if (!message.isRead) {
-          conversation.unreadCount++
-        }
-
-        if (message.createdAt > conversation.lastMessage.createdAt) {
-          conversation.lastMessage = message
-        }
-      })
-
-      // Convert to array and sort by last message time
-      const conversationsList = Array.from(messagesMap.values())
-        .sort((a, b) => {
-          const dateA = a.lastMessage.createdAt?.toDate ? a.lastMessage.createdAt.toDate() : new Date(a.lastMessage.createdAt)
-          const dateB = b.lastMessage.createdAt?.toDate ? b.lastMessage.createdAt.toDate() : new Date(b.lastMessage.createdAt)
-          return dateB - dateA
-        })
-
-      console.log('Processed conversations:', conversationsList.length)
       conversations.value = conversationsList
       return conversationsList
     } catch (err) {
       error.value = err
-      console.error('Error loading conversations:', err)
       return []
     } finally {
       isLoading.value = false
     }
   }
 
-  // Get messages for specific conversation - FIXED: Ensure messages are loaded and stored
+  // Get messages cho conversation cụ thể
   const getConversationMessages = async (userId, partnerId) => {
-    if (!userId || !partnerId) {
-      console.log('Missing userId or partnerId')
-      return []
-    }
+    if (!userId || !partnerId) return []
 
-    console.log('Loading messages between:', userId, 'and', partnerId)
     isLoading.value = true
     error.value = null
 
     try {
-      const messagesCollection = collection(db, 'messages')
+      const messagesRef = dbRef(rtdb, 'messages')
       
-      // Get sent messages
+      // Query messages between two users
       const sentQuery = query(
-        messagesCollection,
-        and(where('senderId', '==', userId), where('receiverId', '==', partnerId)),
-        orderBy('createdAt', 'asc'),
-        limit(200)
+        messagesRef,
+        orderByChild('senderId'),
+        equalTo(userId)
       )
-
-      // Get received messages
+      
       const receivedQuery = query(
-        messagesCollection,
-        and(where('senderId', '==', partnerId), where('receiverId', '==', userId)),
-        orderBy('createdAt', 'asc'),
-        limit(200)
+        messagesRef,
+        orderByChild('senderId'), 
+        equalTo(partnerId)
       )
 
       const [sentSnapshot, receivedSnapshot] = await Promise.all([
-        getDocs(sentQuery),
-        getDocs(receivedQuery)
+        get(sentQuery),
+        get(receivedQuery)
       ])
-
-      console.log('Messages sent:', sentSnapshot.size)
-      console.log('Messages received:', receivedSnapshot.size)
 
       const messages = []
 
-      sentSnapshot.forEach((doc) => {
-        messages.push({
-          id: doc.id,
-          ...doc.data()
+      // Process sent messages
+      if (sentSnapshot.exists()) {
+        Object.entries(sentSnapshot.val()).forEach(([key, data]) => {
+          if (data.receiverId === partnerId) {
+            messages.push({
+              id: key,
+              ...data
+            })
+          }
         })
-      })
+      }
 
-      receivedSnapshot.forEach((doc) => {
-        messages.push({
-          id: doc.id,
-          ...doc.data()
+      // Process received messages
+      if (receivedSnapshot.exists()) {
+        Object.entries(receivedSnapshot.val()).forEach(([key, data]) => {
+          if (data.receiverId === userId) {
+            messages.push({
+              id: key,
+              ...data
+            })
+          }
         })
-      })
+      }
 
-      // Sort by createdAt
+      // Sort by timestamp
       messages.sort((a, b) => {
-        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
-        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
-        return dateA - dateB
+        const timeA = a.timestamp || 0
+        const timeB = b.timestamp || 0
+        return timeA - timeB
       })
 
-      console.log('Total conversation messages:', messages.length)
-      console.log('First few messages:', messages.slice(0, 3))
-      
-      // FIXED: Always update currentMessages and activeConversationId
       currentMessages.value = messages
       activeConversationId.value = partnerId
       
       return messages
     } catch (err) {
       error.value = err
-      console.error('Error loading conversation messages:', err)
       return []
     } finally {
       isLoading.value = false
     }
   }
 
-  // Mark messages as read
+  // Mark messages as read và update conversation
   const markMessagesAsRead = async (userId, partnerId) => {
     if (!userId || !partnerId) return
 
     try {
-      const messagesCollection = collection(db, 'messages')
+      // Get all messages in conversation
+      const messagesRef = dbRef(rtdb, 'messages')
+      const snapshot = await get(messagesRef)
       
-      const q = query(
-        messagesCollection,
-        and(
-          where('senderId', '==', partnerId),
-          where('receiverId', '==', userId),
-          where('isRead', '==', false)
-        ),
-        limit(100)
-      )
+      if (snapshot.exists()) {
+        const updates = {}
+        let hasUnreadMessages = false
+        
+        Object.entries(snapshot.val()).forEach(([messageId, messageData]) => {
+          // Mark messages sent by partner to current user as read
+          if (messageData.senderId === partnerId && 
+              messageData.receiverId === userId && 
+              !messageData.isRead) {
+            updates[`messages/${messageId}/isRead`] = true
+            hasUnreadMessages = true
+          }
+        })
 
-      const querySnapshot = await getDocs(q)
-      
-      const promises = []
-      querySnapshot.forEach((docSnap) => {
-        const messageRef = doc(db, 'messages', docSnap.id)
-        promises.push(updateDoc(messageRef, { isRead: true }))
-      })
+        // Update messages if there are unread ones
+        if (Object.keys(updates).length > 0) {
+          await update(dbRef(rtdb), updates)
+        }
 
-      if (promises.length > 0) {
-        await Promise.all(promises)
-        console.log('Marked', promises.length, 'messages as read')
+        // Reset unread count in user's conversation
+        if (hasUnreadMessages) {
+          const conversationRef = dbRef(rtdb, `conversations/${userId}/${partnerId}`)
+          const conversationSnapshot = await get(conversationRef)
+          
+          if (conversationSnapshot.exists()) {
+            const conversationData = conversationSnapshot.val()
+            await update(conversationRef, {
+              ...conversationData,
+              unreadCount: 0
+            })
+          }
+        }
       }
     } catch (err) {
+      // Silent fail để không break flow
       console.error('Error marking messages as read:', err)
     }
   }
 
-  // Search users for messaging với multiple strategies
+  // Mark single message as read khi gửi thành công
+  const markMessageAsDelivered = async (messageId) => {
+    if (!messageId) return
+
+    try {
+      const messageRef = dbRef(rtdb, `messages/${messageId}`)
+      await update(messageRef, {
+        isDelivered: true,
+        deliveredAt: Date.now()
+      })
+    } catch (err) {
+      // Silent fail
+      console.error('Error marking message as delivered:', err)
+    }
+  }
+
+  // Search users cho messaging với optimization
   const searchUsersForMessaging = async (searchTerm, currentUserId, limitCount = 10) => {
     if (!searchTerm?.trim() || !currentUserId) return []
 
-    console.log('Searching for users with term:', searchTerm)
-
     try {
       const usersCollection = collection(db, 'users')
-      const searchQuery = searchTerm.trim()
+      const searchQuery = searchTerm.trim().toLowerCase()
       const users = []
 
-      // Strategy 1: Exact UserName search (case-sensitive)
+      // Strategy 1: Exact UserName search (case-insensitive)
       try {
-        const exactQuery = query(
+        // Search by UserName starting with search term
+        const exactQuery = firestoreQuery(
           usersCollection,
-          where('UserName', '>=', searchQuery),
-          where('UserName', '<=', searchQuery + '\uf8ff'),
+          where('UserName', '>=', searchTerm),
+          where('UserName', '<=', searchTerm + '\uf8ff'),
           limit(limitCount)
         )
         
         const exactSnapshot = await getDocs(exactQuery)
         exactSnapshot.forEach((doc) => {
           const userData = doc.data()
-          if (userData.UserID !== currentUserId) {
+          if (userData.UserID !== currentUserId && userData.UserName) {
             users.push({
               id: doc.id,
-              ...userData
+              UserID: userData.UserID,
+              UserName: userData.UserName,
+              Avatar: userData.Avatar || null
+              // Không include Email để ẩn thông tin cá nhân
             })
           }
         })
-        
-        console.log('Exact search results:', users.length)
       } catch (error) {
-        console.log('Exact search failed:', error.message)
+        console.log('Exact search failed, trying fallback')
       }
 
-      // Strategy 2: If no results, try case-insensitive search
+      // Strategy 2: Fallback - case-insensitive contains search
       if (users.length === 0) {
         try {
-          const allUsersQuery = query(usersCollection, limit(100))
+          const allUsersQuery = firestoreQuery(usersCollection, limit(50))
           const allUsersSnapshot = await getDocs(allUsersQuery)
-          
-          const searchLower = searchQuery.toLowerCase()
           
           allUsersSnapshot.forEach((doc) => {
             const userData = doc.data()
             const userName = (userData.UserName || '').toLowerCase()
-            const email = (userData.Email || '').toLowerCase()
             
+            // Chỉ search theo UserName, không search email để bảo mật
             if (userData.UserID !== currentUserId && 
-                (userName.includes(searchLower) || email.includes(searchLower))) {
+                userData.UserName && 
+                userName.includes(searchQuery)) {
               users.push({
                 id: doc.id,
-                ...userData
+                UserID: userData.UserID,
+                UserName: userData.UserName,
+                Avatar: userData.Avatar || null
               })
             }
           })
-          
-          console.log('Case-insensitive search results:', users.length)
         } catch (error) {
-          console.log('Case-insensitive search failed:', error.message)
+          console.error('Fallback search failed:', error)
         }
       }
 
-      // Remove duplicates and limit results
+      // Remove duplicates và sort theo relevance
       const uniqueUsers = users.filter((user, index, self) => 
         index === self.findIndex(u => u.UserID === user.UserID)
-      ).slice(0, limitCount)
+      )
 
-      console.log('Final search results:', uniqueUsers)
-      return uniqueUsers
+      // Sort by relevance: exact match first, then contains
+      uniqueUsers.sort((a, b) => {
+        const aName = a.UserName.toLowerCase()
+        const bName = b.UserName.toLowerCase()
+        
+        // Exact match gets priority
+        const aExact = aName === searchQuery ? 0 : 1
+        const bExact = bName === searchQuery ? 0 : 1
+        
+        if (aExact !== bExact) return aExact - bExact
+        
+        // Then by starts with
+        const aStarts = aName.startsWith(searchQuery) ? 0 : 1
+        const bStarts = bName.startsWith(searchQuery) ? 0 : 1
+        
+        if (aStarts !== bStarts) return aStarts - bStarts
+        
+        // Finally alphabetical
+        return aName.localeCompare(bName)
+      })
+
+      return uniqueUsers.slice(0, limitCount)
 
     } catch (err) {
-      console.error('Error searching users:', err)
+      console.error('Search error:', err)
       return []
     }
   }
@@ -396,177 +416,179 @@ export function useMessages() {
   const setupConversationsListener = (userId) => {
     if (!userId) return
 
-    console.log('Setting up conversations listener for:', userId)
+    cleanupConversationsListeners()
 
-    // Clean up existing listener
-    if (conversationsUnsubscribe) {
-      conversationsUnsubscribe()
-    }
+    const userConversationsRef = dbRef(rtdb, `conversations/${userId}`)
+    
+    const conversationUnsubscribe = onValue(userConversationsRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const conversationsData = snapshot.val()
+        const conversationsList = Object.entries(conversationsData).map(([partnerId, data]) => ({
+          partnerId,
+          partnerName: data.partnerName,
+          partnerAvatar: data.partnerAvatar,
+          lastMessage: data.lastMessage || { content: '', timestamp: Date.now() },
+          unreadCount: data.unreadCount || 0,
+          updatedAt: data.updatedAt
+        }))
 
-    const messagesCollection = collection(db, 'messages')
+        // Sort by last message timestamp
+        conversationsList.sort((a, b) => {
+          const timeA = a.lastMessage.timestamp || 0
+          const timeB = b.lastMessage.timestamp || 0
+          return timeB - timeA
+        })
 
-    // Listen to sent messages
-    const sentQuery = query(
-      messagesCollection,
-      where('senderId', '==', userId),
-      orderBy('createdAt', 'desc'),
-      limit(100)
-    )
-
-    // Listen to received messages
-    const receivedQuery = query(
-      messagesCollection,
-      where('receiverId', '==', userId),
-      orderBy('createdAt', 'desc'),
-      limit(100)
-    )
-
-    let sentUnsubscribe = null
-    let receivedUnsubscribe = null
-
-    // Setup listeners
-    sentUnsubscribe = onSnapshot(sentQuery, (snapshot) => {
-      console.log('Sent messages updated, count:', snapshot.size)
-      refreshConversationsFromSnapshot(userId)
+        conversations.value = conversationsList
+      } else {
+        conversations.value = []
+      }
     }, (error) => {
-      console.error('Error in sent conversations listener:', error)
+      console.error('Error in conversations listener:', error)
     })
 
-    receivedUnsubscribe = onSnapshot(receivedQuery, (snapshot) => {
-      console.log('Received messages updated, count:', snapshot.size)
-      refreshConversationsFromSnapshot(userId)
+    // Also listen to all messages để update conversations real-time khi có tin nhắn mới
+    const messagesRef = dbRef(rtdb, 'messages')
+    const messagesUnsubscribe = onValue(messagesRef, (snapshot) => {
+      if (snapshot.exists()) {
+        // Force refresh conversations khi có message mới
+        refreshConversationsFromMessages(userId, snapshot.val())
+      }
     }, (error) => {
-      console.error('Error in received conversations listener:', error)
+      console.error('Error in messages listener:', error)
     })
 
-    // Combined unsubscribe function
-    conversationsUnsubscribe = () => {
-      if (sentUnsubscribe) sentUnsubscribe()
-      if (receivedUnsubscribe) receivedUnsubscribe()
-      console.log('Conversations listeners cleaned up')
-    }
-
-    // Initial load
-    getConversations(userId)
+    conversationsListeners.push(conversationUnsubscribe)
+    conversationsListeners.push(messagesUnsubscribe)
   }
 
-  // Setup real-time messages listener for active conversation - FIXED
+  // Helper function để refresh conversations từ messages
+  const refreshConversationsFromMessages = async (userId, allMessages) => {
+    try {
+      const conversationsMap = new Map()
+      
+      // Process all messages to build conversations
+      Object.entries(allMessages).forEach(([messageId, messageData]) => {
+        let partnerId = null
+        let isIncoming = false
+        
+        // Determine partner và direction
+        if (messageData.senderId === userId) {
+          partnerId = messageData.receiverId
+          isIncoming = false
+        } else if (messageData.receiverId === userId) {
+          partnerId = messageData.senderId
+          isIncoming = true
+        }
+        
+        if (!partnerId) return
+        
+        // Get or create conversation
+        if (!conversationsMap.has(partnerId)) {
+          conversationsMap.set(partnerId, {
+            partnerId,
+            partnerName: isIncoming ? messageData.senderName : messageData.receiverName,
+            partnerAvatar: isIncoming ? messageData.senderAvatar : messageData.receiverAvatar,
+            lastMessage: messageData,
+            unreadCount: 0,
+            messages: []
+          })
+        }
+        
+        const conversation = conversationsMap.get(partnerId)
+        conversation.messages.push(messageData)
+        
+        // Update last message if this is newer
+        if (messageData.timestamp > conversation.lastMessage.timestamp) {
+          conversation.lastMessage = {
+            content: messageData.content,
+            timestamp: messageData.timestamp,
+            senderId: messageData.senderId
+          }
+        }
+        
+        // Count unread messages (messages sent to current user that are unread)
+        if (isIncoming && !messageData.isRead) {
+          conversation.unreadCount++
+        }
+      })
+      
+      // Convert to array and sort
+      const conversationsList = Array.from(conversationsMap.values())
+        .sort((a, b) => {
+          const timeA = a.lastMessage.timestamp || 0
+          const timeB = b.lastMessage.timestamp || 0
+          return timeB - timeA
+        })
+      
+      conversations.value = conversationsList
+    } catch (error) {
+      console.error('Error refreshing conversations from messages:', error)
+    }
+  }
+
+  // Setup real-time messages listener
   const setupMessagesListener = (userId, partnerId) => {
     if (!userId || !partnerId) return
 
-    console.log('Setting up messages listener between:', userId, 'and', partnerId)
+    cleanupMessagesListener()
 
-    // Clean up existing listener
-    if (messagesUnsubscribe) {
-      messagesUnsubscribe()
-    }
-
-    const messagesCollection = collection(db, 'messages')
+    const messagesRef = dbRef(rtdb, 'messages')
     
-    // Create combined query for both sent and received messages
-    // We'll use two separate listeners for better performance
-    
-    const sentQuery = query(
-      messagesCollection,
-      and(where('senderId', '==', userId), where('receiverId', '==', partnerId)),
-      orderBy('createdAt', 'asc'),
-      limit(200)
-    )
+    messagesListener = onValue(messagesRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const allMessages = snapshot.val()
+        const conversationMessages = []
 
-    const receivedQuery = query(
-      messagesCollection,
-      and(where('senderId', '==', partnerId), where('receiverId', '==', userId)),
-      orderBy('createdAt', 'asc'),
-      limit(200)
-    )
-
-    let sentUnsubscribe = null
-    let receivedUnsubscribe = null
-    let messagesCache = new Map()
-
-    const updateMessagesFromCache = () => {
-      const allMessages = Array.from(messagesCache.values())
-      allMessages.sort((a, b) => {
-        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt)
-        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt)
-        return dateA - dateB
-      })
-      
-      console.log('Updated messages cache, total:', allMessages.length)
-      currentMessages.value = allMessages
-      activeConversationId.value = partnerId
-    }
-
-    sentUnsubscribe = onSnapshot(sentQuery, (snapshot) => {
-      console.log('Sent messages updated, count:', snapshot.size)
-      
-      // Update cache with sent messages
-      snapshot.forEach(doc => {
-        messagesCache.set(doc.id, {
-          id: doc.id,
-          ...doc.data()
+        Object.entries(allMessages).forEach(([messageId, messageData]) => {
+          // Check if message belongs to this conversation
+          if ((messageData.senderId === userId && messageData.receiverId === partnerId) ||
+              (messageData.senderId === partnerId && messageData.receiverId === userId)) {
+            conversationMessages.push({
+              id: messageId,
+              ...messageData
+            })
+          }
         })
-      })
-      
-      updateMessagesFromCache()
-    }, (error) => {
-      console.error('Error in sent messages listener:', error)
-    })
 
-    receivedUnsubscribe = onSnapshot(receivedQuery, (snapshot) => {
-      console.log('Received messages updated, count:', snapshot.size)
-      
-      // Update cache with received messages
-      snapshot.forEach(doc => {
-        messagesCache.set(doc.id, {
-          id: doc.id,
-          ...doc.data()
+        // Sort by timestamp
+        conversationMessages.sort((a, b) => {
+          const timeA = a.timestamp || 0
+          const timeB = b.timestamp || 0
+          return timeA - timeB
         })
-      })
-      
-      updateMessagesFromCache()
-    }, (error) => {
-      console.error('Error in received messages listener:', error)
+
+        currentMessages.value = conversationMessages
+        activeConversationId.value = partnerId
+      }
     })
-
-    messagesUnsubscribe = () => {
-      if (sentUnsubscribe) sentUnsubscribe()
-      if (receivedUnsubscribe) receivedUnsubscribe()
-      messagesCache.clear()
-      console.log('Messages listeners cleaned up')
-    }
-
-    // Initial load
-    getConversationMessages(userId, partnerId)
   }
 
-  // Helper function to refresh conversations from snapshots
-  const refreshConversationsFromSnapshot = async (userId) => {
-    try {
-      await getConversations(userId)
-    } catch (error) {
-      console.error('Error refreshing conversations:', error)
+  // Cleanup functions
+  const cleanupConversationsListeners = () => {
+    conversationsListeners.forEach(unsubscribe => {
+      if (unsubscribe) unsubscribe()
+    })
+    conversationsListeners = []
+  }
+
+  const cleanupMessagesListener = () => {
+    if (messagesListener) {
+      messagesListener()
+      messagesListener = null
     }
   }
 
-  // Cleanup listeners
   const cleanupListeners = () => {
-    console.log('Cleaning up all listeners')
-    if (conversationsUnsubscribe) {
-      conversationsUnsubscribe()
-      conversationsUnsubscribe = null
-    }
-    if (messagesUnsubscribe) {
-      messagesUnsubscribe()
-      messagesUnsubscribe = null
-    }
+    cleanupConversationsListeners()
+    cleanupMessagesListener()
   }
 
-  // Debug: Get all users
+  // Debug function
   const getAllUsers = async () => {
     try {
       const usersCollection = collection(db, 'users')
-      const allUsersQuery = query(usersCollection, limit(20))
+      const allUsersQuery = firestoreQuery(usersCollection, limit(20))
       const snapshot = await getDocs(allUsersQuery)
       
       const users = []
@@ -577,10 +599,8 @@ export function useMessages() {
         })
       })
       
-      console.log('All users in database:', users)
       return users
     } catch (error) {
-      console.error('Error getting all users:', error)
       return []
     }
   }
@@ -606,6 +626,7 @@ export function useMessages() {
     getConversations,
     getConversationMessages,
     markMessagesAsRead,
+    markMessageAsDelivered,
     searchUsersForMessaging,
     getAllUsers,
     setupConversationsListener,

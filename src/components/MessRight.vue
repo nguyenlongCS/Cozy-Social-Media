@@ -1,12 +1,12 @@
 <!--
 src/components/MessRight.vue
-Component sidebar bên phải trang messages
+Component sidebar bên phải trang messages với search optimization
 Logic:
 - Hiển thị danh sách conversations với avatar, tên, tin nhắn mới nhất
 - Trạng thái unread count cho từng conversation
-- Thanh tìm kiếm users để bắt đầu conversation mới
+- Thanh tìm kiếm users tối ưu với debounce và caching
 - Real-time updates với conversation list
-- Emit selected conversation to parent
+- Ẩn email trong kết quả search để bảo mật
 -->
 <template>
   <div class="mess-right">
@@ -20,17 +20,29 @@ Logic:
           type="text"
           class="search-input"
           :placeholder="getText('searchUsers')"
-          @input="handleSearch"
+          @input="handleSearchInput"
+          @focus="showSearchResults = true"
+          @blur="handleSearchBlur"
         >
         <div class="search-icon"></div>
+        
+        <!-- Clear search button -->
+        <button 
+          v-if="searchTerm.length > 0"
+          class="clear-search-btn"
+          @click="clearSearch"
+        >
+          ×
+        </button>
       </div>
 
       <!-- Search results -->
-      <div v-if="showSearchResults" class="search-results">
+      <div v-if="showSearchResults && searchTerm.trim()" class="search-results">
         <div v-if="isSearching" class="search-loading">
+          <div class="search-spinner"></div>
           {{ getText('searching') }}...
         </div>
-        <div v-else-if="searchResults.length === 0 && searchTerm.trim()" class="no-search-results">
+        <div v-else-if="searchResults.length === 0" class="no-search-results">
           {{ getText('noUsersFound') }}
         </div>
         <div v-else class="search-users-list">
@@ -46,8 +58,9 @@ Logic:
             ></div>
             <div class="search-user-info">
               <div class="search-user-name">{{ searchUser.UserName || getText('unknownUser') }}</div>
-              <div class="search-user-email">{{ searchUser.Email }}</div>
+              <!-- Email đã được ẩn trong search results -->
             </div>
+            <div class="start-chat-icon"></div>
           </div>
         </div>
       </div>
@@ -56,16 +69,17 @@ Logic:
     <!-- Conversations list -->
     <div class="conversations-section">
       <div v-if="isLoadingConversations" class="conversations-loading">
+        <div class="loading-spinner"></div>
         {{ getText('loading') }}...
       </div>
 
-      <div v-else-if="conversations.length === 0" class="no-conversations">
+      <div v-else-if="conversations.length === 0 && !searchTerm.trim()" class="no-conversations">
         <div class="no-conversations-icon"></div>
         <p class="no-conversations-text">{{ getText('noConversationsYet') }}</p>
         <p class="no-conversations-hint">{{ getText('searchUsersToStart') }}</p>
       </div>
 
-      <div v-else class="conversations-list">
+      <div v-else-if="!searchTerm.trim()" class="conversations-list">
         <div
           v-for="conversation in conversations"
           :key="conversation.partnerId"
@@ -84,12 +98,13 @@ Logic:
             <div v-if="conversation.unreadCount > 0" class="unread-badge">
               {{ conversation.unreadCount > 99 ? '99+' : conversation.unreadCount }}
             </div>
+            <div v-else-if="isOnline(conversation.partnerId)" class="online-indicator"></div>
           </div>
 
           <div class="conversation-content">
             <div class="conversation-header">
               <div class="partner-name">{{ conversation.partnerName || getText('unknownUser') }}</div>
-              <div class="last-message-time">{{ formatConversationTime(conversation.lastMessage.createdAt) }}</div>
+              <div class="last-message-time">{{ formatConversationTime(conversation.lastMessage.timestamp) }}</div>
             </div>
             
             <div class="last-message">
@@ -125,7 +140,6 @@ export default {
       isLoading: isLoadingConversations,
       getConversations,
       searchUsersForMessaging,
-      getAllUsers, // Debug function
       setupConversationsListener,
       cleanupListeners
     } = useMessages()
@@ -137,64 +151,87 @@ export default {
     const searchTerm = ref('')
     const searchResults = ref([])
     const isSearching = ref(false)
+    const showSearchResults = ref(false)
     const searchTimeout = ref(null)
+    const searchCache = ref(new Map()) // Cache search results
 
     // Computed properties
     const currentUserId = computed(() => user.value?.uid)
 
-    const showSearchResults = computed(() => {
-      return searchTerm.value.trim().length > 0
-    })
-
-    // Search handling với debug logging
-    const handleSearch = () => {
+    // Optimized search với debounce và caching
+    const handleSearchInput = () => {
       if (searchTimeout.value) {
         clearTimeout(searchTimeout.value)
       }
 
-      searchTimeout.value = setTimeout(async () => {
-        const query = searchTerm.value.trim()
-        if (!query || !currentUserId.value) {
-          searchResults.value = []
-          return
-        }
+      const query = searchTerm.value.trim()
+      if (!query) {
+        searchResults.value = []
+        showSearchResults.value = false
+        return
+      }
 
-        console.log('Starting search for:', query)
-        isSearching.value = true
+      // Check cache first
+      if (searchCache.value.has(query)) {
+        searchResults.value = searchCache.value.get(query)
+        showSearchResults.value = true
+        return
+      }
+
+      // Debounce search
+      searchTimeout.value = setTimeout(async () => {
+        await performSearch(query)
+      }, 300) // 300ms debounce
+    }
+
+    const performSearch = async (query) => {
+      if (!query || !currentUserId.value) {
+        searchResults.value = []
+        return
+      }
+
+      isSearching.value = true
+      showSearchResults.value = true
+      
+      try {
+        const results = await searchUsersForMessaging(query, currentUserId.value, 8)
         
-        try {
-          // Debug: Log current user info
-          console.log('Current user ID:', currentUserId.value)
-          
-          // Try search
-          const results = await searchUsersForMessaging(query, currentUserId.value)
-          console.log('Search results received:', results)
-          searchResults.value = results
-          
-          // Debug: If no results, try getting all users to see if there are any
-          if (results.length === 0) {
-            console.log('No search results, checking all users...')
-            const allUsers = await getAllUsers()
-            console.log('Total users in database:', allUsers.length)
-            
-            // Show some users as fallback if search returns nothing
-            const fallbackUsers = allUsers
-              .filter(user => user.UserID !== currentUserId.value)
-              .slice(0, 5)
-            
-            if (fallbackUsers.length > 0) {
-              console.log('Showing fallback users:', fallbackUsers)
-              searchResults.value = fallbackUsers
-            }
-          }
-        } catch (error) {
-          console.error('Search error:', error)
-          searchResults.value = []
-          showError(error, 'search')
-        } finally {
-          isSearching.value = false
+        // Cache results
+        searchCache.value.set(query, results)
+        
+        // Clear old cache if too large (keep last 20 searches)
+        if (searchCache.value.size > 20) {
+          const firstKey = searchCache.value.keys().next().value
+          searchCache.value.delete(firstKey)
         }
-      }, 300)
+        
+        searchResults.value = results
+      } catch (error) {
+        console.error('Search error:', error)
+        searchResults.value = []
+        showError(error, 'search')
+      } finally {
+        isSearching.value = false
+      }
+    }
+
+    // Handle search blur với delay
+    const handleSearchBlur = () => {
+      setTimeout(() => {
+        if (!searchTerm.value.trim()) {
+          showSearchResults.value = false
+        }
+      }, 200) // Delay để cho phép click vào search results
+    }
+
+    // Clear search
+    const clearSearch = () => {
+      searchTerm.value = ''
+      searchResults.value = []
+      showSearchResults.value = false
+      if (searchTimeout.value) {
+        clearTimeout(searchTimeout.value)
+      }
     }
 
     // Start conversation with searched user
@@ -212,15 +249,14 @@ export default {
           partnerId: searchUser.UserID,
           partnerName: searchUser.UserName,
           partnerAvatar: searchUser.Avatar,
-          lastMessage: { content: '', createdAt: new Date() },
+          lastMessage: { content: '', timestamp: Date.now() },
           unreadCount: 0
         }
         selectConversation(newConversation)
       }
       
       // Clear search
-      searchTerm.value = ''
-      searchResults.value = []
+      clearSearch()
     }
 
     // Select conversation
@@ -238,13 +274,7 @@ export default {
     const formatConversationTime = (timestamp) => {
       if (!timestamp) return ''
       
-      let date
-      if (timestamp.toDate) {
-        date = timestamp.toDate()
-      } else {
-        date = timestamp instanceof Date ? timestamp : new Date(timestamp)
-      }
-      
+      const date = new Date(timestamp)
       const now = new Date()
       const diffInMs = now - date
       const diffInMinutes = Math.floor(diffInMs / (1000 * 60))
@@ -270,6 +300,12 @@ export default {
       return content.length > 30 ? content.substring(0, 30) + '...' : content
     }
 
+    // Check if user is online (placeholder - có thể implement sau)
+    const isOnline = (userId) => {
+      // Có thể implement với presence system sau
+      return false
+    }
+
     // Load conversations
     const loadConversations = async () => {
       if (!currentUserId.value) return
@@ -290,7 +326,6 @@ export default {
 
     // Watchers
     watch(currentUserId, (newUserId) => {
-      console.log('MessRight: User changed to:', newUserId)
       if (newUserId) {
         loadConversations()
         setupRealtimeListener()
@@ -303,7 +338,6 @@ export default {
 
     // Lifecycle
     onMounted(() => {
-      console.log('MessRight: Component mounted')
       if (currentUserId.value) {
         loadConversations()
         setupRealtimeListener()
@@ -311,11 +345,12 @@ export default {
     })
 
     onUnmounted(() => {
-      console.log('MessRight: Component unmounted, cleaning up')
       cleanupListeners()
       if (searchTimeout.value) {
         clearTimeout(searchTimeout.value)
       }
+      // Clear search cache
+      searchCache.value.clear()
     })
 
     return {
@@ -328,11 +363,14 @@ export default {
       showSearchResults,
       currentUserId,
       getText,
-      handleSearch,
+      handleSearchInput,
+      handleSearchBlur,
+      clearSearch,
       startConversationWithUser,
       selectConversation,
       formatConversationTime,
-      getMessagePreview
+      getMessagePreview,
+      isOnline
     }
   }
 }
@@ -375,7 +413,7 @@ export default {
   background: rgba(255, 235, 124, 0.1);
   border: 1px solid rgba(255, 235, 124, 0.3);
   border-radius: 1rem;
-  padding: 0 2rem 0 0.75rem;
+  padding: 0 2.5rem 0 0.75rem;
   font-size: 0.75rem;
   color: var(--theme-color);
   outline: none;
@@ -403,6 +441,31 @@ export default {
   opacity: 0.6;
 }
 
+.clear-search-btn {
+  position: absolute;
+  right: 1.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  border: none;
+  background: rgba(255, 235, 124, 0.3);
+  color: var(--theme-color);
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.clear-search-btn:hover {
+  background: rgba(255, 235, 124, 0.5);
+  transform: translateY(-50%) scale(1.1);
+}
+
 /* Search results */
 .search-results {
   position: relative;
@@ -419,6 +482,19 @@ export default {
   text-align: center;
   color: rgba(255, 235, 124, 0.6);
   font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.search-spinner, .loading-spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 235, 124, 0.3);
+  border-top: 2px solid var(--theme-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
 }
 
 .search-users-list {
@@ -432,11 +508,13 @@ export default {
   padding: 0.5rem;
   border-radius: 0.375rem;
   cursor: pointer;
-  transition: background 0.2s ease;
+  transition: all 0.2s ease;
+  position: relative;
 }
 
 .search-user-item:hover {
   background: rgba(255, 235, 124, 0.1);
+  transform: translateX(0.25rem);
 }
 
 .search-user-avatar {
@@ -465,12 +543,19 @@ export default {
   white-space: nowrap;
 }
 
-.search-user-email {
-  font-size: 0.625rem;
-  color: rgba(255, 235, 124, 0.6);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.start-chat-icon {
+  width: 1rem;
+  height: 1rem;
+  background: url('@/icons/mess.png') center/cover;
+  filter: brightness(0) saturate(100%) invert(78%) sepia(35%) saturate(348%) hue-rotate(34deg) brightness(105%) contrast(105%);
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.search-user-item:hover .start-chat-icon {
+  opacity: 1;
+  transform: scale(1.1);
 }
 
 /* Conversations section */
@@ -488,6 +573,7 @@ export default {
   height: 100%;
   color: rgba(255, 235, 124, 0.6);
   font-size: 0.75rem;
+  gap: 0.5rem;
 }
 
 .no-conversations {
@@ -542,11 +628,13 @@ export default {
 .conversation-item:hover {
   background: rgba(255, 235, 124, 0.05);
   border-color: rgba(255, 235, 124, 0.2);
+  transform: translateX(0.125rem);
 }
 
 .conversation-item.active {
   background: rgba(255, 235, 124, 0.1);
   border-color: var(--theme-color);
+  transform: translateX(0.25rem);
 }
 
 .conversation-item.unread {
@@ -582,6 +670,18 @@ export default {
   text-align: center;
   line-height: 1;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.2);
+  animation: pulse 2s infinite;
+}
+
+.online-indicator {
+  position: absolute;
+  bottom: -0.125rem;
+  right: -0.125rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  background: #4CAF50;
+  border: 2px solid #2B2D42;
+  border-radius: 50%;
 }
 
 .conversation-content {
@@ -642,6 +742,19 @@ export default {
   background: var(--theme-color);
   border-radius: 50%;
   flex-shrink: 0;
+  animation: pulse 2s infinite;
+}
+
+/* Animations */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 /* Scrollbar styling */

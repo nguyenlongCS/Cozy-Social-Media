@@ -103,6 +103,7 @@ export default {
   selectConversation: 'Chọn cuộc trò chuyện',
   chooseConversationToStart: 'Chọn một cuộc trò chuyện để bắt đầu',
   messages: 'Tin nhắn',
+  noUsersFound: 'Không tìm thấy người dùng',
   noConversationsYet: 'Chưa có cuộc trò chuyện nào',
   searchUsersToStart: 'Tìm người để bắt đầu trò chuyện',
   online: 'Đang hoạt động',

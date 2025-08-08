@@ -5,7 +5,7 @@ Logic:
 - Hiển thị danh sách tin nhắn giữa current user và selected partner
 - Form gửi tin nhắn mới với emoji picker
 - Auto scroll to bottom khi có tin nhắn mới
-- Real-time updates với Firestore listener
+- Real-time updates với Realtime Database listener
 - Message status: sent/received, read/unread
 -->
 <template>
@@ -60,14 +60,12 @@ Logic:
             <div class="message-bubble">
               <div class="message-content">{{ message.content }}</div>
               <div class="message-meta">
-                <span class="message-time">{{ formatMessageTime(message.createdAt) }}</span>
+                <span class="message-time">{{ formatMessageTime(message.timestamp) }}</span>
                 <div 
                   v-if="message.senderId === currentUserId"
                   class="message-status"
-                  :class="{
-                    'status-read': message.isRead,
-                    'status-sent': !message.isRead
-                  }"
+                  :class="getMessageStatusClass(message)"
+                  :title="getMessageStatusTooltip(message)"
                 ></div>
               </div>
             </div>
@@ -158,6 +156,7 @@ export default {
       sendMessage,
       getConversationMessages,
       markMessagesAsRead,
+      markMessageAsDelivered,
       setupMessagesListener,
       cleanupListeners
     } = useMessages()
@@ -211,17 +210,31 @@ export default {
       }
     }
 
-    // Format message time
+    // Get message status class
+    const getMessageStatusClass = (message) => {
+      if (message.isRead) {
+        return 'status-read'
+      } else if (message.isDelivered) {
+        return 'status-delivered'
+      } else {
+        return 'status-sent'
+      }
+    }
+
+    // Get message status tooltip
+    const getMessageStatusTooltip = (message) => {
+      if (message.isRead) {
+        return getText('messageRead')
+      } else if (message.isDelivered) {
+        return getText('messageDelivered')
+      } else {
+        return getText('messageSent')
+      }
+    }
     const formatMessageTime = (timestamp) => {
       if (!timestamp) return ''
       
-      let date
-      if (timestamp.toDate) {
-        date = timestamp.toDate()
-      } else {
-        date = timestamp instanceof Date ? timestamp : new Date(timestamp)
-      }
-      
+      const date = new Date(timestamp)
       const now = new Date()
       const diffInMs = now - date
       const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
@@ -290,19 +303,16 @@ export default {
     // Load conversation messages
     const loadConversationMessages = async () => {
       if (!props.selectedPartnerId || !currentUserId.value) {
-        console.log('Cannot load messages: missing partnerId or userId')
         return
       }
-
-      console.log('Loading conversation between:', currentUserId.value, 'and', props.selectedPartnerId)
 
       try {
         await getConversationMessages(currentUserId.value, props.selectedPartnerId)
         
-        // Mark messages as read
+        // Mark messages as read khi mở conversation
         await markMessagesAsRead(currentUserId.value, props.selectedPartnerId)
         
-        setTimeout(scrollToBottom, 100) // Delay to ensure DOM update
+        setTimeout(scrollToBottom, 100)
         emit('conversation-updated')
       } catch (error) {
         console.error('Error loading conversation messages:', error)
@@ -313,32 +323,26 @@ export default {
     // Setup real-time listener
     const setupRealtimeListener = () => {
       if (props.selectedPartnerId && currentUserId.value) {
-        console.log('Setting up realtime listener for conversation')
         setupMessagesListener(currentUserId.value, props.selectedPartnerId)
       }
     }
 
     // Watchers
     watch(() => props.selectedPartnerId, async (newPartnerId, oldPartnerId) => {
-      console.log('Selected partner changed from', oldPartnerId, 'to', newPartnerId)
-      
       if (newPartnerId && currentUserId.value) {
         cleanupListeners()
         await loadConversationMessages()
         setupRealtimeListener()
       } else {
         cleanupListeners()
-        currentMessages.value = [] // Clear messages when no partner selected
       }
     }, { immediate: true })
 
     watch(messages, (newMessages) => {
-      console.log('Messages updated, count:', newMessages.length)
       setTimeout(scrollToBottom, 100)
     }, { deep: true, flush: 'post' })
 
     watch(currentUserId, (newUserId) => {
-      console.log('User changed:', newUserId)
       if (newUserId && props.selectedPartnerId) {
         setupRealtimeListener()
       }
@@ -374,7 +378,9 @@ export default {
       handleSendMessage,
       toggleEmojiPicker,
       selectEmoji,
-      formatMessageTime
+      formatMessageTime,
+      getMessageStatusClass,
+      getMessageStatusTooltip
     }
   }
 }
@@ -609,6 +615,11 @@ export default {
 .status-sent {
   background: rgba(43, 45, 66, 0.5);
   border: 1px solid rgba(43, 45, 66, 0.7);
+}
+
+.status-delivered {
+  background: #FFA726;
+  border: 1px solid #FF9800;
 }
 
 .status-read {
