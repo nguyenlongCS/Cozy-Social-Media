@@ -453,7 +453,7 @@ export default {
   flex-shrink: 0;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--theme-color);
-  background: #2B2D42;
+  background: rgba(255, 235, 124, 0.15);
 }
 
 .partner-info {
@@ -632,14 +632,14 @@ export default {
   flex-shrink: 0;
   padding: 0.75rem 1rem;
   border-top: 1px solid var(--theme-color);
-  background: #2B2D42;
+  background: rgba(255, 235, 124, 0.15);
 }
 
 .message-input-wrapper {
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
-  background: #2B2D42;
+  background: rgba(255, 235, 124, 0.15);
   border: 1px solid var(--theme-color);
   border-radius: 1.5rem;
   padding: 0.5rem;
