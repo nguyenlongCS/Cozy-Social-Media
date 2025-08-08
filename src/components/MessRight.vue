@@ -410,8 +410,8 @@ export default {
 .search-input {
   width: 100%;
   height: 2rem;
-  background: rgba(255, 235, 124, 0.1);
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  background: #2B2D42;
+  border: 1px solid var(--theme-color);
   border-radius: 1rem;
   padding: 0 2.5rem 0 0.75rem;
   font-size: 0.75rem;

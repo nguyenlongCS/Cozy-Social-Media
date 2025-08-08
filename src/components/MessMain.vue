@@ -452,8 +452,8 @@ export default {
 .conversation-header {
   flex-shrink: 0;
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255, 235, 124, 0.2);
-  background: rgba(255, 235, 124, 0.05);
+  border-bottom: 1px solid var(--theme-color);
+  background: #2B2D42;
 }
 
 .partner-info {
@@ -631,16 +631,16 @@ export default {
 .message-input-container {
   flex-shrink: 0;
   padding: 0.75rem 1rem;
-  border-top: 1px solid rgba(255, 235, 124, 0.2);
-  background: rgba(255, 235, 124, 0.05);
+  border-top: 1px solid var(--theme-color);
+  background: #2B2D42;
 }
 
 .message-input-wrapper {
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
-  background: rgba(255, 235, 124, 0.1);
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  background: #2B2D42;
+  border: 1px solid var(--theme-color);
   border-radius: 1.5rem;
   padding: 0.5rem;
 }
