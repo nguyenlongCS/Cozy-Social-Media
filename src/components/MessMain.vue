@@ -386,6 +386,7 @@ export default {
 }
 </script>
 
+/* MessMain.vue styles - Updated Colors */
 <style scoped>
 .mess-main {
   width: 39.53%;
@@ -436,7 +437,8 @@ export default {
 
 .no-conversation-text {
   font-size: 0.875rem;
-  color: rgba(255, 235, 124, 0.7);
+  color: var(--theme-color);
+  opacity: 0.7;
   margin: 0;
 }
 
@@ -453,7 +455,7 @@ export default {
   flex-shrink: 0;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid var(--theme-color);
-  background: rgba(255, 235, 124, 0.15);
+  background: var(--theme-color-10);
 }
 
 .partner-info {
@@ -486,7 +488,8 @@ export default {
 
 .online-status {
   font-size: 0.75rem;
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
 }
 
 /* Messages container */
@@ -504,7 +507,8 @@ export default {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
   font-size: 0.875rem;
 }
 
@@ -527,7 +531,8 @@ export default {
 }
 
 .no-messages p {
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
   font-size: 0.875rem;
   margin: 0;
 }
@@ -571,9 +576,9 @@ export default {
 }
 
 .message-received .message-bubble {
-  background: rgba(255, 235, 124, 0.15);
+  background: var(--theme-color-10);
   color: var(--theme-color);
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  border: 1px solid var(--theme-color-20);
   border-bottom-left-radius: 0.25rem;
 }
 
@@ -598,11 +603,13 @@ export default {
 }
 
 .message-sent .message-time {
-  color: rgba(43, 45, 66, 0.7);
+  color: #2B2D42;
+  opacity: 0.7;
 }
 
 .message-received .message-time {
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
 }
 
 .message-status {
@@ -613,18 +620,20 @@ export default {
 }
 
 .status-sent {
-  background: rgba(43, 45, 66, 0.5);
-  border: 1px solid rgba(43, 45, 66, 0.7);
+  background: #2B2D42;
+  opacity: 0.5;
+  border: 1px solid #2B2D42;
+  opacity: 0.7;
 }
 
 .status-delivered {
-  background: #FFA726;
-  border: 1px solid #FF9800;
+  background: var(--theme-color);
+  border: 1px solid var(--theme-color);
 }
 
 .status-read {
-  background: #4CAF50;
-  border: 1px solid #4CAF50;
+  background: #4caf50;
+  border: 1px solid #4caf50;
 }
 
 /* Message input */
@@ -632,14 +641,14 @@ export default {
   flex-shrink: 0;
   padding: 0.75rem 1rem;
   border-top: 1px solid var(--theme-color);
-  background: rgba(255, 235, 124, 0.15);
+  background: var(--theme-color-10);
 }
 
 .message-input-wrapper {
   display: flex;
   align-items: flex-end;
   gap: 0.5rem;
-  background: rgba(255, 235, 124, 0.15);
+  background: var(--theme-color-10);
   border: 1px solid var(--theme-color);
   border-radius: 1.5rem;
   padding: 0.5rem;
@@ -661,7 +670,8 @@ export default {
 }
 
 .message-input::placeholder {
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
 }
 
 .input-actions {
@@ -690,7 +700,7 @@ export default {
 }
 
 .emoji-btn:hover:not(:disabled) {
-  background: rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-20);
   transform: scale(1.1);
 }
 
@@ -710,7 +720,7 @@ export default {
   width: 12rem;
   max-height: 8rem;
   background: #2B2D42;
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  border: 1px solid var(--theme-color-20);
   border-radius: 0.5rem;
   box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3);
   z-index: 10;
@@ -741,7 +751,7 @@ export default {
 }
 
 .emoji-option:hover {
-  background: rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-20);
   transform: scale(1.1);
 }
 
@@ -762,7 +772,7 @@ export default {
 
 .send-btn:hover:not(:disabled) {
   transform: scale(1.1);
-  box-shadow: 0 0.125rem 0.25rem rgba(255, 235, 124, 0.4);
+  box-shadow: 0 0.125rem 0.25rem var(--theme-color-20);
 }
 
 .send-btn:disabled {
@@ -784,15 +794,15 @@ export default {
 }
 
 .messages-container::-webkit-scrollbar-track {
-  background: rgba(255, 235, 124, 0.1);
+  background: var(--theme-color-10);
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-20);
   border-radius: 0.125rem;
 }
 
 .messages-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 235, 124, 0.5);
+  background: var(--theme-color);
 }
 </style>

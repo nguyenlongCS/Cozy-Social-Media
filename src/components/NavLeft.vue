@@ -87,7 +87,6 @@ export default {
   justify-content: flex-start;
   gap: 0.625rem;
   padding-left: 0.625rem;
-  border-radius: 0 0.9375rem 0.9375rem 0;
 }
 
 .user-avatar {

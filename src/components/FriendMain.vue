@@ -360,6 +360,7 @@ export default {
 }
 </script>
 
+/* FriendMain.vue styles - Updated Colors */
 <style scoped>
 .friend-main {
   width: 39.53%;
@@ -408,8 +409,8 @@ export default {
 }
 
 .friend-card, .suggestion-card, .request-card {
-  background: rgba(255, 235, 124, 0.05);
-  border: 1px solid rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-05);
+  border: 1px solid var(--theme-color-20);
   border-radius: 0.5rem;
   padding: 0.75rem;
   display: flex;
@@ -419,8 +420,8 @@ export default {
 }
 
 .friend-card:hover, .suggestion-card:hover, .request-card:hover {
-  background: rgba(255, 235, 124, 0.1);
-  border-color: rgba(255, 235, 124, 0.4);
+  background: var(--theme-color-10);
+  border-color: var(--theme-color-20);
 }
 
 .friend-info, .suggestion-info, .request-info {
@@ -455,13 +456,15 @@ export default {
 
 .friend-email, .suggestion-email, .request-email {
   font-size: 0.75rem;
-  color: rgba(255, 235, 124, 0.7);
+  color: var(--theme-color);
+  opacity: 0.7;
   margin-bottom: 0.125rem;
 }
 
 .friend-date, .suggestion-date, .request-date {
   font-size: 0.625rem;
-  color: rgba(255, 235, 124, 0.5);
+  color: var(--theme-color);
+  opacity: 0.5;
 }
 
 /* Action Buttons */
@@ -482,13 +485,13 @@ export default {
 }
 
 .unfriend-btn {
-  background: rgba(255, 107, 107, 0.1);
-  border-color: rgba(255, 107, 107, 0.3);
-  color: #ff6b6b;
+  background: rgba(255, 0, 0, 0.1);
+  border-color: rgba(255, 0, 0, 0.3);
+  color: rgba(255, 0, 0, 0.9);
 }
 
 .unfriend-btn:hover:not(:disabled) {
-  background: rgba(255, 107, 107, 0.2);
+  background: rgba(255, 0, 0, 0.2);
   transform: scale(1.05);
 }
 
@@ -500,17 +503,17 @@ export default {
 
 .add-friend-btn:hover:not(:disabled), .accept-btn:hover:not(:disabled) {
   transform: scale(1.05);
-  box-shadow: 0 0.125rem 0.25rem rgba(255, 235, 124, 0.3);
+  box-shadow: 0 0.125rem 0.25rem var(--theme-color-20);
 }
 
 .reject-btn {
-  background: rgba(255, 235, 124, 0.1);
-  border-color: rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-10);
+  border-color: var(--theme-color-20);
   color: var(--theme-color);
 }
 
 .reject-btn:hover:not(:disabled) {
-  background: rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-20);
   transform: scale(1.05);
 }
 

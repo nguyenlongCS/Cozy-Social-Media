@@ -71,6 +71,8 @@ export default {
   reportPost: 'Báo Cáo',
   deletePost: 'Xóa Bài Viết',
   hidePost: 'Ẩn Bài Viết',
+  showMore: 'Xem thêm',
+  showLess: 'Thu gọn',
 
   // Profile
   clickToUpload: 'Click để tải ảnh',

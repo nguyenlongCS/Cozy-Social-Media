@@ -84,7 +84,6 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 0.625rem;
-  border-radius: 0.9375rem 0 0 0.9375rem;
 }
 
 .theme-selector {

@@ -71,6 +71,8 @@ export default {
   reportPost: 'Report',
   deletePost: 'Delete Post',
   hidePost: 'Hide Post',
+  showMore: 'Show more',
+  showLess: 'Show less',
 
   // Profile
   clickToUpload: 'Click to upload',

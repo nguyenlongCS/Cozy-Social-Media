@@ -387,6 +387,7 @@ export default {
 }
 </script>
 
+/* ProfileMain.vue styles - Updated Colors */
 <style scoped>
 .profile-main {
   width: 39.53%;
@@ -418,7 +419,7 @@ export default {
   gap: 0.75rem;
   align-items: flex-start;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(255, 235, 124, 0.2);
+  border-bottom: 1px solid var(--theme-color-20);
   flex-shrink: 0;
 }
 
@@ -478,8 +479,8 @@ export default {
 }
 
 .remove-avatar-btn {
-  background: rgba(255, 235, 124, 0.1);
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-10);
+  border: 1px solid var(--theme-color-20);
   color: var(--theme-color);
   border-radius: 0.25rem;
   padding: 0.125rem 0.375rem;
@@ -489,7 +490,7 @@ export default {
 }
 
 .remove-avatar-btn:hover {
-  background: rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-20);
 }
 
 .user-info {
@@ -508,19 +509,21 @@ export default {
 
 .user-email {
   font-size: 0.75rem;
-  color: rgba(255, 235, 124, 0.8);
+  color: var(--theme-color);
+  opacity: 0.8;
   margin: 0;
 }
 
 .user-provider, .join-date {
   font-size: 0.625rem;
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
   margin: 0;
 }
 
 .sync-status {
-  background: rgba(255, 235, 124, 0.1);
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-10);
+  border: 1px solid var(--theme-color-20);
   border-radius: 0.5rem;
   padding: 0.5rem;
   margin-bottom: 0.5rem;
@@ -536,7 +539,7 @@ export default {
 .sync-spinner {
   width: 1rem;
   height: 1rem;
-  border: 2px solid rgba(255, 235, 124, 0.3);
+  border: 2px solid var(--theme-color-20);
   border-top: 2px solid var(--theme-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -551,7 +554,7 @@ export default {
 .sync-progress-bar {
   width: 100%;
   height: 0.25rem;
-  background: rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-20);
   border-radius: 0.125rem;
   overflow: hidden;
 }
@@ -589,8 +592,8 @@ export default {
 }
 
 .form-input, .form-textarea, .form-select {
-  background: rgba(255, 235, 124, 0.1);
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-10);
+  border: 1px solid var(--theme-color-20);
   border-radius: 0.375rem;
   padding: 0.375rem;
   font-size: 0.75rem;
@@ -610,11 +613,12 @@ export default {
 
 .form-input:focus, .form-textarea:focus, .form-select:focus {
   border-color: var(--theme-color);
-  box-shadow: 0 0 0.25rem rgba(255, 235, 124, 0.3);
+  box-shadow: 0 0 0.25rem var(--theme-color-20);
 }
 
 .form-input::placeholder, .form-textarea::placeholder {
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
 }
 
 .form-actions {
@@ -639,8 +643,8 @@ export default {
 
 .cancel-btn {
   width: 4.5rem;
-  background: rgba(255, 235, 124, 0.1);
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-10);
+  border: 1px solid var(--theme-color-20);
   color: var(--theme-color);
 }
 
@@ -651,7 +655,7 @@ export default {
 }
 
 .cancel-btn:hover:not(:disabled) {
-  background: rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-20);
   transform: scale(1.05);
 }
 
@@ -664,7 +668,7 @@ export default {
 .avatar-placeholder {
   width: 5rem;
   height: 5rem;
-  background: rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-20);
   border-radius: 50%;
   animation: pulse 1.5s ease-in-out infinite;
 }
@@ -683,7 +687,8 @@ export default {
 }
 
 .error-message p, .login-message p {
-  color: rgba(255, 235, 124, 0.8);
+  color: var(--theme-color);
+  opacity: 0.8;
   font-size: 0.9rem;
   margin: 0;
 }

@@ -11,6 +11,9 @@ Logic:
 */
 :root {
     --theme-color: #6495ED;
+    --theme-color-10: #6495ED1A;
+    --theme-color-20: #6495ED33;
+    --theme-color-05: #6495ED0D;
 }
 
 * {
@@ -39,24 +42,24 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-    background: rgba(255, 235, 124, 0.1);
+    background: var(--theme-color-10);
     border-radius: 0.1875rem;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 235, 124, 0.4);
+    background: var(--theme-color-20);
     border-radius: 0.1875rem;
     transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 235, 124, 0.6);
+    background: var(--theme-color);
 }
 
 /* Firefox scrollbar */
 * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(255, 235, 124, 0.4) rgba(255, 235, 124, 0.1);
+    scrollbar-color: var(--theme-color-20) var(--theme-color-10);
 }
 
 .home {

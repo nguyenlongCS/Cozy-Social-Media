@@ -8,13 +8,29 @@ Logic:
 - Auto-scroll comments list
 - Business logic đã được tách ra composables
 -->
+<!-- HomeRight.vue Template - Updated with Caption Show/Hide -->
 <template>
   <div class="right" :style="themeStyles">
     <div v-if="post && post.PostID" class="post-details">
       <!-- Caption section -->
       <div class="caption-section">
         <h3 class="section-title">{{ getText('caption') }}</h3>
-        <p class="caption-text">{{ post.Caption || getText('noCaption') }}</p>
+        <div v-if="post.Caption">
+          <p 
+            class="caption-text" 
+            :class="{ collapsed: isLongCaption && !showFullCaption }"
+          >
+            {{ post.Caption }}
+          </p>
+          <button 
+            v-if="isLongCaption" 
+            class="show-more-btn"
+            @click="toggleCaption"
+          >
+            {{ showFullCaption ? getText('showLess') : getText('showMore') }}
+          </button>
+        </div>
+        <p v-else class="caption-text">{{ getText('noCaption') }}</p>
         
         <!-- Tags display -->
         <div v-if="post.Tags && post.Tags.length > 0" class="tags-container">
@@ -122,8 +138,9 @@ Logic:
   </div>
 </template>
 
+// HomeRight.vue Script - Updated with Caption Show/Hide Logic
 <script>
-import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useLanguage } from '@/composables/useLanguage'
 import { useFirestore } from '@/composables/useFirestore'
@@ -151,6 +168,9 @@ export default {
     const isLoading = ref(false)
     const isLoadingComments = ref(false)
     const showEmojiPicker = ref(false)
+    
+    // Caption show/hide state
+    const showFullCaption = ref(false)
 
     // Theme styles
     const themeStyles = computed(() => ({
@@ -159,6 +179,15 @@ export default {
       '--theme-color-10': `${currentTheme.value}1A`,
       '--theme-color-05': `${currentTheme.value}0D`,
     }))
+
+    // Caption logic
+    const isLongCaption = computed(() => {
+      return props.post?.Caption && props.post.Caption.length > 450
+    })
+
+    const toggleCaption = () => {
+      showFullCaption.value = !showFullCaption.value
+    }
 
     // Emoji list
     const emojiList = [
@@ -265,6 +294,8 @@ export default {
     watch(() => props.post, (newPost) => {
       if (newPost && newPost.PostID) {
         loadComments()
+        // Reset caption state when post changes
+        showFullCaption.value = false
       } else {
         comments.value = []
       }
@@ -289,6 +320,11 @@ export default {
       showEmojiPicker,
       emojiList,
       themeStyles,
+      // Caption show/hide
+      isLongCaption,
+      showFullCaption,
+      toggleCaption,
+      // Methods
       getText,
       formatCommentTime,
       handleAddComment,
@@ -299,6 +335,7 @@ export default {
 }
 </script>
 
+/* HomeRight.vue styles - Updated Colors */
 <style scoped>
 .right {
   width: 22.13%;
@@ -323,7 +360,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
+  color: var(--theme-color-20);
   font-size: 0.875rem;
   text-align: center;
   padding: 1rem;
@@ -337,19 +374,47 @@ export default {
 }
 
 .caption-section {
-  border-bottom: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.2));
+  border-bottom: 1px solid var(--theme-color-20);
   padding-bottom: 0.75rem;
 }
 
 .caption-text {
   font-size: 0.75rem;
   line-height: 1.4;
-  color: var(--current-theme-color, rgba(255, 235, 124, 0.9));
+  color: var(--current-theme-color, var(--theme-color));
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: pre-wrap;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
   opacity: 0.9;
+  transition: max-height 0.3s ease;
+}
+
+.caption-text.collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+}
+
+.show-more-btn {
+  background: none;
+  border: none;
+  color: var(--current-theme-color, var(--theme-color));
+  font-size: 0.625rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 0.75rem;
+  text-decoration: underline;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.show-more-btn:hover {
+  opacity: 1;
 }
 
 /* Tags styling */
@@ -363,8 +428,8 @@ export default {
 .tag-pill {
   display: inline-block;
   padding: 0.25rem 0.5rem;
-  background: var(--theme-color-10, rgba(255, 235, 124, 0.15));
-  border: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.4));
+  background: var(--theme-color-10);
+  border: 1px solid var(--theme-color-20);
   border-radius: 1rem;
   font-size: 0.625rem;
   font-weight: 500;
@@ -374,13 +439,13 @@ export default {
 }
 
 .tag-pill:hover {
-  background: var(--theme-color-20, rgba(255, 235, 124, 0.25));
-  border-color: var(--current-theme-color, rgba(255, 235, 124, 0.6));
+  background: var(--theme-color-20);
+  border-color: var(--current-theme-color, var(--theme-color));
   transform: scale(1.05);
 }
 
 .likes-section {
-  border-bottom: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.2));
+  border-bottom: 1px solid var(--theme-color-20);
   padding-bottom: 0.75rem;
 }
 
@@ -411,10 +476,9 @@ export default {
   mask-size: cover;
 }
 
-
 .likes-count {
   font-size: 0.75rem;
-  color: var(--current-theme-color, rgba(255, 235, 124, 0.8));
+  color: var(--current-theme-color, var(--theme-color));
   opacity: 0.8;
 }
 
@@ -433,7 +497,7 @@ export default {
 }
 
 .loading-comments, .no-comments {
-  color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
+  color: var(--theme-color-20);
   font-size: 0.75rem;
   text-align: center;
   padding: 1rem 0;
@@ -442,9 +506,9 @@ export default {
 .comment-item {
   margin-bottom: 0.75rem;
   padding: 0.5rem;
-  background: var(--theme-color-05, rgba(255, 235, 124, 0.05));
+  background: var(--theme-color-05);
   border-radius: 0.5rem;
-  border-left: 2px solid var(--theme-color-20, rgba(255, 235, 124, 0.3));
+  border-left: 2px solid var(--theme-color-20);
 }
 
 .comment-header {
@@ -458,7 +522,7 @@ export default {
   width: 1.5rem;
   height: 1.5rem;
   background: url('@/icons/user.png') center/cover var(--current-theme-color, var(--theme-color));
-  border: 0.125rem solid var(--theme-color-20, rgba(255, 235, 124, 0.3));
+  border: 0.125rem solid var(--theme-color-20);
   border-radius: 50%;
   background-size: cover;
   background-position: center;
@@ -480,28 +544,28 @@ export default {
 
 .comment-time {
   font-size: 0.625rem;
-  color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
+  color: var(--theme-color-20);
 }
 
 .comment-text {
   font-size: 0.75rem;
   line-height: 1.3;
-  color: var(--current-theme-color, rgba(255, 235, 124, 0.9));
+  color: var(--current-theme-color, var(--theme-color));
   word-wrap: break-word;
   margin-left: 2rem;
   opacity: 0.9;
 }
 
 .add-comment {
-  border-top: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.2));
+  border-top: 1px solid var(--theme-color-20);
   padding-top: 0.75rem;
 }
 
 .comment-input {
   width: 100%;
   height: 2rem;
-  background: var(--theme-color-10, rgba(255, 235, 124, 0.1));
-  border: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.3));
+  background: var(--theme-color-10);
+  border: 1px solid var(--theme-color-20);
   border-radius: 1rem;
   padding: 0 0.75rem;
   font-size: 0.75rem;
@@ -511,12 +575,12 @@ export default {
 }
 
 .comment-input::placeholder {
-  color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
+  color: var(--theme-color-20);
 }
 
 .comment-input:focus {
   border-color: var(--current-theme-color, var(--theme-color));
-  box-shadow: 0 0 0.25rem var(--theme-color-20, rgba(255, 235, 124, 0.3));
+  box-shadow: 0 0 0.25rem var(--theme-color-20);
 }
 
 .comment-actions {
@@ -534,7 +598,7 @@ export default {
   height: 1.75rem;
   border: none;
   border-radius: 50%;
-  background: var(--theme-color-10, rgba(255, 235, 124, 0.1));
+  background: var(--theme-color-10);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -543,7 +607,7 @@ export default {
 }
 
 .emoji-btn:hover:not(:disabled), .send-btn:hover:not(:disabled) {
-  background: var(--theme-color-20, rgba(255, 235, 124, 0.2));
+  background: var(--theme-color-20);
   transform: scale(1.1);
 }
 
@@ -574,7 +638,7 @@ export default {
   width: 12rem;
   max-height: 8rem;
   background: #2B2D42;
-  border: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.3));
+  border: 1px solid var(--theme-color-20);
   border-radius: 0.5rem;
   box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.3);
   z-index: 10;
@@ -605,15 +669,15 @@ export default {
 }
 
 .emoji-option:hover {
-  background: var(--theme-color-20, rgba(255, 235, 124, 0.2));
+  background: var(--theme-color-20);
   transform: scale(1.1);
 }
 
 .login-prompt {
-  border-top: 1px solid var(--theme-color-20, rgba(255, 235, 124, 0.2));
+  border-top: 1px solid var(--theme-color-20);
   padding-top: 0.75rem;
   text-align: center;
   font-size: 0.75rem;
-  color: var(--theme-color-20, rgba(255, 235, 124, 0.6));
+  color: var(--theme-color-20);
 }
 </style>

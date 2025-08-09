@@ -471,6 +471,7 @@ export default {
 }
 </script>
 
+/* CreatePost.vue styles - Updated Colors */
 <style scoped>
 .create-post {
   width: 39.53%;
@@ -691,7 +692,7 @@ video.preview-media:hover::-moz-media-controls {
   width: 2rem;
   height: 2rem;
   background: rgba(0, 0, 0, 0.7);
-  color: white;
+  color: var(--theme-color);
   border: none;
   border-radius: 50%;
   font-size: 1.25rem;
@@ -742,8 +743,8 @@ video.preview-media:hover::-moz-media-controls {
   right: 2.5rem;
   width: 1.75rem;
   height: 1.75rem;
-  background: rgba(0, 150, 0, 0.8);
-  color: white;
+  background: var(--theme-color);
+  color: #000;
   border: none;
   border-radius: 50%;
   font-size: 1rem;
@@ -776,14 +777,14 @@ video.preview-media:hover::-moz-media-controls {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--theme-color-20);
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .dot.active {
-  background: white;
+  background: var(--theme-color);
   transform: scale(1.2);
 }
 
@@ -792,7 +793,7 @@ video.preview-media:hover::-moz-media-controls {
   bottom: 0.5rem;
   right: 0.5rem;
   background: rgba(0, 0, 0, 0.7);
-  color: white;
+  color: var(--theme-color);
   padding: 0.25rem 0.5rem;
   border-radius: 0.75rem;
   font-size: 0.625rem;
@@ -801,7 +802,7 @@ video.preview-media:hover::-moz-media-controls {
 }
 
 .limit-warning {
-  color: #ff6b6b;
+  color: #2B2D42;
   margin-left: 0.25rem;
 }
 
@@ -847,7 +848,7 @@ video.preview-media:hover::-moz-media-controls {
 }
 
 .play-icon {
-  color: white;
+  color: var(--theme-color);
   font-size: 1rem;
 }
 
@@ -902,11 +903,11 @@ video.preview-media:hover::-moz-media-controls {
 }
 
 .caption-input::placeholder {
-  color: rgba(0, 0, 0, 0.6);
+  color: var(--theme-color-20);
 }
 
 .caption-input:focus {
-  box-shadow: 0 0 0.5rem rgba(255, 235, 124, 0.4);
+  box-shadow: 0 0 0.5rem var(--theme-color-20);
 }
 
 .actions {
@@ -948,7 +949,7 @@ video.preview-media:hover::-moz-media-controls {
 .cancel-btn:hover:not(:disabled), .post-btn:hover:not(:disabled) {
   transform: scale(1.1);
   box-shadow: 0 0.25rem 0.625rem rgba(0, 0, 0, 0.4);
-  background-color: #F8F8FF;
+  background-color: #2B2D42;
 }
 
 .cancel-btn:disabled, .post-btn:disabled {

@@ -284,6 +284,7 @@ export default {
 }
 </script>
 
+/* LoginMain.vue styles - Updated Colors */
 <style scoped>
 .loginform {
   width: 39.53%;
@@ -357,11 +358,11 @@ export default {
 }
 
 .form-input:focus {
-  box-shadow: 0 0 0.5rem rgba(255, 235, 124, 0.4);
+  box-shadow: 0 0 0.5rem var(--theme-color-20);
 }
 
 .form-input::placeholder {
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color-20);
 }
 
 /* FIXED: Autofill styling để giữ màu theme */
@@ -435,7 +436,7 @@ export default {
 
 .login-btn:hover:not(:disabled), .signup-btn:hover:not(:disabled) {
   transform: scale(1.05);
-  box-shadow: 0 0.25rem 0.625rem rgba(255, 235, 124, 0.4);
+  box-shadow: 0 0.25rem 0.625rem var(--theme-color-20);
 }
 
 .login-btn:disabled, .signup-btn:disabled {

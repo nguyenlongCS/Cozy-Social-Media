@@ -560,6 +560,7 @@ export default {
 }
 </script>
 
+/* HomeMain.vue styles - Updated Colors */
 <style scoped>
 .feed {
   width: 39.53%;
@@ -797,7 +798,7 @@ video.post-media:focus::-moz-media-controls {
   width: 2rem;
   height: 2rem;
   background: rgba(0, 0, 0, 0.7);
-  color: white;
+  color: var(--theme-color);
   border: none;
   border-radius: 50%;
   font-size: 1.25rem;
@@ -840,14 +841,14 @@ video.post-media:focus::-moz-media-controls {
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--theme-color-20);
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .dot.active {
-  background: white;
+  background: var(--theme-color);
   transform: scale(1.2);
 }
 
@@ -856,7 +857,7 @@ video.post-media:focus::-moz-media-controls {
   bottom: 0.5rem;
   right: 0.5rem;
   background: rgba(0, 0, 0, 0.7);
-  color: white;
+  color: var(--theme-color);
   padding: 0.25rem 0.5rem;
   border-radius: 0.75rem;
   font-size: 0.625rem;
@@ -873,9 +874,9 @@ video.post-media:focus::-moz-media-controls {
   font-weight: 500;
   width: 80%;
   height: 18.75rem;
-  background: rgba(255, 235, 124, 0.1);
+  background: var(--theme-color-10);
   border-radius: 0.9375rem;
-  border: 0.125rem solid rgba(255, 235, 124, 0.3);
+  border: 0.125rem solid var(--theme-color-20);
 }
 
 .bottom-bar {
@@ -927,7 +928,7 @@ video.post-media:focus::-moz-media-controls {
 }
 
 .like.liked {
-  background-color: #ff4757;
+  background-color: rgba(255, 0, 0, 0.8);
   transform: scale(1.05);
 }
 
@@ -936,7 +937,7 @@ video.post-media:focus::-moz-media-controls {
   bottom: -0.25rem;
   right: -0.25rem;
   background: rgba(0, 0, 0, 0.8);
-  color: white;
+  color: var(--theme-color);
   font-size: 0.5rem;
   padding: 0.125rem 0.25rem;
   border-radius: 0.5rem;
@@ -995,7 +996,7 @@ video.post-media:focus::-moz-media-controls {
 }
 
 .option-item:hover:not(:disabled) {
-  background: rgba(255, 235, 124, 0.1);
+  background: var(--theme-color-10);
 }
 
 .option-item:disabled {
@@ -1029,7 +1030,7 @@ video.post-media:focus::-moz-media-controls {
 }
 
 .delete-option {
-  color: #ff6b6b;
+  color: rgba(255, 0, 0, 0.9);
 }
 
 .delete-option .option-icon {
@@ -1037,6 +1038,6 @@ video.post-media:focus::-moz-media-controls {
 }
 
 .delete-option:hover:not(:disabled) {
-  background: rgba(255, 107, 107, 0.1);
+  background: rgba(255, 0, 0, 0.1);
 }
 </style>

@@ -376,6 +376,7 @@ export default {
 }
 </script>
 
+/* MessRight.vue styles - Complete Rewrite with Updated Colors */
 <style scoped>
 .mess-right {
   width: 22.13%;
@@ -392,7 +393,7 @@ export default {
 .search-section {
   flex-shrink: 0;
   padding: 1rem;
-  border-bottom: 1px solid rgba(255, 235, 124, 0.2);
+  border-bottom: 1px solid var(--theme-color-20);
 }
 
 .section-title {
@@ -415,18 +416,23 @@ export default {
   border-radius: 1rem;
   padding: 0 2.5rem 0 0.75rem;
   font-size: 0.75rem;
-  color: var(--theme-color);
+  color: var(--theme-color) !important;
   outline: none;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .search-input:focus {
   border-color: var(--theme-color);
-  box-shadow: 0 0 0.25rem rgba(255, 235, 124, 0.3);
+  box-shadow: 0 0 0.25rem var(--theme-color-20);
+  color: var(--theme-color) !important;
+}
+
+.search-input:active {
+  color: var(--theme-color) !important;
 }
 
 .search-input::placeholder {
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color-20) !important;
 }
 
 .search-icon {
@@ -449,8 +455,8 @@ export default {
   width: 1rem;
   height: 1rem;
   border: none;
-  background: rgba(255, 235, 124, 0.3);
-  color: var(--theme-color);
+  background: rgba(255, 0, 0, 0.3);
+  color: white;
   border-radius: 50%;
   cursor: pointer;
   font-size: 0.75rem;
@@ -462,7 +468,7 @@ export default {
 }
 
 .clear-search-btn:hover {
-  background: rgba(255, 235, 124, 0.5);
+  background: rgba(255, 0, 0, 0.5);
   transform: translateY(-50%) scale(1.1);
 }
 
@@ -471,8 +477,8 @@ export default {
   position: relative;
   max-height: 12rem;
   overflow-y: auto;
-  background: rgba(255, 235, 124, 0.05);
-  border: 1px solid rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-05);
+  border: 1px solid var(--theme-color-20);
   border-radius: 0.5rem;
   margin-bottom: 0.75rem;
 }
@@ -480,7 +486,8 @@ export default {
 .search-loading, .no-search-results {
   padding: 1rem;
   text-align: center;
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
   font-size: 0.75rem;
   display: flex;
   align-items: center;
@@ -491,7 +498,7 @@ export default {
 .search-spinner, .loading-spinner {
   width: 1rem;
   height: 1rem;
-  border: 2px solid rgba(255, 235, 124, 0.3);
+  border: 2px solid var(--theme-color-20);
   border-top: 2px solid var(--theme-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
@@ -513,7 +520,7 @@ export default {
 }
 
 .search-user-item:hover {
-  background: rgba(255, 235, 124, 0.1);
+  background: var(--theme-color-10);
   transform: translateX(0.25rem);
 }
 
@@ -521,7 +528,7 @@ export default {
   width: 2rem;
   height: 2rem;
   background: url('@/icons/user.png') center/cover var(--theme-color);
-  border: 0.125rem solid rgba(255, 235, 124, 0.3);
+  border: 0.125rem solid var(--theme-color-20);
   border-radius: 50%;
   background-size: cover;
   background-position: center;
@@ -571,7 +578,8 @@ export default {
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
   font-size: 0.75rem;
   gap: 0.5rem;
 }
@@ -596,7 +604,8 @@ export default {
 }
 
 .no-conversations-text, .no-conversations-hint {
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
   font-size: 0.75rem;
   margin: 0;
 }
@@ -626,19 +635,19 @@ export default {
 }
 
 .conversation-item:hover {
-  background: rgba(255, 235, 124, 0.05);
-  border-color: rgba(255, 235, 124, 0.2);
+  background: var(--theme-color-05);
+  border-color: var(--theme-color-20);
   transform: translateX(0.125rem);
 }
 
 .conversation-item.active {
-  background: rgba(255, 235, 124, 0.1);
+  background: var(--theme-color-10);
   border-color: var(--theme-color);
   transform: translateX(0.25rem);
 }
 
 .conversation-item.unread {
-  background: rgba(255, 235, 124, 0.08);
+  background: var(--theme-color-05);
 }
 
 .conversation-avatar {
@@ -650,7 +659,7 @@ export default {
   width: 2.5rem;
   height: 2.5rem;
   background: url('@/icons/user.png') center/cover var(--theme-color);
-  border: 0.125rem solid rgba(255, 235, 124, 0.3);
+  border: 0.125rem solid var(--theme-color-20);
   border-radius: 50%;
   background-size: cover;
   background-position: center;
@@ -660,7 +669,7 @@ export default {
   position: absolute;
   top: -0.25rem;
   right: -0.25rem;
-  background: #ff4757;
+  background: rgba(255, 0, 0, 0.9);
   color: white;
   font-size: 0.625rem;
   font-weight: 600;
@@ -679,7 +688,7 @@ export default {
   right: -0.125rem;
   width: 0.75rem;
   height: 0.75rem;
-  background: #4CAF50;
+  background: var(--theme-color);
   border: 2px solid #2B2D42;
   border-radius: 50%;
 }
@@ -711,7 +720,8 @@ export default {
 
 .last-message-time {
   font-size: 0.625rem;
-  color: rgba(255, 235, 124, 0.6);
+  color: var(--theme-color);
+  opacity: 0.6;
   flex-shrink: 0;
 }
 
@@ -724,7 +734,8 @@ export default {
 
 .message-preview {
   font-size: 0.75rem;
-  color: rgba(255, 235, 124, 0.8);
+  color: var(--theme-color);
+  opacity: 0.8;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -765,17 +776,17 @@ export default {
 
 .conversations-section::-webkit-scrollbar-track,
 .search-results::-webkit-scrollbar-track {
-  background: rgba(255, 235, 124, 0.1);
+  background: var(--theme-color-10);
 }
 
 .conversations-section::-webkit-scrollbar-thumb,
 .search-results::-webkit-scrollbar-thumb {
-  background: rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-20);
   border-radius: 0.125rem;
 }
 
 .conversations-section::-webkit-scrollbar-thumb:hover,
 .search-results::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 235, 124, 0.5);
+  background: var(--theme-color);
 }
 </style>

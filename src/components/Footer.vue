@@ -47,6 +47,7 @@ export default {
 }
 </script>
 
+/* Footer.vue styles - Updated Colors */
 <style scoped>
 .footer {
   width: 100%;
@@ -79,7 +80,7 @@ export default {
   position: absolute;
   bottom: 0.3125rem;
   font-size: 0.75rem;
-  color: #d32f2f;
+  color: rgba(255, 0, 0, 0.9);
   font-weight: 600;
   animation: fadeInOut 2s ease-in-out;
 }
@@ -91,7 +92,7 @@ export default {
   font-size: 0.75rem;
   color: #000;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.2);
   padding: 0.25rem 0.5rem;
   border-radius: 0.75rem;
   backdrop-filter: blur(2px);
