@@ -209,7 +209,7 @@ export default {
   font-size: 0.625rem;
   font-weight: 600;
   padding: 0.125rem 0.375rem;
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   min-width: 1rem;
   text-align: center;
   line-height: 1;
@@ -224,7 +224,7 @@ export default {
 }
 
 .friends-badge {
-  background: rgba(255, 0, 0, 0.9);
+  background: rgba(0, 150, 255, 0.9);
   color: white;
 }
 

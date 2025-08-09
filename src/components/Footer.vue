@@ -100,7 +100,7 @@ export default {
         return timeB - timeA
       })
       
-      return sortedConversations.slice(0, 5)
+      return sortedConversations.slice(0, 3)
     })
 
     // Setup conversations cho circle messages

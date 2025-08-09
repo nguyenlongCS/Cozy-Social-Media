@@ -43,7 +43,7 @@ const CONFIG = {
   // Content limits
   MAX_CAPTION_LENGTH: 500,
   MAX_TITLE_LENGTH: 200,
-  ARTICLE_AGE_HOURS: 48,
+  ARTICLE_AGE_HOURS: 24, // Giảm xuống 24 giờ để có nội dung fresh hơn
   RECENT_POSTS_CHECK: 40,
   
   // DIVERSIFIED CATEGORIES - Balanced mix of topics
@@ -201,14 +201,14 @@ const executeNewsPosting = async (trigger = 'manual') => {
 
 const getNextCategory = async () => {
   try {
-    // Get last posted category từ Firestore
-    const configDoc = await db.collection('system_config').doc('news_posting').get()
+    // Sử dụng News Bot user document để lưu category rotation info
+    const newsBotDoc = await db.collection('users').doc(CONFIG.NEWS_BOT_USER_ID).get()
     
     let lastCategory = null
     let categoryHistory = []
     
-    if (configDoc.exists) {
-      const data = configDoc.data()
+    if (newsBotDoc.exists) {
+      const data = newsBotDoc.data()
       lastCategory = data.lastPostedCategory
       categoryHistory = data.categoryHistory || []
     }
@@ -283,12 +283,14 @@ const selectNextCategory = (lastCategory, categoryHistory) => {
 
 const updateCategoryRotation = async (postedCategory) => {
   try {
-    const configRef = db.collection('system_config').doc('news_posting')
-    const configDoc = await configRef.get()
+    // Sử dụng News Bot user document để lưu category rotation info
+    const newsBotRef = db.collection('users').doc(CONFIG.NEWS_BOT_USER_ID)
+    const newsBotDoc = await newsBotRef.get()
     
     let categoryHistory = []
-    if (configDoc.exists) {
-      categoryHistory = configDoc.data().categoryHistory || []
+    if (newsBotDoc.exists) {
+      const data = newsBotDoc.data()
+      categoryHistory = data.categoryHistory || []
     }
     
     // Add new category to history
@@ -299,11 +301,11 @@ const updateCategoryRotation = async (postedCategory) => {
       categoryHistory = categoryHistory.slice(-10)
     }
     
-    // Update Firestore
-    await configRef.set({
+    // Update News Bot user document với category rotation info
+    await newsBotRef.set({
       lastPostedCategory: postedCategory,
       categoryHistory: categoryHistory,
-      lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+      lastCategoryUpdate: admin.firestore.FieldValue.serverTimestamp()
     }, { merge: true })
     
   } catch (error) {
