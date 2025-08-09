@@ -1,12 +1,12 @@
 /*
-functions/index.js - Auto News Posting System with Server-side Classification
-Firebase Cloud Functions tự động đăng bài viết tin tức với tích hợp classification
+functions/index.js - Auto News Posting System with Diversified Categories
+Firebase Cloud Functions tự động đăng bài viết tin tức đa dạng chủ đề
 Logic:
-- Tích hợp server-side classification service cho auto posts
-- Tự động classify và gán Tags cho news posts
-- Enhanced: Retry mechanism, caption validation, source prioritization
-- Optimized: Constants consolidation, better error handling, source quality filtering
-- Professional: Focused categories, reliable news sources, production-ready code
+- Đa dạng hóa categories: sports, entertainment, health, science, technology
+- Rotation system để đảm bảo balance giữa các chủ đề
+- Enhanced source filtering cho từng category
+- Improved caption formatting cho từng loại tin tức
+- Category-specific validation và content quality checks
 */
 
 const functions = require('firebase-functions')
@@ -24,7 +24,7 @@ const db = admin.firestore()
 db.settings({databaseId: 'social-media-db'})
 
 // =============================================================================
-// CONSTANTS CONSOLIDATION
+// DIVERSIFIED CONSTANTS CONFIGURATION
 // =============================================================================
 
 const CONFIG = {
@@ -43,43 +43,91 @@ const CONFIG = {
   // Content limits
   MAX_CAPTION_LENGTH: 500,
   MAX_TITLE_LENGTH: 200,
-  ARTICLE_AGE_HOURS: 48, // Giảm từ 48 xuống 48 giờ
-  RECENT_POSTS_CHECK: 30, // Giảm từ 50 xuống 30
+  ARTICLE_AGE_HOURS: 48,
+  RECENT_POSTS_CHECK: 40,
   
-  // Categories - Focused on high-quality tech news
-  CATEGORIES: ['technology', 'business'],
+  // DIVERSIFIED CATEGORIES - Balanced mix of topics
+  CATEGORIES: [
+    'sports',        // Thể thao - 20%
+    'entertainment', // Giải trí/Âm nhạc - 20%
+    'health',        // Sức khỏe/Y tế - 15%
+    'science',       // Khoa học/Công nghệ - 15%
+    'technology',    // Công nghệ - 15%
+    'business',      // Kinh tế/Kinh doanh - 15%
+  ],
+  
+  // Category rotation để đảm bảo diversity
+  CATEGORY_ROTATION_STORAGE_KEY: 'last_posted_category',
   
   // Retry configuration
   MAX_RETRIES: 3,
   RETRY_DELAY_MS: 2000,
   
-  // Premium news sources for better content quality
-  PRIORITY_SOURCES: [
-    'techcrunch.com',
-    'theverge.com',
-    'arstechnica.com',
-    'wired.com',
-    'engadget.com',
-    'venturebeat.com',
-    'reuters.com',
-    'bbc.com',
-    'cnn.com'
-  ]
+  // Category-specific premium sources
+  CATEGORY_SOURCES: {
+    sports: [
+      'espn.com',
+      'bbc.com/sport',
+      'reuters.com',
+      'cnn.com',
+      'bleacherreport.com'
+    ],
+    entertainment: [
+      'variety.com',
+      'hollywoodreporter.com',
+      'billboard.com',
+      'entertainment-weekly.com',
+      'rolling-stone.com',
+      'bbc.com'
+    ],
+    health: [
+      'webmd.com',
+      'healthline.com',
+      'mayoclinic.org',
+      'reuters.com',
+      'bbc.com',
+      'cnn.com'
+    ],
+    science: [
+      'sciencedaily.com',
+      'nature.com',
+      'newscientist.com',
+      'scientific-american.com',
+      'reuters.com',
+      'bbc.com'
+    ],
+    technology: [
+      'techcrunch.com',
+      'theverge.com',
+      'arstechnica.com',
+      'wired.com',
+      'engadget.com',
+      'venturebeat.com'
+    ],
+    business: [
+      'reuters.com',
+      'bloomberg.com',
+      'cnbc.com',
+      'marketwatch.com',
+      'bbc.com',
+      'cnn.com'
+    ]
+  }
 }
 
 // =============================================================================
-// CORE AUTO POSTING FUNCTION
+// CORE AUTO POSTING FUNCTION WITH CATEGORY ROTATION
 // =============================================================================
 
 exports.autoPostNews = functions.pubsub
-  .schedule('0 * * * *') // Chạy mỗi giờ
+  .schedule('0 */2 * * *') // Chạy mỗi 2 giờ để có thời gian đa dạng hơn
   .timeZone('Asia/Ho_Chi_Minh')
   .onRun(async (context) => {
     return await executeNewsPosting('scheduled')
   })
 
 // =============================================================================
-// SHARED NEWS POSTING LOGIC
+// ENHANCED NEWS POSTING LOGIC WITH CATEGORY DIVERSITY
 // =============================================================================
 
 const executeNewsPosting = async (trigger = 'manual') => {
@@ -92,19 +140,43 @@ const executeNewsPosting = async (trigger = 'manual') => {
     // Load News Bot user info
     const newsBotInfo = await loadNewsBotInfo()
     
-    // Find suitable article
-    const selectedArticle = await findSuitableArticle()
+    // Get next category using rotation system
+    const selectedCategory = await getNextCategory()
+    
+    // Find suitable article from selected category
+    const selectedArticle = await findSuitableArticleFromCategory(selectedCategory)
     
     if (!selectedArticle) {
-      console.log(`No suitable articles found - ${trigger} trigger`)
-      return { success: true, message: 'NO_ARTICLES_FOUND' }
+      console.log(`No suitable articles found for category: ${selectedCategory} - ${trigger} trigger`)
+      // Try fallback với category khác
+      const fallbackArticle = await findFallbackArticle(selectedCategory)
+      
+      if (!fallbackArticle) {
+        return { success: true, message: 'NO_ARTICLES_FOUND', category: selectedCategory }
+      }
+      
+      // Use fallback article
+      const result = await createNewsPost(fallbackArticle, newsBotInfo, selectedCategory)
+      await updateCategoryRotation(selectedCategory)
+      
+      return { 
+        success: true, 
+        message: 'FALLBACK_POST_CREATED',
+        postId: result.PostID,
+        category: selectedCategory,
+        trigger
+      }
     }
 
-    // Create post
-    const result = await createNewsPost(selectedArticle, newsBotInfo)
+    // Create post với selected article
+    const result = await createNewsPost(selectedArticle, newsBotInfo, selectedCategory)
     
-    console.log(`Auto news post completed - ${trigger} trigger:`, {
+    // Update category rotation
+    await updateCategoryRotation(selectedCategory)
+    
+    console.log(`Diversified auto news post completed - ${trigger} trigger:`, {
       postId: result.PostID,
+      category: selectedCategory,
       title: selectedArticle.title?.substring(0, 50) + '...',
       source: selectedArticle.source?.name
     })
@@ -113,17 +185,245 @@ const executeNewsPosting = async (trigger = 'manual') => {
       success: true, 
       message: 'POST_CREATED',
       postId: result.PostID,
+      category: selectedCategory,
       trigger
     }
 
   } catch (error) {
-    console.error(`Error in auto news posting (${trigger}):`, error.message)
+    console.error(`Error in diversified auto news posting (${trigger}):`, error.message)
     return { success: false, error: error.message, trigger }
   }
 }
 
 // =============================================================================
-// NEWS BOT USER MANAGEMENT
+// CATEGORY ROTATION SYSTEM
+// =============================================================================
+
+const getNextCategory = async () => {
+  try {
+    // Get last posted category từ Firestore
+    const configDoc = await db.collection('system_config').doc('news_posting').get()
+    
+    let lastCategory = null
+    let categoryHistory = []
+    
+    if (configDoc.exists) {
+      const data = configDoc.data()
+      lastCategory = data.lastPostedCategory
+      categoryHistory = data.categoryHistory || []
+    }
+    
+    // Tìm category tiếp theo theo rotation logic
+    const nextCategory = selectNextCategory(lastCategory, categoryHistory)
+    
+    console.log('Category rotation:', {
+      lastCategory,
+      selectedCategory: nextCategory,
+      recentHistory: categoryHistory.slice(-3)
+    })
+    
+    return nextCategory
+    
+  } catch (error) {
+    console.error('Error in category rotation:', error)
+    // Fallback to random category
+    return CONFIG.CATEGORIES[Math.floor(Math.random() * CONFIG.CATEGORIES.length)]
+  }
+}
+
+const selectNextCategory = (lastCategory, categoryHistory) => {
+  // Nếu chưa có history, bắt đầu với sports
+  if (!lastCategory) {
+    return 'sports'
+  }
+  
+  // Get recent categories (last 3 posts) để tránh repeat
+  const recentCategories = categoryHistory.slice(-3)
+  
+  // Filter ra categories chưa được dùng gần đây
+  const availableCategories = CONFIG.CATEGORIES.filter(cat => 
+    !recentCategories.includes(cat)
+  )
+  
+  // Nếu tất cả categories đã dùng gần đây, reset và chọn random
+  if (availableCategories.length === 0) {
+    return CONFIG.CATEGORIES[Math.floor(Math.random() * CONFIG.CATEGORIES.length)]
+  }
+  
+  // Weighted selection để ưu tiên các category ít được post
+  const categoryWeights = {
+    'sports': 20,        // Thể thao - cao nhất
+    'entertainment': 20, // Giải trí - cao nhất  
+    'health': 15,        // Sức khỏe
+    'science': 15,       // Khoa học
+    'technology': 15,    // Công nghệ - giảm từ trước
+    'business': 15       // Kinh doanh - giảm từ trước
+  }
+  
+  // Calculate weighted random selection
+  const weightedCategories = availableCategories.map(cat => ({
+    category: cat,
+    weight: categoryWeights[cat] || 10
+  }))
+  
+  const totalWeight = weightedCategories.reduce((sum, item) => sum + item.weight, 0)
+  const random = Math.random() * totalWeight
+  
+  let currentWeight = 0
+  for (const item of weightedCategories) {
+    currentWeight += item.weight
+    if (random <= currentWeight) {
+      return item.category
+    }
+  }
+  
+  // Fallback
+  return availableCategories[0]
+}
+
+const updateCategoryRotation = async (postedCategory) => {
+  try {
+    const configRef = db.collection('system_config').doc('news_posting')
+    const configDoc = await configRef.get()
+    
+    let categoryHistory = []
+    if (configDoc.exists) {
+      categoryHistory = configDoc.data().categoryHistory || []
+    }
+    
+    // Add new category to history
+    categoryHistory.push(postedCategory)
+    
+    // Keep only last 10 entries
+    if (categoryHistory.length > 10) {
+      categoryHistory = categoryHistory.slice(-10)
+    }
+    
+    // Update Firestore
+    await configRef.set({
+      lastPostedCategory: postedCategory,
+      categoryHistory: categoryHistory,
+      lastUpdated: admin.firestore.FieldValue.serverTimestamp()
+    }, { merge: true })
+    
+  } catch (error) {
+    console.error('Error updating category rotation:', error)
+  }
+}
+
+// =============================================================================
+// CATEGORY-SPECIFIC ARTICLE DISCOVERY
+// =============================================================================
+
+const findSuitableArticleFromCategory = async (category) => {
+  const articles = await fetchLatestNewsWithRetry(category)
+  
+  if (articles.length === 0) return null
+  
+  // Sort by category-specific source priority
+  const prioritizedArticles = prioritizeArticlesBySourceForCategory(articles, category)
+  
+  for (const article of prioritizedArticles) {
+    if (await isArticleSuitableForCategory(article, category)) {
+      return article
+    }
+  }
+  
+  return null
+}
+
+const findFallbackArticle = async (excludeCategory) => {
+  // Try other categories as fallback
+  const fallbackCategories = CONFIG.CATEGORIES.filter(cat => cat !== excludeCategory)
+  
+  for (const category of fallbackCategories) {
+    const articles = await fetchLatestNewsWithRetry(category)
+    
+    if (articles.length > 0) {
+      const prioritizedArticles = prioritizeArticlesBySourceForCategory(articles, category)
+      
+      for (const article of prioritizedArticles) {
+        if (await isArticleSuitableForCategory(article, category)) {
+          return article
+        }
+      }
+    }
+  }
+  
+  return null
+}
+
+const prioritizeArticlesBySourceForCategory = (articles, category) => {
+  const categorySources = CONFIG.CATEGORY_SOURCES[category] || []
+  
+  return articles.sort((a, b) => {
+    const aSourcePriority = getSourcePriorityForCategory(a.source?.name, categorySources)
+    const bSourcePriority = getSourcePriorityForCategory(b.source?.name, categorySources)
+    
+    if (aSourcePriority !== bSourcePriority) {
+      return aSourcePriority - bSourcePriority
+    }
+    
+    // Same priority → sort by publishedAt
+    const aTime = new Date(a.publishedAt || 0)
+    const bTime = new Date(b.publishedAt || 0)
+    return bTime - aTime
+  })
+}
+
+const getSourcePriorityForCategory = (sourceName, categorySources) => {
+  if (!sourceName) return 999
+  
+  const sourceUrl = sourceName.toLowerCase()
+  const priorityIndex = categorySources.findIndex(source => 
+    sourceUrl.includes(source.replace('.com', '')) || sourceUrl.includes(source)
+  )
+  
+  return priorityIndex === -1 ? 100 : priorityIndex
+}
+
+// =============================================================================
+// CATEGORY-SPECIFIC ARTICLE VALIDATION
+// =============================================================================
+
+const isArticleSuitableForCategory = async (article, category) => {
+  return isValidArticleForCategory(article, category) && 
+         isArticleRecent(article) && 
+         !(await isArticleAlreadyPosted(article))
+}
+
+const isValidArticleForCategory = (article, category) => {
+  if (!isValidArticle(article)) return false
+  
+  // Category-specific validation
+  const title = article.title.toLowerCase()
+  const description = (article.description || '').toLowerCase()
+  const content = title + ' ' + description
+  
+  // Category-specific keyword validation
+  const categoryKeywords = {
+    sports: ['sport', 'game', 'match', 'team', 'player', 'championship', 'tournament', 'football', 'basketball', 'tennis', 'olympic'],
+    entertainment: ['movie', 'film', 'music', 'concert', 'album', 'celebrity', 'actor', 'singer', 'entertainment', 'show', 'award'],
+    health: ['health', 'medical', 'doctor', 'hospital', 'medicine', 'treatment', 'disease', 'virus', 'vaccine', 'fitness'],
+    science: ['science', 'research', 'study', 'discovery', 'technology', 'space', 'climate', 'environment', 'scientist'],
+    technology: ['tech', 'software', 'app', 'smartphone', 'computer', 'AI', 'digital', 'internet', 'innovation'],
+    business: ['business', 'company', 'economy', 'market', 'finance', 'investment', 'stock', 'revenue', 'profit']
+  }
+  
+  const keywords = categoryKeywords[category] || []
+  const hasRelevantKeywords = keywords.some(keyword => content.includes(keyword))
+  
+  // Flexible validation - nếu từ nguồn tin uy tín thì ít strict hơn
+  const trustedSources = CONFIG.CATEGORY_SOURCES[category] || []
+  const isFromTrustedSource = trustedSources.some(source => 
+    (article.source?.name || '').toLowerCase().includes(source.replace('.com', ''))
+  )
+  
+  return hasRelevantKeywords || isFromTrustedSource
+}
+
+// =============================================================================
+// EXISTING HELPER FUNCTIONS (kept same)
 // =============================================================================
 
 const loadNewsBotInfo = async () => {
@@ -139,7 +439,6 @@ const loadNewsBotInfo = async () => {
       }
     }
     
-    // Return fallback without creating - News Bot should exist
     console.warn('News Bot user not found, using fallback')
     return CONFIG.NEWS_BOT_FALLBACK
     
@@ -149,32 +448,9 @@ const loadNewsBotInfo = async () => {
   }
 }
 
-// =============================================================================
-// ARTICLE DISCOVERY & FILTERING
-// =============================================================================
-
-const findSuitableArticle = async () => {
-  for (const category of CONFIG.CATEGORIES) {
-    const articles = await fetchLatestNewsWithRetry(category)
-    
-    if (articles.length === 0) continue
-    
-    // Sort by source priority first, then by publishedAt
-    const prioritizedArticles = prioritizeArticlesBySource(articles)
-    
-    for (const article of prioritizedArticles) {
-      if (await isArticleSuitable(article)) {
-        return article
-      }
-    }
-  }
-  
-  return null
-}
-
 const fetchLatestNewsWithRetry = async (category, retryCount = 0) => {
   try {
-    const url = `${CONFIG.NEWS_API_BASE_URL}/top-headlines?category=${category}&country=us&pageSize=10&apiKey=${CONFIG.NEWS_API_KEY}`
+    const url = `${CONFIG.NEWS_API_BASE_URL}/top-headlines?category=${category}&country=us&pageSize=15&apiKey=${CONFIG.NEWS_API_KEY}`
     
     const response = await fetch(url)
     
@@ -202,43 +478,6 @@ const fetchLatestNewsWithRetry = async (category, retryCount = 0) => {
   }
 }
 
-const prioritizeArticlesBySource = (articles) => {
-  return articles.sort((a, b) => {
-    const aSourcePriority = getSourcePriority(a.source?.name)
-    const bSourcePriority = getSourcePriority(b.source?.name)
-    
-    if (aSourcePriority !== bSourcePriority) {
-      return aSourcePriority - bSourcePriority // Lower number = higher priority
-    }
-    
-    // If same priority, sort by publishedAt (newer first)
-    const aTime = new Date(a.publishedAt || 0)
-    const bTime = new Date(b.publishedAt || 0)
-    return bTime - aTime
-  })
-}
-
-const getSourcePriority = (sourceName) => {
-  if (!sourceName) return 999
-  
-  const sourceUrl = sourceName.toLowerCase()
-  const priorityIndex = CONFIG.PRIORITY_SOURCES.findIndex(source => 
-    sourceUrl.includes(source.replace('.com', '')) || sourceUrl.includes(source)
-  )
-  
-  return priorityIndex === -1 ? 100 : priorityIndex // Priority sources get 0-8, others get 100
-}
-
-// =============================================================================
-// ARTICLE VALIDATION
-// =============================================================================
-
-const isArticleSuitable = async (article) => {
-  return isValidArticle(article) && 
-         isArticleRecent(article) && 
-         !(await isArticleAlreadyPosted(article))
-}
-
 const isValidArticle = (article) => {
   if (!article?.title || !article?.url || !article?.source?.name) {
     return false
@@ -248,7 +487,6 @@ const isValidArticle = (article) => {
     return false
   }
   
-  // Filter out articles with generic or poor titles
   const poorTitleIndicators = ['[removed]', '[deleted]', 'click here', 'you won\'t believe']
   const titleLower = article.title.toLowerCase()
   
@@ -256,9 +494,7 @@ const isValidArticle = (article) => {
 }
 
 const isArticleRecent = (article) => {
-  if (!article.publishedAt) {
-    return false // Strict validation - require publishedAt
-  }
+  if (!article.publishedAt) return false
   
   try {
     const publishedTime = new Date(article.publishedAt)
@@ -267,7 +503,7 @@ const isArticleRecent = (article) => {
     
     return hoursSincePublished <= CONFIG.ARTICLE_AGE_HOURS
   } catch (error) {
-    return false // Strict validation on error
+    return false
   }
 }
 
@@ -284,7 +520,6 @@ const isArticleAlreadyPosted = async (article) => {
 
     const recentPosts = recentPostsQuery.docs.map(doc => doc.data())
 
-    // URL-based duplicate check (primary)
     if (article.url) {
       const urlExists = recentPosts.some(post => 
         post.Caption?.includes(article.url)
@@ -292,7 +527,6 @@ const isArticleAlreadyPosted = async (article) => {
       if (urlExists) return true
     }
 
-    // Title-based duplicate check (secondary)
     if (article.title && article.title.length > 20) {
       const normalizedTitle = normalizeString(article.title)
       
@@ -307,7 +541,7 @@ const isArticleAlreadyPosted = async (article) => {
     return false
   } catch (error) {
     console.error('Error checking duplicate articles:', error.message)
-    return false // Allow posting on error
+    return false
   }
 }
 
@@ -319,30 +553,26 @@ const normalizeString = (str) => {
 }
 
 // =============================================================================
-// POST CREATION WITH SERVER-SIDE CLASSIFICATION
+// ENHANCED POST CREATION WITH CATEGORY CONTEXT
 // =============================================================================
 
-const createNewsPost = async (article, newsBotInfo) => {
-  const caption = formatNewsCaption(article)
+const createNewsPost = async (article, newsBotInfo, category) => {
+  const caption = formatNewsCaptionForCategory(article, category)
   
-  // Validate caption length
   if (caption.length > CONFIG.MAX_CAPTION_LENGTH) {
     throw new Error(`Caption too long: ${caption.length} > ${CONFIG.MAX_CAPTION_LENGTH}`)
   }
 
-  // Classify caption using server-side classification service
+  // Server-side classification
   let tags = null
   try {
     const classificationResult = classifyPost(caption)
     if (classificationResult && classificationResult.length > 0) {
       tags = classificationResult
-      console.log('Auto post classified with tags:', tags)
-    } else {
-      console.log('No classification tags found for auto post')
+      console.log(`Auto post (${category}) classified with tags:`, tags)
     }
   } catch (classificationError) {
     console.error('Classification failed for auto post:', classificationError)
-    // Continue without tags rather than failing the post
   }
 
   const postData = {
@@ -355,17 +585,19 @@ const createNewsPost = async (article, newsBotInfo) => {
     MediaURL: article.urlToImage || null,
     likes: 0,
     comments: 0,
-    // Include Tags from server-side classification
-    Tags: tags
+    Tags: tags,
+    // Add category metadata
+    SourceCategory: category,
+    SourceName: article.source?.name
   }
 
   const docRef = await db.collection('posts').add(postData)
   
-  console.log('News post created with classification:', {
+  console.log('Diversified news post created:', {
     PostID: docRef.id,
-    UserID: CONFIG.NEWS_BOT_USER_ID,
-    UserName: newsBotInfo.UserName,
-    Tags: tags
+    Category: category,
+    Tags: tags,
+    Source: article.source?.name
   })
 
   return {
@@ -374,19 +606,30 @@ const createNewsPost = async (article, newsBotInfo) => {
   }
 }
 
-const formatNewsCaption = (article) => {
+const formatNewsCaptionForCategory = (article, category) => {
   const title = article.title || 'No Title'
   const description = article.description || 'No Description'
   const sourceName = article.source?.name || 'Unknown Source'
   const publishedAt = article.publishedAt ? formatPublishTime(article.publishedAt) : 'Unknown Time'
   const url = article.url || ''
 
-  // Optimized caption format
+  // Category-specific emojis
+  const categoryEmojis = {
+    sports: '⚽',
+    entertainment: '🎬', 
+    health: '🏥',
+    science: '🔬',
+    technology: '💻',
+    business: '💼'
+  }
+
+  const categoryEmoji = categoryEmojis[category] || '📰'
+
   const caption = `${title}
 
 ${description}
 
-📰 ${sourceName} | 🕒 ${publishedAt}
+${categoryEmoji} ${sourceName} | 🕒 ${publishedAt}
 
 ${url}`
 
@@ -409,11 +652,10 @@ const formatPublishTime = (isoString) => {
 }
 
 // =============================================================================
-// MANUAL TRIGGER ENDPOINT
+// ENHANCED ENDPOINTS
 // =============================================================================
 
 exports.triggerNewsPost = functions.https.onRequest(async (req, res) => {
-  // CORS headers
   res.set('Access-Control-Allow-Origin', '*')
   res.set('Access-Control-Allow-Methods', 'POST')
   res.set('Access-Control-Allow-Headers', 'Content-Type')
@@ -431,6 +673,7 @@ exports.triggerNewsPost = functions.https.onRequest(async (req, res) => {
         success: true,
         message: result.message,
         postId: result.postId || null,
+        category: result.category,
         trigger: result.trigger
       })
     } else {
@@ -449,10 +692,6 @@ exports.triggerNewsPost = functions.https.onRequest(async (req, res) => {
   }
 })
 
-// =============================================================================
-// MONITORING ENDPOINT
-// =============================================================================
-
 exports.getRecentNewsPosts = functions.https.onRequest(async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*')
   
@@ -461,7 +700,7 @@ exports.getRecentNewsPosts = functions.https.onRequest(async (req, res) => {
       .collection('posts')
       .where('UserID', '==', CONFIG.NEWS_BOT_USER_ID)
       .orderBy('Created', 'desc')
-      .limit(10)
+      .limit(15)
       .get()
 
     const posts = recentPosts.docs.map(doc => ({
@@ -470,12 +709,21 @@ exports.getRecentNewsPosts = functions.https.onRequest(async (req, res) => {
       Created: doc.data().Created?.toDate?.() || doc.data().Created
     }))
 
+    // Category distribution stats
+    const categoryStats = {}
+    posts.forEach(post => {
+      const category = post.SourceCategory || 'unknown'
+      categoryStats[category] = (categoryStats[category] || 0) + 1
+    })
+
     res.status(200).json({
       success: true,
       count: posts.length,
       posts: posts,
+      categoryDistribution: categoryStats,
       config: {
         categories: CONFIG.CATEGORIES,
+        categoryRotation: true,
         maxCaptionLength: CONFIG.MAX_CAPTION_LENGTH,
         articleAgeHours: CONFIG.ARTICLE_AGE_HOURS
       }
