@@ -1,11 +1,7 @@
 <!--
 src/components/FriendMain.vue - Refactored
 Component chính hiển thị danh sách friends
-Logic:
-- Hiển thị friends, suggestions, requests dựa vào activeTab
-- Xử lý các actions: gửi/chấp nhận/từ chối lời mời, hủy kết bạn
-- Auto-populate user info cho các items
-- Business logic đã được tách ra composables
+Logic: Hiển thị friends, suggestions, requests dựa vào activeTab, xử lý các actions kết bạn
 -->
 <template>
   <div class="friend-main">
@@ -174,7 +170,6 @@ export default {
     const requestsList = ref([])
     const actionLoading = ref(false)
 
-    // Computed
     const currentUserId = computed(() => user.value?.uid)
 
     // Data loading methods
@@ -184,7 +179,7 @@ export default {
       try {
         const friends = await getFriends(currentUserId.value)
         
-        // Populate user info for friends
+        // Populate user info cho friends
         for (const friend of friends) {
           const userInfo = await getUserById(friend.friendId)
           friend.userInfo = userInfo
@@ -192,7 +187,6 @@ export default {
         
         friendsList.value = friends
       } catch (error) {
-        console.error('Error loading friends:', error)
         showError(error, 'loadFriends')
       }
     }
@@ -204,7 +198,6 @@ export default {
         const suggestions = await getFriendSuggestions(currentUserId.value)
         suggestionsList.value = suggestions
       } catch (error) {
-        console.error('Error loading suggestions:', error)
         showError(error, 'loadSuggestions')
       }
     }
@@ -215,7 +208,7 @@ export default {
       try {
         const requests = await getFriendRequests(currentUserId.value)
         
-        // Populate sender info for requests
+        // Populate sender info cho requests
         for (const request of requests) {
           const senderInfo = await getUserById(request.senderId)
           request.senderInfo = senderInfo
@@ -223,7 +216,6 @@ export default {
         
         requestsList.value = requests
       } catch (error) {
-        console.error('Error loading friend requests:', error)
         showError(error, 'loadRequests')
       }
     }
@@ -239,7 +231,6 @@ export default {
         await loadFriends()
         emit('data-updated')
       } catch (error) {
-        console.error('Error unfriending:', error)
         showError(error, 'unfriend')
       } finally {
         actionLoading.value = false
@@ -256,7 +247,6 @@ export default {
         await loadSuggestions()
         emit('data-updated')
       } catch (error) {
-        console.error('Error sending friend request:', error)
         showError(error, 'sendRequest')
       } finally {
         actionLoading.value = false
@@ -272,7 +262,6 @@ export default {
         await loadFriends()
         emit('data-updated')
       } catch (error) {
-        console.error('Error accepting friend request:', error)
         showError(error, 'acceptRequest')
       } finally {
         actionLoading.value = false
@@ -287,7 +276,6 @@ export default {
         await loadRequests()
         emit('data-updated')
       } catch (error) {
-        console.error('Error rejecting friend request:', error)
         showError(error, 'rejectRequest')
       } finally {
         actionLoading.value = false
@@ -308,20 +296,16 @@ export default {
       return date.toLocaleDateString()
     }
 
-    // Load data based on active tab
+    // Load data dựa vào active tab
     const loadDataForTab = async (tab) => {
       if (!currentUserId.value) return
 
-      switch (tab) {
-        case 'friends':
-          await loadFriends()
-          break
-        case 'suggestions':
-          await loadSuggestions()
-          break
-        case 'requests':
-          await loadRequests()
-          break
+      if (tab === 'friends') {
+        await loadFriends()
+      } else if (tab === 'suggestions') {
+        await loadSuggestions()
+      } else if (tab === 'requests') {
+        await loadRequests()
       }
     }
 
@@ -360,7 +344,6 @@ export default {
 }
 </script>
 
-/* FriendMain.vue styles - Updated Colors */
 <style scoped>
 .friend-main {
   width: 39.53%;
@@ -401,7 +384,6 @@ export default {
   text-align: center;
 }
 
-/* Friend Cards */
 .friends-list, .suggestions-list, .requests-list {
   display: flex;
   flex-direction: column;
@@ -467,7 +449,6 @@ export default {
   opacity: 0.5;
 }
 
-/* Action Buttons */
 .friend-actions, .suggestion-actions, .request-actions {
   display: flex;
   gap: 0.5rem;

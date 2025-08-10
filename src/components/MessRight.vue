@@ -1,12 +1,7 @@
 <!--
-src/components/MessRight.vue
+src/components/MessRight.vue - Refactored
 Component sidebar bên phải trang messages với search optimization
-Logic:
-- Hiển thị danh sách conversations với avatar, tên, tin nhắn mới nhất
-- Trạng thái unread count cho từng conversation
-- Thanh tìm kiếm users tối ưu với debounce và caching
-- Real-time updates với conversation list
-- Ẩn email trong kết quả search để bảo mật
+Logic: Hiển thị conversations list, search users với debounce và caching, real-time updates
 -->
 <template>
   <div class="mess-right">
@@ -58,7 +53,6 @@ Logic:
             ></div>
             <div class="search-user-info">
               <div class="search-user-name">{{ searchUser.UserName || getText('unknownUser') }}</div>
-              <!-- Email đã được ẩn trong search results -->
             </div>
             <div class="start-chat-icon"></div>
           </div>
@@ -153,12 +147,11 @@ export default {
     const isSearching = ref(false)
     const showSearchResults = ref(false)
     const searchTimeout = ref(null)
-    const searchCache = ref(new Map()) // Cache search results
+    const searchCache = ref(new Map())
 
-    // Computed properties
     const currentUserId = computed(() => user.value?.uid)
 
-    // Optimized search với debounce và caching
+    // Search với debounce và caching
     const handleSearchInput = () => {
       if (searchTimeout.value) {
         clearTimeout(searchTimeout.value)
@@ -171,7 +164,7 @@ export default {
         return
       }
 
-      // Check cache first
+      // Check cache trước
       if (searchCache.value.has(query)) {
         searchResults.value = searchCache.value.get(query)
         showSearchResults.value = true
@@ -181,7 +174,7 @@ export default {
       // Debounce search
       searchTimeout.value = setTimeout(async () => {
         await performSearch(query)
-      }, 300) // 300ms debounce
+      }, 300)
     }
 
     const performSearch = async (query) => {
@@ -196,10 +189,10 @@ export default {
       try {
         const results = await searchUsersForMessaging(query, currentUserId.value, 8)
         
-        // Cache results
+        // Cache kết quả
         searchCache.value.set(query, results)
         
-        // Clear old cache if too large (keep last 20 searches)
+        // Xóa cache cũ nếu quá lớn
         if (searchCache.value.size > 20) {
           const firstKey = searchCache.value.keys().next().value
           searchCache.value.delete(firstKey)
@@ -207,7 +200,6 @@ export default {
         
         searchResults.value = results
       } catch (error) {
-        console.error('Search error:', error)
         searchResults.value = []
         showError(error, 'search')
       } finally {
@@ -221,7 +213,7 @@ export default {
         if (!searchTerm.value.trim()) {
           showSearchResults.value = false
         }
-      }, 200) // Delay để cho phép click vào search results
+      }, 200)
     }
 
     // Clear search
@@ -234,9 +226,9 @@ export default {
       }
     }
 
-    // Start conversation with searched user
+    // Start conversation với searched user
     const startConversationWithUser = (searchUser) => {
-      // Check if conversation already exists
+      // Check conversation đã tồn tại chưa
       const existingConversation = conversations.value.find(
         conv => conv.partnerId === searchUser.UserID
       )
@@ -244,7 +236,7 @@ export default {
       if (existingConversation) {
         selectConversation(existingConversation)
       } else {
-        // Create new conversation object
+        // Tạo conversation object mới
         const newConversation = {
           partnerId: searchUser.UserID,
           partnerName: searchUser.UserName,
@@ -255,7 +247,6 @@ export default {
         selectConversation(newConversation)
       }
       
-      // Clear search
       clearSearch()
     }
 
@@ -270,7 +261,7 @@ export default {
       })
     }
 
-    // Format time for conversation list
+    // Format time cho conversation list
     const formatConversationTime = (timestamp) => {
       if (!timestamp) return ''
       
@@ -300,9 +291,8 @@ export default {
       return content.length > 30 ? content.substring(0, 30) + '...' : content
     }
 
-    // Check if user is online (placeholder - có thể implement sau)
+    // Check online status (placeholder)
     const isOnline = (userId) => {
-      // Có thể implement với presence system sau
       return false
     }
 
@@ -349,7 +339,6 @@ export default {
       if (searchTimeout.value) {
         clearTimeout(searchTimeout.value)
       }
-      // Clear search cache
       searchCache.value.clear()
     })
 
@@ -376,7 +365,6 @@ export default {
 }
 </script>
 
-/* MessRight.vue styles - Complete Rewrite with Updated Colors */
 <style scoped>
 .mess-right {
   width: 22.13%;
@@ -389,7 +377,6 @@ export default {
   overflow: hidden;
 }
 
-/* Search section */
 .search-section {
   flex-shrink: 0;
   padding: 1rem;
@@ -424,11 +411,6 @@ export default {
 .search-input:focus {
   border-color: var(--theme-color);
   box-shadow: 0 0 0.25rem var(--theme-color-20);
-  color: var(--theme-color) !important;
-}
-
-.search-input:active {
-  color: var(--theme-color) !important;
 }
 
 .search-input::placeholder {
@@ -472,7 +454,6 @@ export default {
   transform: translateY(-50%) scale(1.1);
 }
 
-/* Search results */
 .search-results {
   position: relative;
   max-height: 12rem;
@@ -565,7 +546,6 @@ export default {
   transform: scale(1.1);
 }
 
-/* Conversations section */
 .conversations-section {
   flex: 1;
   overflow-y: auto;
@@ -615,7 +595,6 @@ export default {
   opacity: 0.8;
 }
 
-/* Conversations list */
 .conversations-list {
   display: flex;
   flex-direction: column;
@@ -756,7 +735,6 @@ export default {
   animation: pulse 2s infinite;
 }
 
-/* Animations */
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -768,7 +746,6 @@ export default {
   100% { opacity: 1; transform: scale(1); }
 }
 
-/* Scrollbar styling */
 .conversations-section::-webkit-scrollbar,
 .search-results::-webkit-scrollbar {
   width: 0.25rem;

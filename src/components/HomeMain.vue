@@ -62,8 +62,7 @@ Logic: Hiển thị posts với multi-media carousel, like/unlike, wheel scrolli
                  muted
                  loop
                  playsinline
-                 @click="toggleVideoPlayPause"
-                 @error="handleVideoError">
+                 @click="toggleVideoPlayPause">
           </video>
           
           <!-- Navigation controls -->
@@ -117,8 +116,7 @@ Logic: Hiển thị posts với multi-media carousel, like/unlike, wheel scrolli
                muted
                loop
                playsinline
-               @click="toggleVideoPlayPause"
-               @error="handleVideoError">
+               @click="toggleVideoPlayPause">
         </video>
       </div>
       
@@ -275,12 +273,6 @@ export default {
       } else {
         video.pause()
       }
-    }
-
-    const handleVideoError = (event) => {
-      const video = event.target
-      video.setAttribute('controls', 'true')
-      video.removeAttribute('autoplay')
     }
 
     // Options menu
@@ -549,7 +541,6 @@ export default {
       previousMedia,
       nextMedia,
       toggleVideoPlayPause,
-      handleVideoError,
       toggleOptionsMenu,
       handleDeletePost,
       handleHidePost,
@@ -560,7 +551,6 @@ export default {
 }
 </script>
 
-/* HomeMain.vue styles - Updated Colors */
 <style scoped>
 .feed {
   width: 39.53%;
@@ -622,7 +612,6 @@ export default {
   font-weight: 400;
 }
 
-/* Media styles */
 .media-carousel {
   width: 80%;
   height: 18.75rem;
@@ -661,7 +650,6 @@ export default {
   border-radius: 0.9375rem;
 }
 
-/* Video autoplay styles */
 video.post-media {
   cursor: pointer;
 }
@@ -670,116 +658,13 @@ video.post-media:hover {
   opacity: 0.95;
 }
 
-/* Webkit browsers (Chrome, Safari) - Hide all controls by default */
 video.post-media::-webkit-media-controls {
   display: none !important;
 }
 
-video.post-media::-webkit-media-controls-panel {
-  display: none !important;
-}
-
-video.post-media::-webkit-media-controls-play-button {
-  display: none !important;
-}
-
-video.post-media::-webkit-media-controls-start-playback-button {
-  display: none !important;
-}
-
-video.post-media::-webkit-media-controls-timeline {
-  display: none !important;
-}
-
-video.post-media::-webkit-media-controls-volume-slider {
-  display: none !important;
-}
-
-video.post-media::-webkit-media-controls-current-time-display {
-  display: none !important;
-}
-
-video.post-media::-webkit-media-controls-time-remaining-display {
-  display: none !important;
-}
-
-video.post-media::-webkit-media-controls-mute-button {
-  display: none !important;
-}
-
-video.post-media::-webkit-media-controls-fullscreen-button {
-  display: none !important;
-}
-
-/* Show all controls on hover or focus */
 video.post-media:hover::-webkit-media-controls,
 video.post-media:focus::-webkit-media-controls {
   display: flex !important;
-}
-
-video.post-media:hover::-webkit-media-controls-panel,
-video.post-media:focus::-webkit-media-controls-panel {
-  display: flex !important;
-}
-
-video.post-media:hover::-webkit-media-controls-play-button,
-video.post-media:focus::-webkit-media-controls-play-button {
-  display: flex !important;
-}
-
-video.post-media:hover::-webkit-media-controls-timeline,
-video.post-media:focus::-webkit-media-controls-timeline {
-  display: flex !important;
-}
-
-video.post-media:hover::-webkit-media-controls-volume-slider,
-video.post-media:focus::-webkit-media-controls-volume-slider {
-  display: flex !important;
-}
-
-video.post-media:hover::-webkit-media-controls-current-time-display,
-video.post-media:focus::-webkit-media-controls-current-time-display {
-  display: flex !important;
-}
-
-video.post-media:hover::-webkit-media-controls-time-remaining-display,
-video.post-media:focus::-webkit-media-controls-time-remaining-display {
-  display: flex !important;
-}
-
-video.post-media:hover::-webkit-media-controls-mute-button,
-video.post-media:focus::-webkit-media-controls-mute-button {
-  display: flex !important;
-}
-
-video.post-media:hover::-webkit-media-controls-fullscreen-button,
-video.post-media:focus::-webkit-media-controls-fullscreen-button {
-  display: flex !important;
-}
-
-/* Firefox */
-video.post-media::-moz-media-controls {
-  opacity: 0 !important;
-  transition: opacity 0.3s ease;
-}
-
-video.post-media:hover::-moz-media-controls,
-video.post-media:focus::-moz-media-controls {
-  opacity: 1 !important;
-}
-
-@media (max-width: 768px) {
-  video.post-media::-webkit-media-controls {
-    display: block !important;
-  }
-  
-  video.post-media::-webkit-media-controls-panel {
-    display: flex !important;
-  }
-  
-  video.post-media::-moz-media-controls {
-    opacity: 1;
-  }
 }
 
 .media-controls {
@@ -962,7 +847,6 @@ video.post-media:focus::-moz-media-controls {
   transform: none;
 }
 
-/* Options Menu Styles */
 .options-container {
   position: relative;
 }
@@ -991,7 +875,7 @@ video.post-media:focus::-moz-media-controls {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  transition: background 0.3s ease;
+  transition: all 0.3s ease;
   text-align: left;
 }
 

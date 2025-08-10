@@ -1,14 +1,8 @@
 <!--
 src/components/HomeRight.vue - Refactored
 Component sidebar bên phải hiển thị chi tiết bài post
-Logic:
-- Hiển thị caption, likes, comments của post hiện tại
-- Form thêm comment với emoji picker
-- Theme support qua CSS variables
-- Auto-scroll comments list
-- Business logic đã được tách ra composables
+Logic: Hiển thị caption, likes, comments của post hiện tại, form thêm comment với emoji picker
 -->
-<!-- HomeRight.vue Template - Updated with Caption Show/Hide -->
 <template>
   <div class="right" :style="themeStyles">
     <div v-if="post && post.PostID" class="post-details">
@@ -138,7 +132,6 @@ Logic:
   </div>
 </template>
 
-// HomeRight.vue Script - Updated with Caption Show/Hide Logic
 <script>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '@/composables/useAuth'
@@ -168,8 +161,6 @@ export default {
     const isLoading = ref(false)
     const isLoadingComments = ref(false)
     const showEmojiPicker = ref(false)
-    
-    // Caption show/hide state
     const showFullCaption = ref(false)
 
     // Theme styles
@@ -234,7 +225,6 @@ export default {
         const postComments = await getPostComments(props.post.PostID)
         comments.value = postComments
       } catch (error) {
-        console.error('Error loading comments:', error)
         if (error.code !== 'permission-denied' && error.code !== 'unauthenticated') {
           showError(error, 'loadComments')
         }
@@ -265,7 +255,6 @@ export default {
         await loadComments()
 
       } catch (error) {
-        console.error('Error adding comment:', error)
         showError(error, 'comment')
       } finally {
         isLoading.value = false
@@ -294,7 +283,6 @@ export default {
     watch(() => props.post, (newPost) => {
       if (newPost && newPost.PostID) {
         loadComments()
-        // Reset caption state when post changes
         showFullCaption.value = false
       } else {
         comments.value = []
@@ -320,11 +308,9 @@ export default {
       showEmojiPicker,
       emojiList,
       themeStyles,
-      // Caption show/hide
       isLongCaption,
       showFullCaption,
       toggleCaption,
-      // Methods
       getText,
       formatCommentTime,
       handleAddComment,
@@ -335,7 +321,6 @@ export default {
 }
 </script>
 
-/* HomeRight.vue styles - Updated Colors */
 <style scoped>
 .right {
   width: 22.13%;
@@ -417,7 +402,6 @@ export default {
   opacity: 1;
 }
 
-/* Tags styling */
 .tags-container {
   display: flex;
   flex-wrap: wrap;

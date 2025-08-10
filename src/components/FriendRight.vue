@@ -1,10 +1,7 @@
 <!--
 src/components/FriendRight.vue - Refactored
 Component sidebar bên phải cho trang Friends
-Logic:
-- 3 buttons với counter cho mỗi section
-- Emit activeTab để FriendMain biết hiển thị gì
-- Load và update counters khi có thay đổi
+Logic: 3 buttons với counter cho mỗi section, emit activeTab để FriendMain biết hiển thị gì
 -->
 <template>
   <div class="friend-right">
@@ -94,16 +91,17 @@ export default {
       if (!user.value?.uid) return
 
       try {
-        const friendsCountResult = await getFriendsCount(user.value.uid)
-        friendsCount.value = friendsCountResult
+        const [friendsResult, requestsResult, suggestions] = await Promise.all([
+          getFriendsCount(user.value.uid),
+          getFriendRequestsCount(user.value.uid),
+          getFriendSuggestions(user.value.uid, 100)
+        ])
 
-        const requestsCountResult = await getFriendRequestsCount(user.value.uid)
-        requestsCount.value = requestsCountResult
-
-        const suggestions = await getFriendSuggestions(user.value.uid, 100)
+        friendsCount.value = friendsResult
+        requestsCount.value = requestsResult
         suggestionsCount.value = suggestions.length
       } catch (error) {
-        console.error('Error loading counts:', error)
+        // Silent fail
       }
     }
 
@@ -111,6 +109,7 @@ export default {
       loadCounts()
     }
 
+    // Watchers
     watch(user, (newUser) => {
       if (newUser) {
         loadCounts()
@@ -121,6 +120,7 @@ export default {
       }
     }, { immediate: true })
 
+    // Lifecycle
     onMounted(() => {
       if (user.value) loadCounts()
       emit('tab-changed', activeTab.value)

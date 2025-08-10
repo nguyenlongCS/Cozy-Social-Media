@@ -1,12 +1,7 @@
 <!--
-src/components/MessMain.vue
+src/components/MessMain.vue - Refactored
 Component chính hiển thị nội dung tin nhắn của người dùng được chọn
-Logic:
-- Hiển thị danh sách tin nhắn giữa current user và selected partner
-- Form gửi tin nhắn mới với emoji picker
-- Auto scroll to bottom khi có tin nhắn mới
-- Real-time updates với Realtime Database listener
-- Message status: sent/received, read/unread
+Logic: Hiển thị messages list, form gửi tin nhắn mới với emoji picker, real-time updates
 -->
 <template>
   <div class="mess-main">
@@ -156,7 +151,6 @@ export default {
       sendMessage,
       getConversationMessages,
       markMessagesAsRead,
-      markMessageAsDelivered,
       setupMessagesListener,
       cleanupListeners
     } = useMessages()
@@ -190,15 +184,10 @@ export default {
       if (messageInput.value) {
         messageInput.value.style.height = 'auto'
         const scrollHeight = messageInput.value.scrollHeight
-        const maxHeight = 120 // Max 4 lines
+        const maxHeight = 120
         const newHeight = Math.min(scrollHeight, maxHeight)
         messageInput.value.style.height = newHeight + 'px'
-        
-        if (scrollHeight > maxHeight) {
-          messageInput.value.style.overflowY = 'auto'
-        } else {
-          messageInput.value.style.overflowY = 'hidden'
-        }
+        messageInput.value.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden'
       }
     }
 
@@ -231,6 +220,7 @@ export default {
         return getText('messageSent')
       }
     }
+
     const formatMessageTime = (timestamp) => {
       if (!timestamp) return ''
       
@@ -240,13 +230,10 @@ export default {
       const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60))
       
       if (diffInHours < 24) {
-        // Same day - show time only
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       } else if (diffInHours < 24 * 7) {
-        // This week - show day and time
         return date.toLocaleDateString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' })
       } else {
-        // Older - show date and time
         return date.toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
       }
     }
@@ -302,20 +289,14 @@ export default {
 
     // Load conversation messages
     const loadConversationMessages = async () => {
-      if (!props.selectedPartnerId || !currentUserId.value) {
-        return
-      }
+      if (!props.selectedPartnerId || !currentUserId.value) return
 
       try {
         await getConversationMessages(currentUserId.value, props.selectedPartnerId)
-        
-        // Mark messages as read khi mở conversation
         await markMessagesAsRead(currentUserId.value, props.selectedPartnerId)
-        
         setTimeout(scrollToBottom, 100)
         emit('conversation-updated')
       } catch (error) {
-        console.error('Error loading conversation messages:', error)
         showError(error, 'loadMessages')
       }
     }
@@ -328,7 +309,7 @@ export default {
     }
 
     // Watchers
-    watch(() => props.selectedPartnerId, async (newPartnerId, oldPartnerId) => {
+    watch(() => props.selectedPartnerId, async (newPartnerId) => {
       if (newPartnerId && currentUserId.value) {
         cleanupListeners()
         await loadConversationMessages()
@@ -338,7 +319,7 @@ export default {
       }
     }, { immediate: true })
 
-    watch(messages, (newMessages) => {
+    watch(messages, () => {
       setTimeout(scrollToBottom, 100)
     }, { deep: true, flush: 'post' })
 
@@ -386,7 +367,6 @@ export default {
 }
 </script>
 
-/* MessMain.vue styles - Updated Colors */
 <style scoped>
 .mess-main {
   width: 39.53%;
@@ -402,7 +382,6 @@ export default {
   overflow: hidden;
 }
 
-/* No conversation state */
 .no-conversation {
   width: 100%;
   height: 100%;
@@ -442,7 +421,6 @@ export default {
   margin: 0;
 }
 
-/* Active conversation */
 .conversation-container {
   width: 100%;
   height: 100%;
@@ -450,7 +428,6 @@ export default {
   flex-direction: column;
 }
 
-/* Conversation header */
 .conversation-header {
   flex-shrink: 0;
   padding: 0.75rem 1rem;
@@ -492,7 +469,6 @@ export default {
   opacity: 0.6;
 }
 
-/* Messages container */
 .messages-container {
   flex: 1;
   overflow-y: auto;
@@ -542,7 +518,6 @@ export default {
   opacity: 0.8;
 }
 
-/* Messages list */
 .messages-list {
   display: flex;
   flex-direction: column;
@@ -621,9 +596,8 @@ export default {
 
 .status-sent {
   background: #2B2D42;
-  opacity: 0.5;
-  border: 1px solid #2B2D42;
   opacity: 0.7;
+  border: 1px solid #2B2D42;
 }
 
 .status-delivered {
@@ -636,7 +610,6 @@ export default {
   border: 1px solid #4caf50;
 }
 
-/* Message input */
 .message-input-container {
   flex-shrink: 0;
   padding: 0.75rem 1rem;
@@ -681,7 +654,6 @@ export default {
   flex-shrink: 0;
 }
 
-/* Emoji picker */
 .emoji-container {
   position: relative;
 }
@@ -755,7 +727,6 @@ export default {
   transform: scale(1.1);
 }
 
-/* Send button */
 .send-btn {
   width: 2rem;
   height: 2rem;
@@ -788,7 +759,6 @@ export default {
   filter: brightness(0) saturate(100%) invert(16%) sepia(15%) saturate(1180%) hue-rotate(202deg) brightness(94%) contrast(96%);
 }
 
-/* Scrollbar styling */
 .messages-container::-webkit-scrollbar {
   width: 0.25rem;
 }

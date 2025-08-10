@@ -1,13 +1,7 @@
 <!--
-src/components/NavMid.vue - Updated with Messages & Friends Badges
+src/components/NavMid.vue - Refactored
 Component navigation giữa header với unread messages và friend requests badges
-Logic: 
-- Hiển thị 5 navigation buttons với navigation logic đơn giản
-- Thêm unread messages badge trên mess-button
-- Thêm friend requests badge trên friends-button
-- Sử dụng useMessages và useFriends composables
-- Badge hiển thị khi có tin nhắn chưa đọc hoặc lời mời kết bạn (> 0)
-- Không thay đổi layout và styling hiện tại
+Logic: 5 navigation buttons với unread badges cho messages và friends
 -->
 <template>
   <div class="nav-mid">
@@ -66,29 +60,34 @@ export default {
           const count = await getFriendRequestsCount(user.value.uid)
           friendRequestsCount.value = count
         } catch (error) {
-          console.error('Error loading friend requests count:', error)
           friendRequestsCount.value = 0
         }
       }
     }
 
-    // Setup conversations listener khi user đăng nhập
+    // Setup user listeners
     const setupUserListeners = async () => {
       if (user.value?.uid) {
         try {
-          // Load conversations và setup real-time listener
           await getConversations(user.value.uid)
           setupConversationsListener(user.value.uid)
-          
-          // Load friend requests count
           await loadFriendRequestsCount()
         } catch (error) {
-          console.error('Error setting up user listeners:', error)
+          // Silent fail
         }
       }
     }
 
-    // Watch user changes
+    // Navigation methods
+    const goToHome = () => router.push('/')
+    const goToProfile = () => router.push('/profile')
+    const goToFriends = () => {
+      router.push('/friends')
+      setTimeout(loadFriendRequestsCount, 500)
+    }
+    const goToMessages = () => router.push('/messages')
+
+    // Watchers
     watch(user, (newUser) => {
       if (newUser) {
         setupUserListeners()
@@ -98,23 +97,11 @@ export default {
       }
     }, { immediate: true })
 
-    // Refresh friend requests count khi navigate đến friends page
     watch(() => route.name, (newRouteName) => {
       if (newRouteName === 'Friends' && user.value) {
-        // Delay để đảm bảo Friends page đã xử lý xong
         setTimeout(loadFriendRequestsCount, 1000)
       }
     })
-
-    // Navigation methods
-    const goToHome = () => router.push('/')
-    const goToProfile = () => router.push('/profile')
-    const goToFriends = () => {
-      router.push('/friends')
-      // Refresh count sau khi navigate
-      setTimeout(loadFriendRequestsCount, 500)
-    }
-    const goToMessages = () => router.push('/messages')
 
     // Lifecycle
     onMounted(() => {
@@ -201,7 +188,6 @@ export default {
   background-color: #2B2D42;
 }
 
-/* Unread Badge Styles */
 .unread-badge {
   position: absolute;
   top: -0.25rem;
@@ -224,7 +210,7 @@ export default {
 }
 
 .friends-badge {
-  background: rgba(0, 150, 255, 0.9);
+  background: rgba(255, 0, 0, 0.9);
   color: white;
 }
 

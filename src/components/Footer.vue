@@ -1,17 +1,11 @@
 <!--
-src/components/Footer.vue - Updated with Circle Messages
+src/components/Footer.vue - Refactored
 Component footer với post counter, scroll warning và circle messages
-Logic: 
-- Hiển thị hướng dẫn cuộn với opacity fade
-- Post counter ở góc phải
-- Scroll warning animation
-- Circle messages ở góc trái hiển thị 3 conversations mới nhất
-- Mỗi circle-mess hiển thị avatar và unread badge
-- Click vào circle-mess chuyển đến /messages
+Logic: Hiển thị post counter, scroll warning animation, và circle messages từ conversations
 -->
 <template>
   <div class="footer">
-    <!-- Circle Messages Section (góc trái) -->
+    <!-- Circle Messages Section -->
     <div class="circle-messages" v-if="!isLoginPage && user">
       <div 
         v-for="conversation in topConversations" 
@@ -30,7 +24,7 @@ Logic:
       </div>
     </div>
 
-    <!-- Footer Content (center) -->
+    <!-- Footer Content -->
     <div class="footer-content">
       {{ getText('scrollToNext') }}
     </div>
@@ -40,7 +34,7 @@ Logic:
       {{ getText('scrollTooFast') }}
     </div>
     
-    <!-- Post Counter (góc phải) -->
+    <!-- Post Counter -->
     <div v-if="totalPosts > 0" class="post-counter">
       {{ currentPostIndex + 1 }}/{{ totalPosts }}
     </div>
@@ -48,7 +42,7 @@ Logic:
 </template>
 
 <script>
-import { computed, watch, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useLanguage } from '@/composables/useLanguage'
 import { useAuth } from '@/composables/useAuth'
@@ -84,23 +78,21 @@ export default {
 
     const isLoginPage = computed(() => route.name === 'Login')
 
-    // Get top 3 conversations mới nhất với unread messages
+    // Lấy 3 conversations mới nhất với unread messages
     const topConversations = computed(() => {
       if (!conversations.value || conversations.value.length === 0) return []
       
-      // Sort by: unread first, then by last message time
+      // Sort theo unread trước, sau đó theo thời gian
       const sortedConversations = [...conversations.value].sort((a, b) => {
-        // Prioritize conversations with unread messages
         if (a.unreadCount > 0 && b.unreadCount === 0) return -1
         if (a.unreadCount === 0 && b.unreadCount > 0) return 1
         
-        // Then sort by last message timestamp
         const timeA = a.lastMessage?.timestamp || 0
         const timeB = b.lastMessage?.timestamp || 0
         return timeB - timeA
       })
       
-      return sortedConversations.slice(0, 3)
+      return sortedConversations.slice(0, 5)
     })
 
     // Setup conversations cho circle messages
@@ -110,7 +102,7 @@ export default {
           await getConversations(user.value.uid)
           setupConversationsListener(user.value.uid)
         } catch (error) {
-          console.error('Error setting up circle messages:', error)
+          // Silent fail
         }
       }
     }
@@ -120,7 +112,7 @@ export default {
       router.push('/messages')
     }
 
-    // Watch user changes
+    // Watchers
     watch(user, (newUser) => {
       if (newUser && !isLoginPage.value) {
         setupCircleMessages()
@@ -129,7 +121,6 @@ export default {
       }
     }, { immediate: true })
 
-    // Watch route changes
     watch(() => route.name, (newRouteName) => {
       if (newRouteName !== 'Login' && user.value) {
         setupCircleMessages()
@@ -158,7 +149,6 @@ export default {
 }
 </script>
 
-/* Footer.vue styles - Updated with Circle Messages */
 <style scoped>
 .footer {
   width: 100%;
@@ -180,7 +170,6 @@ export default {
   opacity: 1;
 }
 
-/* Circle Messages Section (góc trái) */
 .circle-messages {
   position: absolute;
   left: 1rem;
@@ -237,7 +226,6 @@ export default {
   z-index: 10;
 }
 
-/* Footer Content (center) */
 .footer-content {
   display: flex;
   align-items: center;
@@ -253,7 +241,6 @@ export default {
   animation: fadeInOut 2s ease-in-out;
 }
 
-/* Post Counter (góc phải) */
 .post-counter {
   position: absolute;
   bottom: 0.5rem;

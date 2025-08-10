@@ -1,53 +1,7 @@
 <!--
-src/components/LoginMain.checkbox {
-  display: none;
-}
-
-.checkmark {
-  width: 1rem;
-  height: 1rem;
-  border: 0.125rem solid var(--theme-color);
-  border-radius: 0.1875rem;
-  margin-right: 0.5rem;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.checkbox:checked + .checkmark {
-  background: var(--theme-color);
-}
-
-.checkbox:checked + .checkmark::after {
-  content: '';
-  position: absolute;
-  left: 0.1875rem;
-  top: 0.0625rem;
-  width: 0.3125rem;
-  height: 0.625rem;
-  border: solid #000;
-  border-width: 0 0.125rem 0.125rem 0;
-  transform: rotate(45deg);
-}
-
-.forgot-pass {
-  color: var(--theme-color);
-  font-size: 0.75rem;
-  text-decoration: none;
-  transition: opacity 0.3s ease;
-}
-
-.forgot-pass:hover {
-  opacity: 0.7;
-  text-decoration: underline;
-}
-</style>vue - Fixed
+src/components/LoginMain.vue - Refactored
 Component form đăng nhập/đăng ký với màu input được fix
-Logic:
-- Toggle giữa tab Login và SignUp
-- Form validation và xử lý submit
-- Remember me functionality
-- Password visibility toggle
-- Fixed: form-input color và autofill styling
+Logic: Toggle giữa tab Login và SignUp, form validation và xử lý submit, remember me functionality
 -->
 <template>
   <div class="loginform">
@@ -284,7 +238,6 @@ export default {
 }
 </script>
 
-/* LoginMain.vue styles - Updated Colors */
 <style scoped>
 .loginform {
   width: 39.53%;
@@ -365,7 +318,6 @@ export default {
   color: var(--theme-color-20);
 }
 
-/* FIXED: Autofill styling để giữ màu theme */
 .form-input:-webkit-autofill,
 .form-input:-webkit-autofill:hover,
 .form-input:-webkit-autofill:focus,
@@ -378,14 +330,12 @@ export default {
   caret-color: var(--theme-color);
 }
 
-/* FIXED: Firefox autofill styling */
 .form-input:-moz-autofill {
   background-color: #2B2D42 !important;
   color: var(--theme-color) !important;
   border: 0.125rem solid var(--theme-color) !important;
 }
 
-/* FIXED: Ensure autofill text color matches theme */
 .form-input:-webkit-autofill::first-line {
   color: var(--theme-color) !important;
 }

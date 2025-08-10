@@ -291,8 +291,8 @@ export default {
 .add-interest-btn {
   width: 1.5rem;
   height: 1.5rem;
-  background: rgba(255, 235, 124, 0.1);
-  border: 1px solid rgba(255, 235, 124, 0.3);
+  background: var(--theme-color-10);
+  border: 1px solid var(--theme-color-20);
   border-radius: 50%;
   cursor: pointer;
   display: flex;
@@ -337,8 +337,8 @@ export default {
   align-items: center;
   gap: 0.25rem;
   padding: 0.25rem 0.5rem;
-  background: rgba(255, 235, 124, 0.15);
-  border: 1px solid rgba(255, 235, 124, 0.4);
+  background: var(--theme-color-10);
+  border: 1px solid var(--theme-color-20);
   border-radius: 1rem;
   font-size: 0.625rem;
   font-weight: 500;
@@ -354,7 +354,7 @@ export default {
 .remove-interest {
   background: none;
   border: none;
-  color: rgba(255, 235, 124, 0.8);
+  color: var(--theme-color-10);
   cursor: pointer;
   font-size: 0.875rem;
   font-weight: bold;
