@@ -182,7 +182,7 @@ export default {
 
     // Constants
     const MAX_FILES = 10
-    const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+    const MAX_FILE_SIZE = 1000 * 1024 * 1024 // 1000MB
 
     // Computed properties
     const canPost = computed(() => {

@@ -147,7 +147,7 @@ export default {
   loginCancelled: 'Login cancelled!',
   popupBlocked: 'Popup blocked! Please allow popups.',
 
-  fileTooLarge: 'File too large! Maximum 10MB.',
+  fileTooLarge: 'File too large! Maximum 1000MB.',
   invalidFileType: 'Invalid file type! Only images/videos allowed.',
   tooManyFiles: 'Too many files! Maximum 10 media allowed.',
   missingCaption: 'Please enter a caption!',

@@ -147,7 +147,7 @@ export default {
   loginCancelled: 'Đăng nhập bị hủy!',
   popupBlocked: 'Popup bị chặn! Vui lòng cho phép popup.',
 
-  fileTooLarge: 'File quá lớn! Tối đa 10MB.',
+  fileTooLarge: 'File quá lớn! Tối đa 1000MB.',
   invalidFileType: 'Loại file không hợp lệ! Chỉ chấp nhận ảnh/video.',
   tooManyFiles: 'Quá nhiều files! Tối đa 10 media.',
   missingCaption: 'Vui lòng nhập chú thích!',
