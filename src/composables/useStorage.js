@@ -1,7 +1,7 @@
 /*
 src/composables/useStorage.js - Refactored
-Composable quản lý localStorage với safe operations
-Logic: Centralize localStorage với error handling và remember me functionality
+Quản lý localStorage với safe operations
+Logic: Centralize localStorage với error handling
 */
 import { ref } from 'vue'
 
@@ -9,12 +9,12 @@ export function useStorage() {
   const rememberedEmail = ref('')
   const rememberMe = ref(false)
 
-  // Safe localStorage operations với error handling
+  // Safe localStorage operations
   const setItem = (key, value) => {
     try {
       localStorage.setItem(key, JSON.stringify(value))
       return true
-    } catch (error) {
+    } catch {
       return false
     }
   }
@@ -23,7 +23,7 @@ export function useStorage() {
     try {
       const item = localStorage.getItem(key)
       return item ? JSON.parse(item) : defaultValue
-    } catch (error) {
+    } catch {
       return defaultValue
     }
   }
@@ -32,7 +32,7 @@ export function useStorage() {
     try {
       localStorage.removeItem(key)
       return true
-    } catch (error) {
+    } catch {
       return false
     }
   }

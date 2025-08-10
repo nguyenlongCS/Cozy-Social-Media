@@ -1,7 +1,7 @@
 /*
 src/composables/useDataSync.js - Refactored
-Data synchronization system cho user info across collections
-Logic: Batch sync user avatar và username khi profile update
+Đồng bộ dữ liệu user across collections khi profile update
+Logic: Batch sync user avatar và username
 */
 import { ref } from 'vue'
 import { 
@@ -25,15 +25,12 @@ export function useDataSync() {
 
   // Main sync function
   const syncUserDataAcrossCollections = async (userId, updatedUserData) => {
-    if (!userId || !updatedUserData) {
-      throw new Error('MISSING_USER_OR_DATA')
-    }
+    if (!userId || !updatedUserData) throw new Error('MISSING_USER_OR_DATA')
 
     isSyncing.value = true
     syncProgress.value = 0
 
     try {
-      // Extract syncable data
       const syncData = {}
       if (updatedUserData.UserName) syncData.UserName = updatedUserData.UserName
       if (updatedUserData.Avatar !== undefined) syncData.Avatar = updatedUserData.Avatar
@@ -42,7 +39,6 @@ export function useDataSync() {
         return { success: true, message: 'NO_DATA_TO_SYNC' }
       }
 
-      // Collections to sync
       const collections = [
         { name: 'posts', field: 'UserID' },
         { name: 'comments', field: 'UserID' },
@@ -58,9 +54,7 @@ export function useDataSync() {
         totalDocs += count
       }
 
-      if (totalDocs === 0) {
-        return { success: true, message: 'NO_DOCUMENTS_TO_SYNC' }
-      }
+      if (totalDocs === 0) return { success: true, message: 'NO_DOCUMENTS_TO_SYNC' }
 
       // Sync each collection
       for (const collectionInfo of collections) {
@@ -77,15 +71,7 @@ export function useDataSync() {
       }
 
       syncProgress.value = 100
-      return { 
-        success: true, 
-        message: 'SYNC_COMPLETED',
-        totalDocs,
-        syncedData: syncData
-      }
-
-    } catch (error) {
-      throw error
+      return { success: true, message: 'SYNC_COMPLETED', totalDocs, syncedData: syncData }
     } finally {
       isSyncing.value = false
     }
@@ -94,19 +80,17 @@ export function useDataSync() {
   // Helper functions
   const getDocumentCount = async (collectionName, userIdField, userId) => {
     try {
-      const collectionRef = collection(db, collectionName)
-      const q = query(collectionRef, where(userIdField, '==', userId))
+      const q = query(collection(db, collectionName), where(userIdField, '==', userId))
       const querySnapshot = await getDocs(q)
       return querySnapshot.size
-    } catch (error) {
+    } catch {
       return 0
     }
   }
 
   const syncCollection = async (collectionName, userIdField, userId, syncData, progressCallback) => {
     try {
-      const collectionRef = collection(db, collectionName)
-      const q = query(collectionRef, where(userIdField, '==', userId))
+      const q = query(collection(db, collectionName), where(userIdField, '==', userId))
       const querySnapshot = await getDocs(q)
       
       const documents = querySnapshot.docs
@@ -128,26 +112,14 @@ export function useDataSync() {
           progressCallback(batchDocs.length)
         }
       }
-
     } catch (error) {
       throw error
     }
   }
 
-  // Specific sync methods
-  const syncUserAvatar = async (userId, newAvatarUrl) => {
-    return await syncUserDataAcrossCollections(userId, { Avatar: newAvatarUrl })
-  }
-
-  const syncUserName = async (userId, newUserName) => {
-    return await syncUserDataAcrossCollections(userId, { UserName: newUserName })
-  }
-
   return {
     isSyncing,
     syncProgress,
-    syncUserDataAcrossCollections,
-    syncUserAvatar,
-    syncUserName
+    syncUserDataAcrossCollections
   }
 }

@@ -1,7 +1,7 @@
 /*
 src/composables/useUsers.js - Refactored
-Users collection management với smart avatar handling
-Logic: CRUD operations với avatar preservation và data sync integration
+Quản lý users collection với smart avatar handling và data sync
+Logic: CRUD operations với avatar preservation và sync integration
 */
 import { ref } from 'vue'
 import { 
@@ -23,14 +23,21 @@ const db = getFirestore(app, 'social-media-db')
 
 export function useUsers() {
   const isLoading = ref(false)
-  const error = ref(null)
   const { syncUserDataAcrossCollections, isSyncing } = useDataSync()
 
-  // Smart sync user từ Firebase Auth
-  const syncUserToFirestore = async (firebaseUser) => {
-    if (!firebaseUser) {
-      throw new Error('NO_USER_PROVIDED')
+  // Helper: get provider from Firebase user
+  const getProviderFromFirebaseUser = (firebaseUser) => {
+    if (firebaseUser.providerData?.length > 0) {
+      const providerId = firebaseUser.providerData[0].providerId
+      if (providerId === 'google.com') return 'google'
+      if (providerId === 'facebook.com') return 'facebook'
     }
+    return 'email'
+  }
+
+  // Sync user to Firestore with smart avatar handling
+  const syncUserToFirestore = async (firebaseUser) => {
+    if (!firebaseUser) throw new Error('NO_USER_PROVIDED')
 
     try {
       const userRef = doc(db, 'users', firebaseUser.uid)
@@ -39,13 +46,12 @@ export function useUsers() {
       if (existingDoc.exists()) {
         const existingData = existingDoc.data()
         
-        // Update data với smart avatar handling
         const updateData = {
           SignedIn: new Date(),
           Email: firebaseUser.email || existingData.Email
         }
 
-        // Chỉ update avatar nếu user chưa có custom avatar
+        // Smart avatar handling
         const hasCustomAvatar = existingData.HasCustomAvatar === true
         const hasNoAvatar = !existingData.Avatar
 
@@ -74,46 +80,23 @@ export function useUsers() {
 
       await setDoc(userRef, newUserData)
       return newUserData
-
-    } catch (err) {
+    } catch {
       return null
     }
   }
 
-  // Helper function to determine provider
-  const getProviderFromFirebaseUser = (firebaseUser) => {
-    if (firebaseUser.providerData && firebaseUser.providerData.length > 0) {
-      const providerId = firebaseUser.providerData[0].providerId
-      if (providerId === 'google.com') return 'google'
-      if (providerId === 'facebook.com') return 'facebook'
-    }
-    return 'email'
-  }
-
   // Get user by ID
   const getUserById = async (userId) => {
-    if (!userId) {
-      throw new Error('NO_USER_ID_PROVIDED')
-    }
+    if (!userId) throw new Error('NO_USER_ID_PROVIDED')
 
     isLoading.value = true
-    error.value = null
-
     try {
       const userRef = doc(db, 'users', userId)
       const userDoc = await getDoc(userRef)
 
-      if (!userDoc.exists()) {
-        return null
-      }
+      if (!userDoc.exists()) return null
 
-      return {
-        id: userDoc.id,
-        ...userDoc.data()
-      }
-    } catch (err) {
-      error.value = err
-      throw err
+      return { id: userDoc.id, ...userDoc.data() }
     } finally {
       isLoading.value = false
     }
@@ -122,12 +105,9 @@ export function useUsers() {
   // Get users with pagination
   const getUsers = async (limitCount = 20) => {
     isLoading.value = true
-    error.value = null
-
     try {
-      const usersCollection = collection(db, 'users')
       const q = query(
-        usersCollection,
+        collection(db, 'users'),
         orderBy('Created', 'desc'),
         limit(limitCount)
       )
@@ -136,73 +116,16 @@ export function useUsers() {
       const users = []
       
       querySnapshot.forEach((doc) => {
-        users.push({
-          id: doc.id,
-          ...doc.data()
-        })
+        users.push({ id: doc.id, ...doc.data() })
       })
 
       return users
-    } catch (err) {
-      error.value = err
-      throw err
     } finally {
       isLoading.value = false
     }
   }
 
-  // Update user profile với data sync
-  const updateUserProfile = async (userId, profileData) => {
-    if (!userId || !profileData) {
-      throw new Error('MISSING_USER_OR_PROFILE_DATA')
-    }
-
-    isLoading.value = true
-    error.value = null
-
-    try {
-      // Get current user data
-      const currentUserData = await getUserById(userId)
-      if (!currentUserData) {
-        throw new Error('USER_NOT_FOUND')
-      }
-
-      const userRef = doc(db, 'users', userId)
-      
-      // Prepare update data
-      const updateData = {
-        ...profileData,
-        UpdatedAt: new Date()
-      }
-
-      // Mark custom avatar if uploaded
-      if (profileData.Avatar !== undefined) {
-        updateData.HasCustomAvatar = true
-      }
-
-      // Update user profile
-      await setDoc(userRef, updateData, { merge: true })
-
-      // Check if data sync needed
-      const needsSync = shouldSyncData(currentUserData, updateData)
-      
-      if (needsSync.shouldSync) {
-        // Background sync - không chờ để không chậm UX
-        syncUserDataAcrossCollections(userId, needsSync.changes).catch(() => {
-          // Silent fail
-        })
-      }
-
-      return await getUserById(userId)
-    } catch (err) {
-      error.value = err
-      throw err
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  // Helper to check if sync needed
+  // Helper: check if data sync needed
   const shouldSyncData = (currentData, newData) => {
     const changes = {}
     let shouldSync = false
@@ -220,17 +143,49 @@ export function useUsers() {
     return { shouldSync, changes }
   }
 
+  // Update user profile with data sync
+  const updateUserProfile = async (userId, profileData) => {
+    if (!userId || !profileData) throw new Error('MISSING_USER_OR_PROFILE_DATA')
+
+    isLoading.value = true
+    try {
+      const currentUserData = await getUserById(userId)
+      if (!currentUserData) throw new Error('USER_NOT_FOUND')
+
+      const userRef = doc(db, 'users', userId)
+      
+      const updateData = {
+        ...profileData,
+        UpdatedAt: new Date()
+      }
+
+      // Mark custom avatar if uploaded
+      if (profileData.Avatar !== undefined) {
+        updateData.HasCustomAvatar = true
+      }
+
+      await setDoc(userRef, updateData, { merge: true })
+
+      // Background sync if needed
+      const needsSync = shouldSyncData(currentUserData, updateData)
+      if (needsSync.shouldSync) {
+        syncUserDataAcrossCollections(userId, needsSync.changes).catch(() => {})
+      }
+
+      return await getUserById(userId)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   // Search users by name
   const searchUsersByName = async (searchTerm, limitCount = 10) => {
     if (!searchTerm) return []
 
     isLoading.value = true
-    error.value = null
-
     try {
-      const usersCollection = collection(db, 'users')
       const q = query(
-        usersCollection,
+        collection(db, 'users'),
         where('UserName', '>=', searchTerm),
         where('UserName', '<=', searchTerm + '\uf8ff'),
         orderBy('UserName'),
@@ -241,15 +196,11 @@ export function useUsers() {
       const users = []
       
       querySnapshot.forEach((doc) => {
-        users.push({
-          id: doc.id,
-          ...doc.data()
-        })
+        users.push({ id: doc.id, ...doc.data() })
       })
 
       return users
-    } catch (err) {
-      error.value = err
+    } catch {
       return []
     } finally {
       isLoading.value = false
@@ -259,7 +210,6 @@ export function useUsers() {
   return {
     isLoading,
     isSyncing,
-    error,
     syncUserToFirestore,
     getUserById,
     getUsers,

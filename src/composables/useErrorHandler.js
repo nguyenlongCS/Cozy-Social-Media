@@ -1,17 +1,16 @@
 /*
-src/composables/useErrorHandler.js - Updated with Messages Error Handling
-Centralized error handling với consistent messaging
-Logic: Map error codes to message keys với context-specific handling
-Added: Messages-related error contexts và mapping
+src/composables/useErrorHandler.js - Refactored
+Xử lý lỗi tập trung với message mapping
+Logic: Map error codes thành message keys với context-specific handling
 */
 import { useLanguage } from './useLanguage'
 
 export function useErrorHandler() {
   const { getText } = useLanguage()
 
-  // Error code mapping
+  // Error code to message key mapping
   const errorCodeMap = {
-    // Authentication errors
+    // Auth errors
     'MISSING_FIELDS': 'fillAllFields',
     'PASSWORD_MISMATCH': 'passwordMismatch',
     'WEAK_PASSWORD': 'weakPassword',
@@ -52,31 +51,30 @@ export function useErrorHandler() {
     'INVALID_REQUEST_ID': 'messageFailed'
   }
 
-  // Context-specific error handling
-  const contextErrorMap = {
-    signup: { 'defaultError': 'signupFailed' },
-    signup: { 'defaultError': 'signupFailed' },
-    google: { 'defaultError': 'googleLoginFailed' },
-    facebook: { 'defaultError': 'facebookLoginFailed' },
-    reset: { 'defaultError': 'resetEmailFailed' },
-    logout: { 'defaultError': 'logoutFailed' },
-    post: { 'defaultError': 'postFailed' },
-    upload: { 'defaultError': 'postFailed' },
-    profile: { 'defaultError': 'profileUpdateFailed' },
-    like: { 'defaultError': 'likeFailed' },
-    comment: { 'defaultError': 'commentFailed' },
-    sendRequest: { 'defaultError': 'sendRequest' },
-    acceptRequest: { 'defaultError': 'acceptRequest' },
-    unfriend: { 'defaultError': 'unfriend' },
-    // Messages contexts
-    message: { 'defaultError': 'messageFailed' },
-    loadMessages: { 'defaultError': 'loadMessagesFailed' },
-    loadConversations: { 'defaultError': 'loadConversationsFailed' },
-    search: { 'defaultError': 'searchFailed' }
+  // Context-specific default errors
+  const contextDefaults = {
+    login: 'loginFailed',
+    signup: 'signupFailed',
+    google: 'googleLoginFailed',
+    facebook: 'facebookLoginFailed',
+    reset: 'resetEmailFailed',
+    logout: 'logoutFailed',
+    post: 'postFailed',
+    upload: 'postFailed',
+    profile: 'profileUpdateFailed',
+    like: 'likeFailed',
+    comment: 'commentFailed',
+    sendRequest: 'sendRequest',
+    acceptRequest: 'acceptRequest',
+    unfriend: 'unfriend',
+    message: 'messageFailed',
+    loadMessages: 'loadMessagesFailed',
+    loadConversations: 'loadConversationsFailed',
+    search: 'searchFailed'
   }
 
-  // Success message mapping
-  const successKeyMap = {
+  // Success message keys
+  const successKeys = {
     login: 'loginSuccess',
     signup: 'signupSuccess',
     logout: 'logoutSuccess',
@@ -90,28 +88,25 @@ export function useErrorHandler() {
     friendRequestAccepted: 'friendRequestAccepted',
     friendRequestRejected: 'friendRequestRejected',
     unfriend: 'unfriend',
-    // Messages success
     message: 'messageSuccess'
   }
 
+  // Handle error
   const handleError = (error, context = 'login') => {
     const errorCode = error.code || error.message || 'defaultError'
-    const messageKey = errorCodeMap[errorCode] || 'defaultError'
-    
-    // Apply context-specific mapping
-    const contextMap = contextErrorMap[context]
-    const finalMessageKey = (contextMap && contextMap[messageKey]) || messageKey
-    
-    return getText(finalMessageKey)
+    const messageKey = errorCodeMap[errorCode] || contextDefaults[context] || 'defaultError'
+    return getText(messageKey)
   }
 
+  // Show error alert
   const showError = (error, context = 'login') => {
     const message = handleError(error, context)
     alert(message)
   }
 
+  // Show success alert
   const showSuccess = (context = 'login') => {
-    const messageKey = successKeyMap[context] || 'loginSuccess'
+    const messageKey = successKeys[context] || 'loginSuccess'
     const message = getText(messageKey)
     alert(message)
   }
