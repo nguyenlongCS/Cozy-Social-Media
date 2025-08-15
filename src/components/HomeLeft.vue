@@ -1,17 +1,18 @@
 <!--
-src/components/HomeLeft.vue - Refactored
+src/components/HomeLeft.vue - Updated with Discover Button
 Component sidebar bên trái trang chủ với danh sách bạn bè
 Logic: 
 - Menu buttons với authentication check
 - Hiển thị 5 bạn bè đầu tiên với avatar và tên
 - Button "Toàn bộ bạn bè" chuyển đến trang /friends
+- Added: Button "Khám phá" chuyển đến trang /discover
 -->
 <template>
   <div class="menu">
     <button class="btn" @click="handleCreatePost">
       {{ getText('createPost') }}
     </button>
-    <button class="btn">
+    <button class="btn" @click="goToDiscover">
       {{ getText('explore') }}
     </button>
     <button class="btn">
@@ -86,6 +87,9 @@ export default {
     }
 
     const goToFriends = () => router.push('/friends')
+    
+    // Navigate to discover page
+    const goToDiscover = () => router.push('/discover')
 
     const loadFriendsList = async () => {
       if (!user.value) {
@@ -125,7 +129,8 @@ export default {
       isLoading,
       getText,
       handleCreatePost,
-      goToFriends
+      goToFriends,
+      goToDiscover
     }
   }
 }

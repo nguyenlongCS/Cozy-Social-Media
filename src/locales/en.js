@@ -1,4 +1,4 @@
-// locales/en.js
+// locales/en.js - Updated with Discover texts
 export default {
   // Authentication
   login: 'Login',
@@ -19,6 +19,10 @@ export default {
   search: 'Search...',
   home: 'Home',
   profile: 'Profile',
+
+  // Discover Feature
+  noPostsToDiscover: 'No posts to discover',
+  trending: 'Trending',
 
   // Friends Feature
   friends: 'Friends List',
@@ -175,6 +179,7 @@ export default {
   hidePostFailed: 'Failed to hide post!',
   downloadMediaFailed: 'Download failed!',
   reportComingSoon: 'Report feature coming soon!',
+  discover: 'Failed to load discover page!',
 
   defaultError: 'An error occurred!'
 }

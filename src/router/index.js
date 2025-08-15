@@ -1,7 +1,7 @@
 /*
-src/router/index.js - Updated with Messages Route
+src/router/index.js - Updated with Discover Route
 Router configuration với base URL và fallback routing
-Added: /messages route cho chức năng nhắn tin
+Added: /discover route cho trang khám phá
 */
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/view/Home.vue'
@@ -10,6 +10,7 @@ import CreatePost from '@/view/CreatePost.vue'
 import Profile from '@/view/Profile.vue'
 import Friends from '@/view/Friends.vue'
 import Messages from '@/view/Messages.vue'
+import Discover from '@/view/Discover.vue'
 
 const routes = [
   {
@@ -41,6 +42,11 @@ const routes = [
     path: '/messages',
     name: 'Messages',
     component: Messages
+  },
+  {
+    path: '/discover',
+    name: 'Discover',
+    component: Discover
   },
   // Catch-all route for 404 errors
   {

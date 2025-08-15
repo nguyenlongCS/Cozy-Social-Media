@@ -1,4 +1,4 @@
-// locales/vi.js
+// locales/vi.js - Updated with Discover texts
 export default {
   // Authentication
   login: 'Đăng nhập',
@@ -19,6 +19,10 @@ export default {
   search: 'Tìm kiếm...',
   home: 'Trang chủ',
   profile: 'Hồ sơ',
+
+  // Discover Feature
+  noPostsToDiscover: 'Không có bài viết nào để khám phá',
+  trending: 'Thịnh hành',
 
   // Friends Feature
   friends: 'Danh Sách Bạn Bè',
@@ -175,6 +179,7 @@ export default {
   hidePostFailed: 'Ẩn bài viết thất bại!',
   downloadMediaFailed: 'Tải xuống thất bại!',
   reportComingSoon: 'Tính năng báo cáo sắp ra mắt!',
+  discover: 'Không thể tải trang khám phá!',
 
   defaultError: 'Có lỗi xảy ra!'
 }
