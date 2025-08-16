@@ -232,7 +232,7 @@ export default {
 }
 
 .section-counter.highlight {
-  background: var(--theme-color);
+  background: rgba(255, 0, 0, 0.9);
   color: #2B2D42;
   animation: pulse 2s infinite;
 }
