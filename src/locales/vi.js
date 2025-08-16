@@ -100,6 +100,8 @@ export default {
   posts: 'Danh sách bài viết',
   postsComingSoon: 'Tính năng sắp ra mắt',
   friendsComingSoon: 'Tính năng sắp ra mắt',
+  loginRequired: 'Yêu cầu đăng nhập',
+  loginToViewProfile: 'Đăng nhập để xem hồ sơ',
 
   // Messages
   noMessagesYet: 'Chưa có tin nhắn nào',

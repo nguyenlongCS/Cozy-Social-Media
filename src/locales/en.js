@@ -100,6 +100,8 @@ export default {
   posts: 'Posts',
   postsComingSoon: 'Coming Soon',
   friendsComingSoon: 'Coming Soon',
+  loginRequired: 'Login Required',
+  loginToViewProfile: 'Login To View Profile',
 
    // Messages
   noMessagesYet: 'No messages yet',

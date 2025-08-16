@@ -43,7 +43,7 @@ const CONFIG = {
   // Content limits
   MAX_CAPTION_LENGTH: 500,
   MAX_TITLE_LENGTH: 200,
-  ARTICLE_AGE_HOURS: 24, // Giảm xuống 24 giờ để có nội dung fresh hơn
+  ARTICLE_AGE_HOURS: 72, 
   RECENT_POSTS_CHECK: 40,
   
   // DIVERSIFIED CATEGORIES - Balanced mix of topics
