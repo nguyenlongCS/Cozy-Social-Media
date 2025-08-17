@@ -17,6 +17,8 @@ Logic: 5 navigation buttons với unread badges và notification panel dropdown
     
     <button v-if="!isLoginPage" class="home-button btn" @click="goToHome"></button>
     
+    <button v-if="!isLoginPage" class="news-button btn" @click="goToNews"></button>
+    
     <!-- Mess button với unread badge -->
     <div v-if="!isLoginPage" class="mess-button-container">
       <button class="mess-button btn" @click="goToMessages"></button>
@@ -114,6 +116,7 @@ export default {
       setTimeout(loadFriendRequestsCount, 500)
     }
     const goToMessages = () => router.push('/messages')
+    const goToNews = () => router.push('/news')
 
     // Notification panel methods
     const toggleNotificationPanel = () => {
@@ -182,6 +185,7 @@ export default {
       goToProfile,
       goToFriends,
       goToMessages,
+      goToNews,
       toggleNotificationPanel,
       closeNotificationPanel,
       handleNotificationClick
@@ -202,7 +206,7 @@ export default {
   border-radius: 0.9375rem;
 }
 
-.home-button, .profile-button {
+.home-button, .profile-button, .news-button {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
@@ -241,12 +245,17 @@ export default {
   background-repeat: no-repeat;
 }
 
+.news-button {
+  background: url('@/icons/news.png') center/1.5rem var(--theme-color);
+  background-repeat: no-repeat;
+}
+
 .notification-button {
   background: url('@/icons/notification.png') center/1.5rem var(--theme-color);
   background-repeat: no-repeat;
 }
 
-.home-button:hover, .profile-button:hover, .mess-button:hover, .friends-button:hover, .notification-button:hover {
+.home-button:hover, .profile-button:hover, .news-button:hover, .mess-button:hover, .friends-button:hover, .notification-button:hover {
   transform: scale(1.15);
   background-color: #2B2D42;
 }

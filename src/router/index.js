@@ -1,7 +1,5 @@
 /*
-src/router/index.js - Updated with Discover Route
-Router configuration với base URL và fallback routing
-Added: /discover route cho trang khám phá
+src/router/index.js
 */
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/view/Home.vue'
@@ -11,6 +9,7 @@ import Profile from '@/view/Profile.vue'
 import Friends from '@/view/Friends.vue'
 import Messages from '@/view/Messages.vue'
 import Discover from '@/view/Discover.vue'
+import News from '@/view/News.vue'
 
 const routes = [
   {
@@ -42,6 +41,11 @@ const routes = [
     path: '/messages',
     name: 'Messages',
     component: Messages
+  },
+  {
+    path: '/news',
+    name: 'News',
+    component: News
   },
   {
     path: '/discover',
