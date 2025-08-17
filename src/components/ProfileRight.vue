@@ -96,7 +96,7 @@ Logic:
 
     <!-- Friends Section -->
     <div class="friends-section">
-      <h3 class="section-title">{{ getText('friends') }}</h3>
+      <h3 class="section-title">{{ getText('recentActivity') }}</h3>
       <div class="placeholder-content">
         <p class="placeholder-text">{{ getText('friendsComingSoon') }}</p>
       </div>

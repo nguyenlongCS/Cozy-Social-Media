@@ -25,7 +25,7 @@ export default {
   trending: 'Trending',
 
   // Friends Feature
-  friends: 'Recent Activity',
+  friends: 'Danh Sách Bạn Bè',
   suggestions: 'Friend Suggestions',
   friendRequests: 'Friend Requests',
   noFriendsYet: 'No friends yet',
@@ -102,6 +102,8 @@ export default {
   friendsComingSoon: 'Coming Soon',
   loginRequired: 'Login Required',
   loginToViewProfile: 'Login To View Profile',
+  recentActivity: 'Recent Activity',
+
 
    // Messages
   noMessagesYet: 'No messages yet',

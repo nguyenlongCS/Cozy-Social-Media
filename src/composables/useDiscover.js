@@ -130,7 +130,7 @@ export function useDiscover() {
       
       // Lấy tất cả posts có likes >= 1 (loại bỏ threshold cứng)
       const trendingWeeklyPosts = weeklyPosts
-        .filter(post => post.likes >= 1) // Chỉ cần ít nhất 1 like
+        .filter(post => post.likes >= 5) // Chỉ cần ít nhất 5 like
         .slice(0, maxTrendingPosts) // Lấy top posts
       
       const trendingPostIds = new Set(trendingWeeklyPosts.map(post => post.PostID))

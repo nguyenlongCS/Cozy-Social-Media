@@ -25,7 +25,7 @@ export default {
   trending: 'Thịnh hành',
 
   // Friends Feature
-  friends: 'Hoạt động gần đây',
+  friends: 'Danh Sách Bạn Bè',
   suggestions: 'Gợi ý kết bạn',
   friendRequests: 'Lời mời kết bạn',
   noFriendsYet: 'Chưa có bạn bè nào',
@@ -102,6 +102,7 @@ export default {
   friendsComingSoon: 'Tính năng sắp ra mắt',
   loginRequired: 'Yêu cầu đăng nhập',
   loginToViewProfile: 'Đăng nhập để xem hồ sơ',
+  recentActivity: 'Hoạt Động Gần Đây',
 
   // Messages
   noMessagesYet: 'Chưa có tin nhắn nào',
