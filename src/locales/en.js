@@ -117,6 +117,11 @@ export default {
   online: 'online',
   you: 'you',
 
+  // Notifications
+  notifications: 'Notifications',
+  noNotifications: 'No notifications yet',
+  markAllRead: 'Mark all read',
+
   // Time formats
   justNow: 'Just now',
   minutesAgo: 'm ago',

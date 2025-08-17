@@ -1,7 +1,7 @@
 /*
-src/composables/useFriends.js - Refactored
-Quản lý hệ thống bạn bè: gửi/nhận lời mời, chấp nhận/từ chối, gợi ý kết bạn
-Logic: CRUD operations cho friends collection với status tracking
+src/composables/useFriends.js - Tích hợp Notifications
+Quản lý hệ thống bạn bè: gửi/nhận lời mời, chấp nhận/từ chối, gợi ý kết bạn với notifications
+Logic: CRUD operations cho friends collection với status tracking và notifications
 */
 import { ref } from 'vue'
 import { 
@@ -11,6 +11,7 @@ import {
   updateDoc,
   deleteDoc,
   doc,
+  getDoc,
   query,
   where,
   getDocs,
@@ -20,12 +21,14 @@ import {
 } from 'firebase/firestore'
 import app from '@/firebase/config'
 import { useUsers } from './useUsers'
+import { useNotifications } from './useNotifications'
 
 const db = getFirestore(app, 'social-media-db')
 
 export function useFriends() {
   const isLoading = ref(false)
-  const { getUsers } = useUsers()
+  const { getUsers, getUserById } = useUsers()
+  const { createFriendAcceptNotification } = useNotifications()
 
   // Send friend request
   const sendFriendRequest = async (senderId, receiverId) => {
@@ -69,7 +72,42 @@ export function useFriends() {
 
   // Accept friend request
   const acceptFriendRequest = async (requestId) => {
-    return updateRequestStatus(requestId, 'ACCEPTED')
+    if (!requestId) throw new Error('INVALID_REQUEST_ID')
+    
+    isLoading.value = true
+    try {
+      // Get request info trước khi update
+      const requestRef = doc(db, 'friends', requestId)
+      const requestDoc = await getDoc(requestRef)
+      
+      if (!requestDoc.exists()) {
+        throw new Error('REQUEST_NOT_FOUND')
+      }
+      
+      const requestData = requestDoc.data()
+      
+      // Update status
+      await updateDoc(requestRef, { 
+        status: 'ACCEPTED', 
+        updatedAt: new Date() 
+      })
+      
+      // Tạo notification cho sender
+      try {
+        const accepterInfo = await getUserById(requestData.receiverId)
+        await createFriendAcceptNotification(
+          requestData.senderId,
+          requestData.receiverId,
+          accepterInfo?.UserName || 'Unknown User'
+        )
+      } catch (error) {
+        // Silent fail
+      }
+      
+      return true
+    } finally {
+      isLoading.value = false
+    }
   }
 
   // Reject friend request

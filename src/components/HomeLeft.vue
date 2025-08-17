@@ -166,7 +166,7 @@ export default {
   width: 11.25rem;
   padding: 0.75rem;
   background: #2B2D42;
-  border: 1px solid var(--theme-color);
+  border: 2px solid var(--theme-color);
   border-radius: 0.5rem;
 }
 

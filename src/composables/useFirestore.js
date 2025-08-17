@@ -1,7 +1,7 @@
 /*
-src/composables/useFirestore.js - Refactored  
-Quản lý Firestore operations và Storage uploads
-Logic: CRUD cho posts, comments, likes với auto-tagging
+src/composables/useFirestore.js - Tích hợp Notifications
+Quản lý Firestore operations và Storage uploads với notifications
+Logic: CRUD cho posts, comments, likes với auto-tagging và notifications
 */
 import { ref } from 'vue'
 import { 
@@ -26,6 +26,7 @@ import {
 } from 'firebase/storage'
 import app from '@/firebase/config'
 import { useUsers } from './useUsers'
+import { useNotifications } from './useNotifications'
 import { classifyNewPost } from '@/services/postClassificationService'
 
 const db = getFirestore(app, 'social-media-db')
@@ -34,6 +35,10 @@ const storage = getStorage(app)
 export function useFirestore() {
   const isLoading = ref(false)
   const { getUserById } = useUsers()
+  const {
+    createLikeNotification,
+    createCommentNotification
+  } = useNotifications()
 
   // Helper: populate user info
   const populateUserInfo = async (userId) => {
@@ -254,6 +259,19 @@ export function useFirestore() {
 
     await addDoc(collection(db, 'likes'), likeData)
     await updatePostLikesCount(postId, 1)
+    
+    // Tạo notification cho post owner
+    try {
+      const postRef = doc(db, 'posts', postId)
+      const postDoc = await getDoc(postRef)
+      if (postDoc.exists()) {
+        const postData = postDoc.data()
+        await createLikeNotification(postId, postData.UserID, userId, userInfo.UserName)
+      }
+    } catch (error) {
+      // Silent fail
+    }
+    
     return { success: true }
   }
 
@@ -302,6 +320,23 @@ export function useFirestore() {
 
       const docRef = await addDoc(collection(db, 'comments'), commentToSave)
       await updatePostCommentsCount(commentData.postId, 1)
+
+      // Tạo notification cho post owner
+      try {
+        const postRef = doc(db, 'posts', commentData.postId)
+        const postDoc = await getDoc(postRef)
+        if (postDoc.exists()) {
+          const postData = postDoc.data()
+          await createCommentNotification(
+            commentData.postId, 
+            postData.UserID, 
+            commentData.authorId, 
+            userInfo.UserName
+          )
+        }
+      } catch (error) {
+        // Silent fail
+      }
 
       return { CommentID: docRef.id, ...commentToSave }
     } finally {

@@ -1,7 +1,7 @@
 <!--
-src/components/NavMid.vue - Refactored
-Component navigation giữa header với unread messages và friend requests badges
-Logic: 5 navigation buttons với unread badges cho messages và friends
+src/components/NavMid.vue - Tích hợp Notifications
+Component navigation giữa header với unread messages, friend requests và notifications badges
+Logic: 5 navigation buttons với unread badges và notification panel dropdown
 -->
 <template>
   <div class="nav-mid">
@@ -25,7 +25,24 @@ Logic: 5 navigation buttons với unread badges cho messages và friends
       </div>
     </div>
     
-    <button v-if="!isLoginPage" class="notification-button btn"></button>
+    <!-- Notification button với dropdown panel -->
+    <div v-if="!isLoginPage" class="notification-button-container">
+      <button 
+        class="notification-button btn" 
+        @click="toggleNotificationPanel"
+        :class="{ active: showNotificationPanel }"
+      ></button>
+      <div v-if="notificationUnreadCount > 0" class="unread-badge notification-badge">
+        {{ notificationUnreadCount > 99 ? '99+' : notificationUnreadCount }}
+      </div>
+      
+      <!-- Notification Panel -->
+      <NotificationPanel
+        v-if="showNotificationPanel"
+        @close="closeNotificationPanel"
+        @notification-clicked="handleNotificationClick"
+      />
+    </div>
   </div>
 </template>
 
@@ -35,9 +52,14 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuth } from '@/composables/useAuth'
 import { useMessages } from '@/composables/useMessages'
 import { useFriends } from '@/composables/useFriends'
+import { useNotifications } from '@/composables/useNotifications'
+import NotificationPanel from './NotificationPanel.vue'
 
 export default {
   name: 'NavMid',
+  components: {
+    NotificationPanel
+  },
   setup() {
     const router = useRouter()
     const route = useRoute()
@@ -49,9 +71,14 @@ export default {
       cleanupListeners
     } = useMessages()
     const { getFriendRequestsCount } = useFriends()
+    const { 
+      unreadCount: notificationUnreadCount,
+      initializeNotifications
+    } = useNotifications()
 
     const isLoginPage = computed(() => route.name === 'Login')
     const friendRequestsCount = ref(0)
+    const showNotificationPanel = ref(false)
 
     // Load friend requests count
     const loadFriendRequestsCount = async () => {
@@ -72,6 +99,7 @@ export default {
           await getConversations(user.value.uid)
           setupConversationsListener(user.value.uid)
           await loadFriendRequestsCount()
+          await initializeNotifications()
         } catch (error) {
           // Silent fail
         }
@@ -86,6 +114,34 @@ export default {
       setTimeout(loadFriendRequestsCount, 500)
     }
     const goToMessages = () => router.push('/messages')
+
+    // Notification panel methods
+    const toggleNotificationPanel = () => {
+      showNotificationPanel.value = !showNotificationPanel.value
+    }
+
+    const closeNotificationPanel = () => {
+      showNotificationPanel.value = false
+    }
+
+    const handleNotificationClick = (notification) => {
+      // Handle navigation based on notification type
+      if (notification.type === 'like' || notification.type === 'comment' || notification.type === 'friend_post') {
+        // Navigate to home and scroll to specific post if possible
+        router.push('/')
+      } else if (notification.type === 'friend_accept') {
+        // Navigate to friends page
+        router.push('/friends')
+      }
+    }
+
+    // Click outside handler
+    const handleClickOutside = (event) => {
+      const notificationContainer = event.target.closest('.notification-button-container')
+      if (!notificationContainer && showNotificationPanel.value) {
+        closeNotificationPanel()
+      }
+    }
 
     // Watchers
     watch(user, (newUser) => {
@@ -108,20 +164,27 @@ export default {
       if (user.value) {
         setupUserListeners()
       }
+      document.addEventListener('click', handleClickOutside)
     })
 
     onUnmounted(() => {
       cleanupListeners()
+      document.removeEventListener('click', handleClickOutside)
     })
 
     return {
       isLoginPage,
       totalUnreadCount,
       friendRequestsCount,
+      notificationUnreadCount,
+      showNotificationPanel,
       goToHome,
       goToProfile,
       goToFriends,
-      goToMessages
+      goToMessages,
+      toggleNotificationPanel,
+      closeNotificationPanel,
+      handleNotificationClick
     }
   }
 }
@@ -139,20 +202,20 @@ export default {
   border-radius: 0.9375rem;
 }
 
-.home-button, .profile-button, .notification-button {
+.home-button, .profile-button {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
 }
 
-.mess-button-container, .friends-button-container {
+.mess-button-container, .friends-button-container, .notification-button-container {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.mess-button, .friends-button {
+.mess-button, .friends-button, .notification-button {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
@@ -188,6 +251,11 @@ export default {
   background-color: #2B2D42;
 }
 
+.notification-button.active {
+  background-color: #2B2D42;
+  transform: scale(1.15);
+}
+
 .unread-badge {
   position: absolute;
   top: -0.25rem;
@@ -210,6 +278,11 @@ export default {
 }
 
 .friends-badge {
+  background: rgba(255, 0, 0, 0.9);
+  color: white;
+}
+
+.notification-badge {
   background: rgba(255, 0, 0, 0.9);
   color: white;
 }

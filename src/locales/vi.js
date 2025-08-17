@@ -117,6 +117,11 @@ export default {
   online: 'Đang hoạt động',
   you: 'Bạn',
 
+  // Notifications
+  notifications: 'Các thông báo',
+  noNotifications: 'Không có thông báo nào',
+  markAllRead: 'Đánh dấu tất cả đã đọc',
+
   // Time formats
   justNow: 'Vừa xong',
   minutesAgo: ' phút trước',
