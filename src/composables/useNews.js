@@ -2,10 +2,12 @@
 src/composables/useNews.js
 Quản lý tin tức từ NewsAPI
 Logic:
-- Fetch tin tức từ NewsAPI với categories khác nhau
-- Lấy 20 tin tức mới nhất và hot nhất
+- Fetch tin tức từ NewsAPI sử dụng environment variable
+- Lấy tin tức mới nhất từ multiple sources
+- Ưu tiên tin tức có hình ảnh (urlToImage)
 - Filter và validate articles
 - Handle errors và loading states
+- Kiểm tra API key từ .env file
 */
 
 import { ref } from 'vue'
@@ -15,8 +17,8 @@ export function useNews() {
   const isLoading = ref(false)
   const error = ref(null)
 
-  // NewsAPI configuration
-  const NEWS_API_KEY = 'YOUR_NEWS_API_KEY' // Cần thay bằng key thực
+  // NewsAPI configuration - sử dụng environment variable
+  const NEWS_API_KEY = import.meta.env.VITE_NEWS_API_KEY
   const NEWS_API_BASE_URL = 'https://newsapi.org/v2'
 
   // Load tin tức từ NewsAPI
@@ -25,7 +27,11 @@ export function useNews() {
     error.value = null
 
     try {
-      // Fetch top headlines
+      // Kiểm tra API key
+      if (!NEWS_API_KEY) {
+        throw new Error('NEWS_API_KEY not found in environment variables')
+      }
+
       const headlinesUrl = `${NEWS_API_BASE_URL}/top-headlines?country=${country}&category=${category}&pageSize=20&apiKey=${NEWS_API_KEY}`
       
       const response = await fetch(headlinesUrl)
@@ -40,9 +46,15 @@ export function useNews() {
         throw new Error(data.message || 'Failed to fetch news')
       }
 
-      // Filter và validate articles
+      // Filter và validate articles - ưu tiên articles có hình ảnh
       const validArticles = data.articles
         .filter(article => isValidArticle(article))
+        .sort((a, b) => {
+          // Ưu tiên articles có hình ảnh lên trước
+          if (a.urlToImage && !b.urlToImage) return -1
+          if (!a.urlToImage && b.urlToImage) return 1
+          return 0
+        })
         .map(article => ({
           id: generateArticleId(article),
           title: article.title,
@@ -73,27 +85,34 @@ export function useNews() {
     error.value = null
 
     try {
+      // Kiểm tra API key
+      if (!NEWS_API_KEY) {
+        throw new Error('NEWS_API_KEY not found in environment variables')
+      }
+
       const categories = ['general', 'technology', 'business', 'entertainment', 'sports']
       const newsPromises = categories.map(async category => {
         try {
-          const url = `${NEWS_API_BASE_URL}/top-headlines?country=us&category=${category}&pageSize=4&apiKey=${NEWS_API_KEY}`
+          const url = `${NEWS_API_BASE_URL}/top-headlines?country=us&category=${category}&pageSize=6&apiKey=${NEWS_API_KEY}`
           const response = await fetch(url)
           
           if (response.ok) {
             const data = await response.json()
-            return data.articles
-              .filter(article => isValidArticle(article))
-              .map(article => ({
-                id: generateArticleId(article),
-                title: article.title,
-                description: article.description,
-                content: article.content,
-                url: article.url,
-                urlToImage: article.urlToImage,
-                publishedAt: article.publishedAt,
-                source: article.source,
-                category: category
-              }))
+            if (data.status === 'ok') {
+              return data.articles
+                .filter(article => isValidArticle(article))
+                .map(article => ({
+                  id: generateArticleId(article),
+                  title: article.title,
+                  description: article.description,
+                  content: article.content,
+                  url: article.url,
+                  urlToImage: article.urlToImage,
+                  publishedAt: article.publishedAt,
+                  source: article.source,
+                  category: category
+                }))
+            }
           }
           return []
         } catch {
@@ -104,14 +123,25 @@ export function useNews() {
       const results = await Promise.all(newsPromises)
       const allNews = results.flat()
 
-      // Shuffle và lấy 20 articles
-      const shuffledNews = shuffleArray(allNews).slice(0, 20)
+      if (allNews.length === 0) {
+        throw new Error('No news data available')
+      }
+
+      // Ưu tiên articles có hình ảnh và shuffle
+      const articlesWithImages = allNews.filter(article => article.urlToImage)
+      const articlesWithoutImages = allNews.filter(article => !article.urlToImage)
+      
+      const shuffledWithImages = shuffleArray(articlesWithImages)
+      const shuffledWithoutImages = shuffleArray(articlesWithoutImages)
+      
+      // Kết hợp: articles có hình ảnh trước, sau đó không có hình ảnh
+      const finalNews = [...shuffledWithImages, ...shuffledWithoutImages].slice(0, 24)
       
       // Sort theo publishedAt mới nhất
-      shuffledNews.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+      finalNews.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
 
-      news.value = shuffledNews
-      return shuffledNews
+      news.value = finalNews
+      return finalNews
 
     } catch (err) {
       error.value = err
@@ -130,6 +160,11 @@ export function useNews() {
     error.value = null
 
     try {
+      // Kiểm tra API key
+      if (!NEWS_API_KEY) {
+        throw new Error('NEWS_API_KEY not found in environment variables')
+      }
+
       const searchUrl = `${NEWS_API_BASE_URL}/everything?q=${encodeURIComponent(query)}&sortBy=${sortBy}&pageSize=20&language=en&apiKey=${NEWS_API_KEY}`
       
       const response = await fetch(searchUrl)
@@ -146,6 +181,12 @@ export function useNews() {
 
       const searchResults = data.articles
         .filter(article => isValidArticle(article))
+        .sort((a, b) => {
+          // Ưu tiên articles có hình ảnh
+          if (a.urlToImage && !b.urlToImage) return -1
+          if (!a.urlToImage && b.urlToImage) return 1
+          return 0
+        })
         .map(article => ({
           id: generateArticleId(article),
           title: article.title,

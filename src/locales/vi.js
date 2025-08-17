@@ -25,7 +25,7 @@ export default {
   trending: 'Thịnh hành',
 
   // Friends Feature
-  friends: 'Danh Sách Bạn Bè',
+  friends: 'Hoạt động gần đây',
   suggestions: 'Gợi ý kết bạn',
   friendRequests: 'Lời mời kết bạn',
   noFriendsYet: 'Chưa có bạn bè nào',
@@ -97,7 +97,7 @@ export default {
   noInterestsSelected: 'Chưa chọn nội dung quan tâm nào',
   selectInterests: 'Chọn nội dung quan tâm',
   save: 'Lưu',
-  posts: 'Danh sách bài viết',
+  posts: 'Danh sách bài viết của bạn',
   postsComingSoon: 'Tính năng sắp ra mắt',
   friendsComingSoon: 'Tính năng sắp ra mắt',
   loginRequired: 'Yêu cầu đăng nhập',

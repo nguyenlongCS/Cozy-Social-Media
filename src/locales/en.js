@@ -25,7 +25,7 @@ export default {
   trending: 'Trending',
 
   // Friends Feature
-  friends: 'Friends List',
+  friends: 'Recent Activity',
   suggestions: 'Friend Suggestions',
   friendRequests: 'Friend Requests',
   noFriendsYet: 'No friends yet',
@@ -97,7 +97,7 @@ export default {
   noInterestsSelected: 'No interests selected',
   selectInterests: 'Select Interests',
   save: 'Save',
-  posts: 'Posts',
+  posts: 'Your Posts',
   postsComingSoon: 'Coming Soon',
   friendsComingSoon: 'Coming Soon',
   loginRequired: 'Login Required',
