@@ -1,7 +1,8 @@
 /*
-src/composables/useFirestore.js - Tích hợp Notifications
-Quản lý Firestore operations và Storage uploads với notifications
-Logic: CRUD cho posts, comments, likes với auto-tagging và notifications
+src/composables/useFirestore.js - Tích hợp Classification vào CreatePost
+Quản lý Firestore operations và Storage uploads với auto-classification
+FIXED: Tích hợp classification trực tiếp vào createPost function
+Logic: CRUD cho posts, comments, likes với auto-tagging background classification
 */
 import { ref } from 'vue'
 import { 
@@ -27,7 +28,7 @@ import {
 import app from '@/firebase/config'
 import { useUsers } from './useUsers'
 import { useNotifications } from './useNotifications'
-import { classifyNewPost } from '@/services/postClassificationService'
+import { usePostClassification } from './usePostClassification'
 
 const db = getFirestore(app, 'social-media-db')
 const storage = getStorage(app)
@@ -39,6 +40,7 @@ export function useFirestore() {
     createLikeNotification,
     createCommentNotification
   } = useNotifications()
+  const { classifyPost } = usePostClassification()
 
   // Helper: populate user info
   const populateUserInfo = async (userId) => {
@@ -88,7 +90,14 @@ export function useFirestore() {
     }
   }
 
-  // Create post
+  // =============================================================================
+  // CREATE POST WITH INTEGRATED CLASSIFICATION
+  // =============================================================================
+
+  /**
+   * Tạo post mới với tích hợp auto-classification
+   * Classification chạy background sau khi tạo post thành công
+   */
   const createPost = async (postData) => {
     if (!postData?.caption || !postData?.authorId) {
       throw new Error('MISSING_REQUIRED_FIELDS')
@@ -106,7 +115,7 @@ export function useFirestore() {
         Created: postData.createdAt || new Date(),
         likes: 0,
         comments: 0,
-        Tags: null
+        Tags: null // Sẽ được update bởi background classification
       }
 
       // Handle media
@@ -122,14 +131,45 @@ export function useFirestore() {
         postToSave.mediaCount = postData.mediaUrl ? 1 : 0
       }
 
+      // Tạo post trong Firestore
       const docRef = await addDoc(collection(db, 'posts'), postToSave)
-      
-      // Background classification
-      classifyNewPost(docRef.id, postData.caption.trim()).catch(() => {})
+      const postId = docRef.id
 
-      return { PostID: docRef.id, ...postToSave }
+      // Background classification (không ảnh hưởng UX)
+      performBackgroundClassification(postId, postData.caption.trim())
+
+      return { PostID: postId, ...postToSave }
     } finally {
       isLoading.value = false
+    }
+  }
+
+  // =============================================================================
+  // BACKGROUND CLASSIFICATION
+  // =============================================================================
+
+  /**
+   * Chạy classification trong background sau khi post được tạo
+   * Không throw error để không ảnh hưởng UX
+   */
+  const performBackgroundClassification = async (postId, caption) => {
+    try {
+      // Client-side classification
+      const classificationResults = classifyPost(caption)
+      
+      if (classificationResults && classificationResults.length > 0) {
+        // Lấy tags từ classification results
+        const tags = classificationResults.map(result => result.tag)
+        
+        // Update post với Tags
+        const postRef = doc(db, 'posts', postId)
+        await updateDoc(postRef, {
+          Tags: tags
+        })
+      }
+    } catch (error) {
+      // Silent fail - không ảnh hưởng đến post creation
+      console.warn('Background classification failed:', error)
     }
   }
 
