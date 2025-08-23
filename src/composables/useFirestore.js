@@ -1,8 +1,8 @@
 /*
-src/composables/useFirestore.js - Tích hợp Classification vào CreatePost
+src/composables/useFirestore.js - Tích hợp Classification vào CreatePost với Content field
 Quản lý Firestore operations và Storage uploads với auto-classification
-FIXED: Tích hợp classification trực tiếp vào createPost function
-Logic: CRUD cho posts, comments, likes với auto-tagging background classification
+UPDATED: Thêm Content field, sử dụng content thay vì caption cho classification
+Logic: CRUD cho posts, comments, likes với auto-tagging background classification sử dụng content
 */
 import { ref } from 'vue'
 import { 
@@ -91,15 +91,16 @@ export function useFirestore() {
   }
 
   // =============================================================================
-  // CREATE POST WITH INTEGRATED CLASSIFICATION
+  // CREATE POST WITH INTEGRATED CLASSIFICATION - UPDATED với Content field
   // =============================================================================
 
   /**
    * Tạo post mới với tích hợp auto-classification
    * Classification chạy background sau khi tạo post thành công
+   * UPDATED: Caption và Content đều tùy chọn, chỉ cần authorId
    */
   const createPost = async (postData) => {
-    if (!postData?.caption || !postData?.authorId) {
+    if (!postData?.authorId) {
       throw new Error('MISSING_REQUIRED_FIELDS')
     }
 
@@ -111,7 +112,8 @@ export function useFirestore() {
         UserID: postData.authorId,
         UserName: userInfo.UserName,
         Avatar: userInfo.Avatar,
-        Caption: postData.caption.trim(),
+        Caption: postData.caption || '', // Có thể rỗng
+        Content: postData.content || '', // Có thể rỗng
         Created: postData.createdAt || new Date(),
         likes: 0,
         comments: 0,
@@ -135,8 +137,11 @@ export function useFirestore() {
       const docRef = await addDoc(collection(db, 'posts'), postToSave)
       const postId = docRef.id
 
-      // Background classification (không ảnh hưởng UX)
-      performBackgroundClassification(postId, postData.caption.trim())
+      // Background classification: sử dụng content nếu có, không thì dùng caption
+      const textForClassification = postData.content?.trim() || postData.caption?.trim() || ''
+      if (textForClassification) {
+        performBackgroundClassification(postId, textForClassification)
+      }
 
       return { PostID: postId, ...postToSave }
     } finally {
@@ -145,17 +150,23 @@ export function useFirestore() {
   }
 
   // =============================================================================
-  // BACKGROUND CLASSIFICATION
+  // BACKGROUND CLASSIFICATION - UPDATED sử dụng content
   // =============================================================================
 
   /**
    * Chạy classification trong background sau khi post được tạo
    * Không throw error để không ảnh hưởng UX
+   * UPDATED: Nhận text từ content hoặc caption để phân loại
    */
-  const performBackgroundClassification = async (postId, caption) => {
+  const performBackgroundClassification = async (postId, text) => {
     try {
-      // Client-side classification
-      const classificationResults = classifyPost(caption)
+      // Chỉ classify nếu có text
+      if (!text || text.trim().length === 0) {
+        return
+      }
+
+      // Client-side classification sử dụng text
+      const classificationResults = classifyPost(text)
       
       if (classificationResults && classificationResults.length > 0) {
         // Lấy tags từ classification results

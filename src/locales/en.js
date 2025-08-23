@@ -1,4 +1,4 @@
-// locales/en.js - Updated with Discover texts
+// locales/en.js - Updated với các text mới cho Content feature
 export default {
   // Authentication
   login: 'Login',
@@ -25,7 +25,7 @@ export default {
   trending: 'Trending',
 
   // Friends Feature
-  friends: 'Danh Sách Bạn Bè',
+  friends: 'Friends List',
   suggestions: 'Friend Suggestions',
   friendRequests: 'Friend Requests',
   noFriendsYet: 'No friends yet',
@@ -41,14 +41,21 @@ export default {
   unknownUser: 'Unknown User',
   viewAllFriends: 'View All Friends',
 
-  // Create Post
-  writeCaption: 'Write a caption...',
+  // Create Post - UPDATED với Content feature
+  writeCaption: 'Write a short title...',
   addMedia: 'Add photo/video',
   cancel: 'Cancel',
   post: 'Post',
   remove: 'Remove',
   multiMediaHint: 'Select multiple photos/videos (max 10)',
   mediaLimit: 'Max 10 media',
+  
+  // Content Feature - UPDATED
+  postContent: 'Post Content',
+  writeContent: 'Write detailed content (optional)...',
+  optional: 'optional',
+  content: 'Content',
+  noContent: 'No content',
 
   // User States
   guest: 'Guest',
@@ -64,8 +71,8 @@ export default {
   selectPost: 'Select a post to view details',
 
   // Post Details
-  caption: 'Caption',
-  noCaption: 'No caption',
+  caption: 'Title',
+  noCaption: 'No title',
   likes: 'likes',
   comments: 'Comments',
   noComments: 'No comments yet',
@@ -104,8 +111,7 @@ export default {
   loginToViewProfile: 'Login To View Profile',
   recentActivity: 'Recent Activity',
 
-
-   // Messages
+  // Messages
   noMessagesYet: 'No messages yet',
   sendFirstMessage: 'Send the first message!',
   typeMessage: 'Type a message...',
@@ -163,7 +169,8 @@ export default {
   fileTooLarge: 'File too large! Maximum 1000MB.',
   invalidFileType: 'Invalid file type! Only images/videos allowed.',
   tooManyFiles: 'Too many files! Maximum 10 media allowed.',
-  missingCaption: 'Please enter a caption!',
+  missingCaption: 'Please enter a title!',
+  missingContent: 'Please enter post content!', // NEW
   missingMedia: 'Please select a photo or video!',
   notAuthenticated: 'Please login first!',
   permissionDenied: 'Permission denied!',

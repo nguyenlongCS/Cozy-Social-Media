@@ -1,7 +1,8 @@
 <!--
-src/components/CreatePost.vue - Refactored
-Component tạo bài đăng với multi-media support
-Logic: Upload media files, preview carousel, auto-resize textarea, submit post
+src/components/CreatePost.vue - Refactored với Content field và caption giới hạn 60 ký tự
+Component tạo bài đăng với multi-media support và content field
+Logic: Upload media files, preview carousel, auto-resize textarea, submit post với content field
+UPDATED: Thêm content field, giới hạn caption 60 ký tự, validation cho cả caption và content
 -->
 <template>
   <div class="create-post">
@@ -130,14 +131,23 @@ Logic: Upload media files, preview carousel, auto-resize textarea, submit post
     </div>
 
     <div class="bottom-bar">
-      <textarea 
-        v-model="caption" 
-        :placeholder="getText('writeCaption')" 
-        class="caption-input"
-        rows="1"
-        ref="captionTextarea"
-        @input="adjustTextareaHeight"
-      ></textarea>
+      <div class="caption-container">
+        <textarea 
+          v-model="caption" 
+          :placeholder="getText('writeCaption')" 
+          class="caption-input"
+          rows="1"
+          ref="captionTextarea"
+          @input="adjustTextareaHeight"
+          maxlength="60"
+        ></textarea>
+        <div class="caption-counter">
+          <span :class="{ 'limit-warning': caption.length >= 55 }">
+            {{ caption.length }}/60
+          </span>
+        </div>
+      </div>
+      
       <div class="actions">
         <button class="cancel-btn" @click="handleCancel" :disabled="isUploading"></button>
         <button class="post-btn" @click="handlePost" :disabled="!canPost || isUploading">
@@ -161,7 +171,13 @@ import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
   name: 'CreatePost',
-  setup() {
+  props: {
+    postContent: {
+      type: String,
+      default: ''
+    }
+  },
+  setup(props) {
     const router = useRouter()
     const { getText, currentLanguage } = useLanguage()
     const { user } = useAuth()
@@ -183,9 +199,10 @@ export default {
     const MAX_FILES = 10
     const MAX_FILE_SIZE = 1000 * 1024 * 1024
 
-    // Computed properties
+    // Computed properties - UPDATED: Content không bắt buộc, chỉ cần media
     const canPost = computed(() => {
-      return caption.value.trim().length > 0 && user.value && selectedFiles.value.length > 0
+      return user.value && selectedFiles.value.length > 0
+      // Chỉ cần có user và media, caption và content đều tùy chọn
     })
 
     const currentMedia = computed(() => {
@@ -226,7 +243,7 @@ export default {
       if (captionTextarea.value) {
         captionTextarea.value.style.height = 'auto'
         const scrollHeight = captionTextarea.value.scrollHeight
-        const maxHeight = 150
+        const maxHeight = 80 // Giảm max height vì caption ngắn hơn
         const newHeight = Math.min(scrollHeight, maxHeight)
         captionTextarea.value.style.height = newHeight + 'px'
         captionTextarea.value.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden'
@@ -340,6 +357,7 @@ export default {
       router.push('/')
     }
 
+    // UPDATED: Validation chỉ yêu cầu media, caption và content đều tùy chọn
     const handlePost = async () => {
       if (!user.value) {
         showError({ message: 'NOT_AUTHENTICATED' }, 'post')
@@ -347,9 +365,7 @@ export default {
       }
 
       if (!canPost.value) {
-        if (!caption.value.trim()) {
-          showError({ message: 'MISSING_CAPTION' }, 'post')
-        } else if (selectedFiles.value.length === 0) {
+        if (selectedFiles.value.length === 0) {
           showError({ message: 'MISSING_MEDIA' }, 'post')
         }
         return
@@ -365,8 +381,10 @@ export default {
           throw new Error('No media files uploaded successfully')
         }
 
+        // UPDATED: Caption và Content đều tùy chọn, có thể để trống
         const postData = {
-          caption: caption.value.trim(),
+          caption: caption.value.trim() || '', // Có thể rỗng
+          content: props.postContent.trim() || '', // Có thể rỗng
           authorId: user.value.uid,
           authorName: getCurrentUserDisplayName(),
           authorEmail: user.value.email,
@@ -793,10 +811,17 @@ video.preview-media:hover::-webkit-media-controls {
   gap: 0.625rem;
 }
 
-.caption-input {
+.caption-container {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.caption-input {
+  width: 100%;
   min-height: 1.875rem;
-  max-height: 9.375rem;
+  max-height: 4rem; /* Giảm max-height vì caption ngắn hơn */
   background: var(--theme-color);
   border: 0.125rem solid #000;
   border-radius: 0.9375rem;
@@ -818,6 +843,20 @@ video.preview-media:hover::-webkit-media-controls {
 
 .caption-input:focus {
   box-shadow: 0 0 0.5rem var(--theme-color-20);
+}
+
+.caption-counter {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 0.625rem;
+  color: var(--theme-color);
+  opacity: 0.8;
+}
+
+.caption-counter .limit-warning {
+  color: #ff6b6b;
+  font-weight: 600;
+  opacity: 1;
 }
 
 .actions {

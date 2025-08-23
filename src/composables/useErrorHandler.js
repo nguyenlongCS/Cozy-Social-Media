@@ -1,14 +1,15 @@
 /*
-src/composables/useErrorHandler.js - Refactored
+src/composables/useErrorHandler.js - Updated với MISSING_CONTENT error
 Xử lý lỗi tập trung với message mapping
 Logic: Map error codes thành message keys với context-specific handling
+UPDATED: Thêm MISSING_CONTENT error mapping
 */
 import { useLanguage } from './useLanguage'
 
 export function useErrorHandler() {
   const { getText } = useLanguage()
 
-  // Error code to message key mapping
+  // Error code to message key mapping - UPDATED với MISSING_CONTENT
   const errorCodeMap = {
     // Auth errors
     'MISSING_FIELDS': 'fillAllFields',
@@ -23,10 +24,11 @@ export function useErrorHandler() {
     'auth/popup-closed-by-user': 'loginCancelled',
     'auth/popup-blocked': 'popupBlocked',
     
-    // Post errors
+    // Post errors - UPDATED
     'FILE_TOO_LARGE': 'fileTooLarge',
     'INVALID_FILE_TYPE': 'invalidFileType',
     'MISSING_CAPTION': 'missingCaption',
+    'MISSING_CONTENT': 'missingContent', // NEW - Lỗi thiếu nội dung bài viết
     'MISSING_MEDIA': 'missingMedia',
     'NOT_AUTHENTICATED': 'notAuthenticated',
     'TOO_MANY_FILES': 'tooManyFiles',

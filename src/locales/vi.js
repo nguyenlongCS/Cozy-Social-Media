@@ -1,4 +1,4 @@
-// locales/vi.js - Updated with Discover texts
+// locales/vi.js - Updated với các text mới cho Content feature
 export default {
   // Authentication
   login: 'Đăng nhập',
@@ -41,14 +41,21 @@ export default {
   unknownUser: 'Người dùng không xác định',
   viewAllFriends: 'Toàn bộ bạn bè',
 
-  // Create Post
-  writeCaption: 'Viết chú thích...',
+  // Create Post - UPDATED với Content feature
+  writeCaption: 'Viết tiêu đề ngắn gọn...',
   addMedia: 'Thêm ảnh/video',
   cancel: 'Hủy',
   post: 'Đăng',
   remove: 'Xóa',
   multiMediaHint: 'Chọn nhiều ảnh/video (tối đa 10)',
   mediaLimit: 'Tối đa 10 media',
+  
+  // Content Feature - UPDATED
+  postContent: 'Nội dung bài viết',
+  writeContent: 'Viết nội dung chi tiết (tùy chọn)...',
+  optional: 'tùy chọn',
+  content: 'Nội dung',
+  noContent: 'Không có nội dung',
 
   // User States
   guest: 'Khách',
@@ -64,8 +71,8 @@ export default {
   selectPost: 'Chọn bài viết để xem chi tiết',
 
   // Post Details
-  caption: 'Chú thích',
-  noCaption: 'Không có chú thích',
+  caption: 'Tiêu đề',
+  noCaption: 'Không có tiêu đề',
   likes: 'lượt thích',
   comments: 'Bình luận',
   noComments: 'Chưa có bình luận nào',
@@ -162,7 +169,8 @@ export default {
   fileTooLarge: 'File quá lớn! Tối đa 1000MB.',
   invalidFileType: 'Loại file không hợp lệ! Chỉ chấp nhận ảnh/video.',
   tooManyFiles: 'Quá nhiều files! Tối đa 10 media.',
-  missingCaption: 'Vui lòng nhập chú thích!',
+  missingCaption: 'Vui lòng nhập tiêu đề!',
+  missingContent: 'Vui lòng nhập nội dung bài viết!', // NEW
   missingMedia: 'Vui lòng chọn ảnh hoặc video!',
   notAuthenticated: 'Vui lòng đăng nhập!',
   permissionDenied: 'Không có quyền thực hiện!',

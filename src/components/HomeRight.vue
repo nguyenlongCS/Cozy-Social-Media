@@ -1,30 +1,31 @@
 <!--
-src/components/HomeRight.vue - Refactored
+src/components/HomeRight.vue - Updated hiển thị Content thay vì Caption
 Component sidebar bên phải hiển thị chi tiết bài post
-Logic: Hiển thị caption, likes, comments của post hiện tại, form thêm comment với emoji picker
+Logic: Hiển thị content (nội dung chính), caption ngắn, likes, comments của post hiện tại, form thêm comment với emoji picker
+UPDATED: Hiển thị Content field thay vì Caption làm nội dung chính, Caption chỉ hiển thị ngắn gọn
 -->
 <template>
   <div class="right" :style="themeStyles">
     <div v-if="post && post.PostID" class="post-details">
-      <!-- Caption section -->
-      <div class="caption-section">
-        <h3 class="section-title">{{ getText('caption') }}</h3>
-        <div v-if="post.Caption">
+      <!-- Content section - UPDATED: Hiển thị Content thay vì Caption -->
+      <div class="content-section">
+        <h3 class="section-title">{{ getText('content') }}</h3>
+        <div v-if="post.Content">
           <p 
-            class="caption-text" 
-            :class="{ collapsed: isLongCaption && !showFullCaption }"
+            class="content-text" 
+            :class="{ collapsed: isLongContent && !showFullContent }"
           >
-            {{ post.Caption }}
+            {{ post.Content }}
           </p>
           <button 
-            v-if="isLongCaption" 
+            v-if="isLongContent" 
             class="show-more-btn"
-            @click="toggleCaption"
+            @click="toggleContent"
           >
-            {{ showFullCaption ? getText('showLess') : getText('showMore') }}
+            {{ showFullContent ? getText('showLess') : getText('showMore') }}
           </button>
         </div>
-        <p v-else class="caption-text">{{ getText('noCaption') }}</p>
+        <p v-else class="content-text">{{ getText('noContent') }}</p>
         
         <!-- Tags display -->
         <div v-if="post.Tags && post.Tags.length > 0" class="tags-container">
@@ -161,7 +162,7 @@ export default {
     const isLoading = ref(false)
     const isLoadingComments = ref(false)
     const showEmojiPicker = ref(false)
-    const showFullCaption = ref(false)
+    const showFullContent = ref(false)
 
     // Theme styles
     const themeStyles = computed(() => ({
@@ -171,13 +172,13 @@ export default {
       '--theme-color-05': `${currentTheme.value}0D`,
     }))
 
-    // Caption logic
-    const isLongCaption = computed(() => {
-      return props.post?.Caption && props.post.Caption.length > 450
+    // Content logic - UPDATED: Sử dụng Content thay vì Caption
+    const isLongContent = computed(() => {
+      return props.post?.Content && props.post.Content.length > 450
     })
 
-    const toggleCaption = () => {
-      showFullCaption.value = !showFullCaption.value
+    const toggleContent = () => {
+      showFullContent.value = !showFullContent.value
     }
 
     // Emoji list
@@ -283,7 +284,7 @@ export default {
     watch(() => props.post, (newPost) => {
       if (newPost && newPost.PostID) {
         loadComments()
-        showFullCaption.value = false
+        showFullContent.value = false
       } else {
         comments.value = []
       }
@@ -308,9 +309,9 @@ export default {
       showEmojiPicker,
       emojiList,
       themeStyles,
-      isLongCaption,
-      showFullCaption,
-      toggleCaption,
+      isLongContent,
+      showFullContent,
+      toggleContent,
       getText,
       formatCommentTime,
       handleAddComment,
@@ -358,12 +359,12 @@ export default {
   margin-bottom: 0.5rem;
 }
 
-.caption-section {
+.content-section {
   border-bottom: 1px solid var(--theme-color-20);
   padding-bottom: 0.75rem;
 }
 
-.caption-text {
+.content-text {
   font-size: 0.75rem;
   line-height: 1.4;
   color: var(--current-theme-color, var(--theme-color));
@@ -375,7 +376,7 @@ export default {
   transition: max-height 0.3s ease;
 }
 
-.caption-text.collapsed {
+.content-text.collapsed {
   display: -webkit-box;
   -webkit-line-clamp: 4;
   line-clamp: 4;

@@ -1,7 +1,11 @@
 <!--
-src/view/CreatePost.vue - Fixed Layout Size to Match Home Page
-View trang tạo bài đăng với layout size chuẩn
-FIXED: Layout size to match Home page exactly
+src/view/CreatePost.vue - Updated với CreatePostRight
+View trang tạo bài đăng với layout size chuẩn và tích hợp CreatePostRight
+Logic:
+- Layout tương tự Home page với CreatePostMain và CreatePostRight
+- Xử lý communication giữa CreatePostMain và CreatePostRight qua content prop
+- Handle content change từ CreatePostRight và pass xuống CreatePostMain
+- Validation cho cả caption (60 ký tự) và content (2000 ký tự)
 -->
 <template>
   <div class="create-post-page">
@@ -12,20 +16,21 @@ FIXED: Layout size to match Home page exactly
     </div>
     <div class="body">
       <HomeLeft />
-      <CreatePostMain />
-      <HomeRight />
+      <CreatePostMain :postContent="postContent" />
+      <CreatePostRight @content-changed="handleContentChanged" />
     </div>
     <Footer />
   </div>
 </template>
 
 <script>
+import { ref } from 'vue'
 import NavLeft from '@/components/NavLeft.vue'
 import NavMid from '@/components/NavMid.vue'
 import NavRight from '@/components/NavRight.vue'
 import HomeLeft from '@/components/HomeLeft.vue'
-import HomeRight from '@/components/HomeRight.vue'
 import Footer from '@/components/Footer.vue'
+import CreatePostRight from '@/components/CreatePostRight.vue'
 import CreatePostMain from '@/components/CreatePost.vue'
 import { useLanguage } from '@/composables/useLanguage'
 
@@ -36,22 +41,30 @@ export default {
     NavMid,
     NavRight,
     HomeLeft,
-    HomeRight,
     Footer,
-    CreatePostMain
+    CreatePostMain,
+    CreatePostRight
   },
   setup() {
     const { toggleLanguage } = useLanguage()
+    const postContent = ref('')
+
+    // Handle content change từ CreatePostRight
+    const handleContentChanged = (content) => {
+      postContent.value = content
+    }
 
     return {
-      toggleLanguage
+      toggleLanguage,
+      postContent,
+      handleContentChanged
     }
   }
 }
 </script>
 
 <style scoped>
-/* FIXED: Match Home page layout exactly */
+/* Match Home page layout exactly */
 .create-post-page {
   width: 100vw; /* Use full viewport width like Home */
   height: 100vh; /* Use full viewport height like Home */
