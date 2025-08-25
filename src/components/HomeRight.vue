@@ -27,6 +27,11 @@ UPDATED: Hiển thị Content field thay vì Caption làm nội dung chính, Cap
         </div>
         <p v-else class="content-text">{{ getText('noContent') }}</p>
         
+        <!-- Caption hiển thị ngắn gọn -->
+        <div v-if="post.Caption" class="caption-display">
+          <strong>{{ getText('caption') }}:</strong> {{ post.Caption }}
+        </div>
+        
         <!-- Tags display -->
         <div v-if="post.Tags && post.Tags.length > 0" class="tags-container">
           <div 
@@ -401,6 +406,17 @@ export default {
 
 .show-more-btn:hover {
   opacity: 1;
+}
+
+.caption-display {
+  font-size: 0.75rem;
+  color: var(--current-theme-color, var(--theme-color));
+  opacity: 0.8;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: var(--theme-color-05);
+  border-radius: 0.375rem;
+  border-left: 3px solid var(--theme-color-20);
 }
 
 .tags-container {

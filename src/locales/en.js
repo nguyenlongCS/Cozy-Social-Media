@@ -52,8 +52,7 @@ export default {
   
   // Content Feature - UPDATED
   postContent: 'Post Content',
-  writeContent: 'Write detailed content (optional)...',
-  optional: 'optional',
+  writeContent: 'Write detailed content...',
   content: 'Content',
   noContent: 'No content',
 

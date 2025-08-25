@@ -52,8 +52,7 @@ export default {
   
   // Content Feature - UPDATED
   postContent: 'Nội dung bài viết',
-  writeContent: 'Viết nội dung chi tiết (tùy chọn)...',
-  optional: 'tùy chọn',
+  writeContent: 'Viết nội dung chi tiết...',
   content: 'Nội dung',
   noContent: 'Không có nội dung',
 

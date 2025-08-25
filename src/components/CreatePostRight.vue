@@ -12,7 +12,7 @@ Logic:
   <div class="createpost-right">
     <!-- Content Section -->
     <div class="content-section">
-      <h3 class="section-title">{{ getText('postContent') }} ({{ getText('optional') }})</h3>
+      <h3 class="section-title">{{ getText('postContent') }}</h3>
       
       <div class="content-input-container">
         <textarea 
