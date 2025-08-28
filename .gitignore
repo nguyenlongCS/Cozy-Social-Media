@@ -25,6 +25,8 @@ pnpm-debug.log*
 
 # Firebase
 .firebase
+.firebase/
+.firebase/hosting.ZGlzdA.cache
 .firebaserc.backup
 firebase-debug.log*
 firebase-debug.*.log
