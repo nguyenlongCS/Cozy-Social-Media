@@ -28,7 +28,6 @@ Logic: Hiển thị friends, suggestions, requests dựa vào activeTab, xử l�
             ></div>
             <div class="friend-details">
               <div class="friend-name">{{ friend.userInfo?.UserName || getText('unknownUser') }}</div>
-              <div class="friend-email">{{ friend.userInfo?.Email || '' }}</div>
               <div class="friend-date">{{ getText('friendsSince') }}: {{ formatDate(friend.updatedAt) }}</div>
             </div>
           </div>
@@ -63,7 +62,6 @@ Logic: Hiển thị friends, suggestions, requests dựa vào activeTab, xử l�
             ></div>
             <div class="suggestion-details">
               <div class="suggestion-name">{{ suggestion.UserName || getText('unknownUser') }}</div>
-              <div class="suggestion-email">{{ suggestion.Email || '' }}</div>
               <div class="suggestion-date">{{ getText('joinedOn') }}: {{ formatDate(suggestion.Created) }}</div>
             </div>
           </div>
@@ -98,7 +96,6 @@ Logic: Hiển thị friends, suggestions, requests dựa vào activeTab, xử l�
             ></div>
             <div class="request-details">
               <div class="request-name">{{ request.senderInfo?.UserName || getText('unknownUser') }}</div>
-              <div class="request-email">{{ request.senderInfo?.Email || '' }}</div>
               <div class="request-date">{{ getText('requestSent') }}: {{ formatDate(request.createdAt) }}</div>
             </div>
           </div>
@@ -433,13 +430,6 @@ export default {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--theme-color);
-  margin-bottom: 0.125rem;
-}
-
-.friend-email, .suggestion-email, .request-email {
-  font-size: 0.75rem;
-  color: var(--theme-color);
-  opacity: 0.7;
   margin-bottom: 0.125rem;
 }
 
