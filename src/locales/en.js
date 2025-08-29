@@ -146,6 +146,11 @@ export default {
   scrollToNext: 'Scroll to see next post',
   scrollTooFast: 'Scrolling too fast',
 
+  //Mobile
+  deviceNotSupported: 'Device not supported',
+  mobileNotSupportedDesc: 'mobile not supported',
+  useDesktopForBestExperience: 'Use desktop for best experience',
+
   // Success Messages
   loginSuccess: 'Login successful!',
   signupSuccess: 'Registration successful!',
