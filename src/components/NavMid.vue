@@ -1,8 +1,8 @@
 <!--
-src/components/NavMid.vue - Fixed với Login Check
+src/components/NavMid.vue - Loại bỏ disabled buttons
 Component navigation giữa header với unread badges và login protection
-FIXED: Hiện 99+ badge khi chưa login, không cho click và hiện thông báo
-Logic: Protected navigation với authentication check và visual feedback
+UPDATED: Loại bỏ disabled state, vẫn giữ 99+ badge và thông báo đăng nhập
+Logic: All buttons luôn clickable, hiện thông báo khi chưa đăng nhập, giống như profile button
 -->
 <template>
   <div class="nav-mid">
@@ -13,10 +13,12 @@ Logic: Protected navigation với authentication check và visual feedback
       <button 
         class="friends-button btn" 
         @click="handleFriendsClick"
-        :disabled="!user"
-        :class="{ disabled: !user }"
       ></button>
-      <div class="unread-badge friends-badge" :class="{ 'login-required': !user }">
+      <div 
+        v-if="user ? friendRequestsCount > 0 : true"
+        class="unread-badge friends-badge" 
+        :class="{ 'login-required': !user }"
+      >
         {{ user ? (friendRequestsCount > 99 ? '99+' : friendRequestsCount) : '99+' }}
       </div>
     </div>
@@ -30,10 +32,12 @@ Logic: Protected navigation với authentication check và visual feedback
       <button 
         class="mess-button btn" 
         @click="handleMessagesClick"
-        :disabled="!user"
-        :class="{ disabled: !user }"
       ></button>
-      <div class="unread-badge messages-badge" :class="{ 'login-required': !user }">
+      <div 
+        v-if="user ? totalUnreadCount > 0 : true"
+        class="unread-badge messages-badge" 
+        :class="{ 'login-required': !user }"
+      >
         {{ user ? (totalUnreadCount > 99 ? '99+' : totalUnreadCount) : '99+' }}
       </div>
     </div>
@@ -43,10 +47,13 @@ Logic: Protected navigation với authentication check và visual feedback
       <button 
         class="notification-button btn" 
         @click="handleNotificationClick"
-        :class="{ active: showNotificationPanel, disabled: !user }"
-        :disabled="!user"
+        :class="{ active: showNotificationPanel }"
       ></button>
-      <div class="unread-badge notification-badge" :class="{ 'login-required': !user }">
+      <div 
+        v-if="user ? notificationUnreadCount > 0 : true"
+        class="unread-badge notification-badge" 
+        :class="{ 'login-required': !user }"
+      >
         {{ user ? (notificationUnreadCount > 99 ? '99+' : notificationUnreadCount) : '99+' }}
       </div>
       
@@ -102,7 +109,7 @@ export default {
     // NAVIGATION HANDLERS WITH LOGIN CHECK
     // =============================================================================
 
-    // Protected navigation functions
+    // Protected navigation functions - UPDATED: Loại bỏ disabled logic
     const handleFriendsClick = () => {
       if (!user.value) {
         showLoginRequiredMessage('friends')
@@ -338,10 +345,9 @@ export default {
   background-repeat: no-repeat;
 }
 
-/* Hover states cho buttons không bị disabled */
+/* UPDATED: Loại bỏ disabled styles, tất cả buttons đều hover được */
 .home-button:hover, .profile-button:hover, .news-button:hover, 
-.mess-button:hover:not(.disabled), .friends-button:hover:not(.disabled), 
-.notification-button:hover:not(.disabled) {
+.mess-button:hover, .friends-button:hover, .notification-button:hover {
   transform: scale(1.15);
   background-color: #2B2D42;
 }
@@ -351,19 +357,7 @@ export default {
   transform: scale(1.15);
 }
 
-/* Disabled states cho protected buttons */
-.friends-button.disabled, .mess-button.disabled, .notification-button.disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  filter: grayscale(30%);
-}
-
-.friends-button.disabled:hover, .mess-button.disabled:hover, .notification-button.disabled:hover {
-  transform: none;
-  background-color: var(--theme-color);
-}
-
-/* Badge styles */
+/* Badge styles - UPDATED: Hiện badge cho tất cả trường hợp */
 .unread-badge {
   position: absolute;
   top: -0.25rem;
@@ -377,34 +371,28 @@ export default {
   line-height: 1;
   box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.2);
   z-index: 10;
-}
-
-/* Badge colors cho authenticated users */
-.messages-badge, .friends-badge, .notification-badge {
   background: rgba(255, 0, 0, 0.9);
   color: white;
-  animation: pulse 2s infinite;
 }
 
-/* Badge color cho login required (99+ badges) */
+/* UPDATED: Badge luôn hiển thị, animation khác nhau cho login required vs authenticated */
 .unread-badge.login-required {
-  background: rgba(255, 0, 0, 0.9);
-  color: white;
   animation: loginPulse 2s infinite;
 }
 
-/* Hide badges khi count = 0 và user đã login */
 .unread-badge:not(.login-required) {
-  display: none;
+  animation: pulse 2s infinite;
 }
 
-/* Show badges khi có count > 0 hoặc login required */
+/* Hide badges khi count = 0 và user đã login - Logic được handle trong template */
 .unread-badge.login-required,
-.friends-badge:not(.login-required),
-.messages-badge:not(.login-required), 
-.notification-badge:not(.login-required) {
+.friends-badge,
+.messages-badge, 
+.notification-badge {
   display: block;
 }
+
+/* Logic hiển thị badge được handle trong template với v-if */
 
 /* Animations */
 @keyframes pulse {

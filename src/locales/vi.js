@@ -20,6 +20,13 @@ export default {
   home: 'Trang chủ',
   profile: 'Hồ sơ',
 
+  // Login Protection Messages
+  loginToAccessProfile: 'Vui lòng đăng nhập để xem hồ sơ',
+  loginToAccessFriends: 'Vui lòng đăng nhập để sử dụng tính năng bạn bè',
+  loginToAccessMessages: 'Vui lòng đăng nhập để sử dụng tính năng tin nhắn',
+  loginToAccessNotifications: 'Vui lòng đăng nhập để xem thông báo',
+  loginToUseFeature: 'Vui lòng đăng nhập để sử dụng tính năng này',
+
   // Discover Feature
   noPostsToDiscover: 'Không có bài viết nào để khám phá',
   trending: 'Thịnh hành',

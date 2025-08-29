@@ -20,6 +20,13 @@ export default {
   home: 'Home',
   profile: 'Profile',
 
+  // Login Protection Messages
+  loginToAccessProfile: 'Please login to view profile',
+  loginToAccessFriends: 'Please login to use friends feature',
+  loginToAccessMessages: 'Please login to use messaging feature',
+  loginToAccessNotifications: 'Please login to view notifications',
+  loginToUseFeature: 'Please login to use this feature',
+
   // Discover Feature
   noPostsToDiscover: 'No posts to discover',
   trending: 'Trending',

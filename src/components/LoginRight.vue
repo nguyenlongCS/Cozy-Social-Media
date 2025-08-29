@@ -94,10 +94,10 @@ export default {
 .social-btn {
   width: 12rem;
   height: 2.5rem;
-  border: 0.125rem solid var(--theme-color);
+  border: var(--theme-color);
   border-radius: 0.9375rem;
-  background: #2B2D42;
-  color: var(--theme-color);
+  background: var(--theme-color);
+  color: #000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -108,7 +108,7 @@ export default {
   transition: all 0.3s ease;
 }
 
-.social-btn:hover:not(:disabled) {
+/* .social-btn:hover:not(:disabled) {
   transform: scale(1.05);
   background: var(--theme-color);
   color: #000;
@@ -118,7 +118,7 @@ export default {
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
-}
+} */
 
 .social-icon {
   width: 1.25rem;
