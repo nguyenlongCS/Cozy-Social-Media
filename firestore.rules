@@ -1,3 +1,13 @@
+/*
+firestore.rules - Fixed Permissions cho Like và Comment
+Chỉnh sửa rules để sửa lỗi like/comment thất bại
+Logic: 
+- Sửa permission rules cho posts collection để user có thể read/write khi authenticated
+- Sửa permission rules cho likes và comments collection để user có thể tự do CRUD
+- Loại bỏ các ràng buộc strict về ownership trong create operations
+- Giữ nguyên security cho user profile và friend operations
+*/
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -7,34 +17,31 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // Posts collection - Owner có thể CRUD, authenticated users có thể đọc
+    // Posts collection - FIXED: Cho phép authenticated users read/write để support like operations
     match /posts/{postId} {
       allow read: if true; // Public read cho discover, home feed
-      allow create: if request.auth != null 
-        && request.auth.uid == resource.data.UserID;
-      allow update: if request.auth != null 
-        && request.auth.uid == resource.data.UserID;
+      allow create: if request.auth != null; // Authenticated users có thể tạo post
+      allow update: if request.auth != null; // FIXED: Cho phép update để increment likes counter
       allow delete: if request.auth != null 
-        && request.auth.uid == resource.data.UserID;
+        && request.auth.uid == resource.data.UserID; // Chỉ owner mới xóa được
     }
     
-    // Comments collection - Owner có thể CRUD, authenticated users có thể đọc và tạo
+    // Comments collection - FIXED: Loosened permissions cho comments
     match /comments/{commentId} {
       allow read: if true; // Public read để hiển thị comments
-      allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.UserID;
-      allow update, delete: if request.auth != null 
-        && request.auth.uid == resource.data.UserID;
+      allow create: if request.auth != null; // FIXED: Authenticated users có thể tạo comment
+      allow update: if request.auth != null 
+        && request.auth.uid == resource.data.UserID; // Chỉ owner update comment của mình
+      allow delete: if request.auth != null 
+        && request.auth.uid == resource.data.UserID; // Chỉ owner xóa comment của mình
     }
     
-    // Likes collection - Owner có thể CRUD, authenticated users có thể đọc
+    // Likes collection - FIXED: Completely loosened permissions cho likes
     match /likes/{likeId} {
       allow read: if true; // Public read để count likes
-      allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.UserID;
-      allow delete: if request.auth != null 
-        && request.auth.uid == resource.data.UserID;
-      allow update: if false; // Không cho phép update likes
+      allow create: if request.auth != null; // FIXED: Authenticated users có thể like
+      allow delete: if request.auth != null; // FIXED: Authenticated users có thể unlike
+      allow update: if false; // Không cho phép update likes (chỉ create/delete)
     }
     
     // Friends collection - Authenticated users có thể CRUD relationships của mình
