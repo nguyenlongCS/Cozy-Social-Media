@@ -1,4 +1,4 @@
-// locales/en.js - Updated với các text mới cho Content feature
+// src/locales/en.js - Updated với các text mới cho Nearby Users
 export default {
   // Authentication
   login: 'Login',
@@ -47,19 +47,24 @@ export default {
   confirmUnfriend: 'Are you sure you want to unfriend?',
   unknownUser: 'Unknown User',
   viewAllFriends: 'View All Friends',
+  joinedOn: 'Joined on',
 
-  // Nearby Friends - NEW
-  nearbyFriends: 'Find Nearby Friends',
+  // Nearby Users - NEW/UPDATED
+  nearbyUsers: 'Find Nearby People',
   getNearbyLocation: 'Get Location',
   refreshLocation: 'Refresh',
   allowLocation: 'Allow Location Access',
   locationPermissionRequired: 'Location Permission Required',
-  locationPermissionDescription: 'Allow location access to find friends around you',
-  noNearbyFriends: 'No nearby friends',
+  locationPermissionDescription: 'Allow location access to find people around you',
+  noNearbyUsers: 'No nearby people',
   searchRadius: 'Search radius',
   distanceAway: 'away',
   locationError: 'Location Error',
   retryLocation: 'Try Again',
+  mapView: 'Map',
+  listView: 'List',
+  getLocation: 'Get Location',
+  refresh: 'Refresh',
 
   // Create Post - UPDATED với Content feature
   writeCaption: 'Write a short title...',
@@ -88,6 +93,7 @@ export default {
   noPosts: 'No posts yet',
   textPost: 'Text post',
   selectPost: 'Select a post to view details',
+  selectOption: 'Select an option',
 
   // Post Details
   caption: 'Title',
@@ -159,10 +165,10 @@ export default {
   scrollToNext: 'Scroll to see next post',
   scrollTooFast: 'Scrolling too fast',
 
-  //Mobile
-  deviceNotSupported: 'Device not supported',
-  mobileNotSupportedDesc: 'mobile not supported',
-  useDesktopForBestExperience: 'Use desktop for best experience',
+  // Language
+  language: 'Language',
+  vietnamese: 'Tiếng Việt',
+  english: 'English',
 
   // Success Messages
   loginSuccess: 'Login successful!',
@@ -194,7 +200,7 @@ export default {
   invalidFileType: 'Invalid file type! Only images/videos allowed.',
   tooManyFiles: 'Too many files! Maximum 10 media allowed.',
   missingCaption: 'Please enter a title!',
-  missingContent: 'Please enter post content!', // NEW
+  missingContent: 'Please enter post content!',
   missingMedia: 'Please select a photo or video!',
   notAuthenticated: 'Please login first!',
   permissionDenied: 'Permission denied!',

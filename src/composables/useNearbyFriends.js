@@ -1,11 +1,12 @@
 /*
-src/composables/useNearbyFriends.js
-Composable quản lý tính năng tìm bạn bè xung quanh với Mapbox và Geolocation
+src/composables/useNearbyFriends.js - Updated để tìm TẤT CẢ users xung quanh
+Composable quản lý tính năng tìm người dùng xung quanh với Mapbox và Geolocation
+UPDATED: Thay đổi từ tìm friends thành tìm tất cả users xung quanh
 Logic:
 - Lấy vị trí hiện tại của user qua Geolocation API
 - Lưu và lấy vị trí users từ Firestore
 - Tính khoảng cách giữa các users
-- Tìm friends trong bán kính nhất định
+- Tìm TẤT CẢ users trong bán kính nhất định (không cần là friends)
 - Integrate với Mapbox để hiển thị map và markers
 */
 
@@ -17,25 +18,22 @@ import {
   setDoc,
   getDocs,
   query,
-  where,
   limit
 } from 'firebase/firestore'
 import app from '@/firebase/config'
 import { useAuth } from './useAuth'
 import { useUsers } from './useUsers'
-import { useFriends } from './useFriends'
 
 const db = getFirestore(app, 'social-media-db')
 
 export function useNearbyFriends() {
   const { user } = useAuth()
   const { getUserById } = useUsers()
-  const { getFriends } = useFriends()
 
   // Reactive state
   const isLoading = ref(false)
   const currentLocation = ref(null)
-  const nearbyFriends = ref([])
+  const nearbyFriends = ref([]) // Tên giữ nguyên cho compatibility, nhưng thực tế là nearbyUsers
   const mapInstance = ref(null)
   const userMarkers = ref(new Map())
 
@@ -154,67 +152,68 @@ export function useNearbyFriends() {
   const toRadians = (degrees) => degrees * (Math.PI / 180)
 
   // =============================================================================
-  // NEARBY FRIENDS SEARCH
+  // NEARBY USERS SEARCH - UPDATED để tìm tất cả users
   // =============================================================================
 
   /**
-   * Tìm bạn bè xung quanh trong bán kính nhất định
+   * UPDATED: Tìm TẤT CẢ users xung quanh trong bán kính nhất định (không chỉ friends)
    */
   const findNearbyFriends = async () => {
     if (!user.value || !currentLocation.value) {
-      throw new Error('Cần đăng nhập và có vị trí để tìm bạn bè')
+      throw new Error('Cần đăng nhập và có vị trí để tìm người dùng xung quanh')
     }
 
     isLoading.value = true
 
     try {
-      // Lấy danh sách bạn bè
-      const friendsList = await getFriends(user.value.uid, 100)
+      // UPDATED: Lấy TẤT CẢ locations từ userLocations collection
+      const locationsQuery = query(
+        collection(db, 'userLocations'),
+        limit(200) // Tăng limit để lấy nhiều users hơn
+      )
       
-      if (friendsList.length === 0) {
+      const locationsSnapshot = await getDocs(locationsQuery)
+      
+      if (locationsSnapshot.empty) {
         nearbyFriends.value = []
         return []
       }
 
-      // Lấy locations của tất cả friends
-      const locationsQuery = query(
-        collection(db, 'userLocations'),
-        limit(100)
-      )
-      
-      const locationsSnapshot = await getDocs(locationsQuery)
-      const friendLocations = new Map()
-
-      // Build map of friend locations
-      locationsSnapshot.forEach(doc => {
-        const locationData = doc.data()
-        friendLocations.set(locationData.userId, locationData)
-      })
-
-      // Tìm friends có vị trí và trong bán kính
+      // UPDATED: Tìm TẤT CẢ users có vị trí và trong bán kính (trừ chính mình)
       const nearbyResults = []
 
-      for (const friend of friendsList) {
-        const friendLocation = friendLocations.get(friend.friendId)
+      for (const doc of locationsSnapshot.docs) {
+        const locationData = doc.data()
         
-        if (friendLocation) {
-          const distance = calculateDistance(
-            currentLocation.value.latitude,
-            currentLocation.value.longitude,
-            friendLocation.latitude,
-            friendLocation.longitude
-          )
+        // Bỏ qua chính user hiện tại
+        if (locationData.userId === user.value.uid) {
+          continue
+        }
 
-          if (distance <= SEARCH_RADIUS_KM) {
+        const distance = calculateDistance(
+          currentLocation.value.latitude,
+          currentLocation.value.longitude,
+          locationData.latitude,
+          locationData.longitude
+        )
+
+        // UPDATED: Tìm TẤT CẢ users trong bán kính (không cần kiểm tra friendship)
+        if (distance <= SEARCH_RADIUS_KM) {
+          try {
             // Lấy thông tin user
-            const userInfo = await getUserById(friend.friendId)
+            const userInfo = await getUserById(locationData.userId)
             
-            nearbyResults.push({
-              ...friend,
-              userInfo,
-              location: friendLocation,
-              distance: Math.round(distance * 100) / 100 // Làm tròn 2 số thập phân
-            })
+            if (userInfo) {
+              nearbyResults.push({
+                userId: locationData.userId,
+                userInfo,
+                location: locationData,
+                distance: Math.round(distance * 100) / 100 // Làm tròn 2 số thập phân
+              })
+            }
+          } catch (error) {
+            // Bỏ qua user nếu không lấy được thông tin
+            continue
           }
         }
       }
@@ -261,8 +260,8 @@ export function useNearbyFriends() {
     // Add current user marker
     addCurrentUserMarker(map)
 
-    // Add nearby friends markers
-    addNearbyFriendsMarkers(map)
+    // Add nearby users markers - UPDATED
+    addNearbyUsersMarkers(map)
 
     return map
   }
@@ -297,45 +296,45 @@ export function useNearbyFriends() {
   }
 
   /**
-   * Thêm markers cho nearby friends
+   * UPDATED: Thêm markers cho TẤT CẢ nearby users (không chỉ friends)
    */
-  const addNearbyFriendsMarkers = (map) => {
+  const addNearbyUsersMarkers = (map) => {
     // Xóa markers cũ
     userMarkers.value.forEach(marker => marker.remove())
     userMarkers.value.clear()
 
-    nearbyFriends.value.forEach(friend => {
-      // Tạo marker element
+    nearbyFriends.value.forEach(nearbyUser => {
+      // Tạo marker element - UPDATED với styling cho users thông thường
       const markerEl = document.createElement('div')
-      markerEl.className = 'friend-marker'
-      markerEl.style.backgroundImage = friend.userInfo?.Avatar ? `url(${friend.userInfo.Avatar})` : 'none'
+      markerEl.className = 'nearby-user-marker'
+      markerEl.style.backgroundImage = nearbyUser.userInfo?.Avatar ? `url(${nearbyUser.userInfo.Avatar})` : 'none'
       markerEl.style.width = '35px'
       markerEl.style.height = '35px'
       markerEl.style.borderRadius = '50%'
-      markerEl.style.border = '2px solid #32CD32'
+      markerEl.style.border = '2px solid #FFA500' // Màu cam cho users thông thường
       markerEl.style.backgroundSize = 'cover'
       markerEl.style.backgroundPosition = 'center'
-      markerEl.style.backgroundColor = '#32CD32'
+      markerEl.style.backgroundColor = '#FFA500'
       markerEl.style.cursor = 'pointer'
 
       // Tạo marker
       const marker = new window.mapboxgl.Marker(markerEl)
-        .setLngLat([friend.location.longitude, friend.location.latitude])
+        .setLngLat([nearbyUser.location.longitude, nearbyUser.location.latitude])
         .setPopup(new window.mapboxgl.Popup().setHTML(`
           <div style="text-align: center; padding: 8px;">
-            <img src="${friend.userInfo?.Avatar || ''}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'">
-            <div><strong>${friend.userInfo?.UserName || 'Unknown'}</strong></div>
-            <div style="color: #666; font-size: 12px;">Cách ${friend.distance}km</div>
+            <img src="${nearbyUser.userInfo?.Avatar || ''}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover;" onerror="this.style.display='none'">
+            <div><strong>${nearbyUser.userInfo?.UserName || 'Unknown'}</strong></div>
+            <div style="color: #666; font-size: 12px;">Cách ${nearbyUser.distance}km</div>
           </div>
         `))
         .addTo(map)
 
-      userMarkers.value.set(friend.friendId, marker)
+      userMarkers.value.set(nearbyUser.userId, marker)
     })
   }
 
   /**
-   * Load Mapbox script
+   * Load Mapbox script với proper error handling
    */
   const loadMapboxScript = () => {
     return new Promise((resolve, reject) => {
@@ -344,18 +343,27 @@ export function useNearbyFriends() {
         return
       }
 
-      // Load CSS
+      // Load CSS first
       const cssLink = document.createElement('link')
       cssLink.href = 'https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css'
       cssLink.rel = 'stylesheet'
+      cssLink.onload = () => {
+        // Load JS after CSS
+        const script = document.createElement('script')
+        script.src = 'https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'
+        script.onload = () => {
+          // Ensure mapboxgl is available
+          if (window.mapboxgl) {
+            resolve()
+          } else {
+            reject(new Error('Mapbox GL JS failed to load'))
+          }
+        }
+        script.onerror = () => reject(new Error('Failed to load Mapbox GL JS'))
+        document.head.appendChild(script)
+      }
+      cssLink.onerror = () => reject(new Error('Failed to load Mapbox GL CSS'))
       document.head.appendChild(cssLink)
-
-      // Load JS
-      const script = document.createElement('script')
-      script.src = 'https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js'
-      script.onload = resolve
-      script.onerror = reject
-      document.head.appendChild(script)
     })
   }
 
@@ -364,27 +372,33 @@ export function useNearbyFriends() {
   // =============================================================================
 
   /**
-   * Khởi tạo tính năng nearby friends
+   * Khởi tạo tính năng nearby users với improved error handling
    */
   const initializeNearbyFriends = async () => {
     try {
-      // Load Mapbox
-      await loadMapboxScript()
+      // Load Mapbox với timeout
+      await Promise.race([
+        loadMapboxScript(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Mapbox loading timeout')), 10000)
+        )
+      ])
       
       // Lấy vị trí hiện tại
       await getCurrentLocation()
       
-      // Tìm bạn bè xung quanh
+      // Tìm users xung quanh
       await findNearbyFriends()
 
       return true
     } catch (error) {
+      console.error('Initialize nearby friends error:', error)
       throw error
     }
   }
 
   /**
-   * Refresh nearby friends data
+   * Refresh nearby users data
    */
   const refreshNearbyFriends = async () => {
     if (!currentLocation.value) {
@@ -395,7 +409,7 @@ export function useNearbyFriends() {
     
     // Update map nếu đã khởi tạo
     if (mapInstance.value) {
-      addNearbyFriendsMarkers(mapInstance.value)
+      addNearbyUsersMarkers(mapInstance.value)
     }
   }
 
@@ -419,7 +433,7 @@ export function useNearbyFriends() {
     // State
     isLoading,
     currentLocation,
-    nearbyFriends,
+    nearbyFriends, // Tên giữ nguyên cho compatibility
     mapInstance,
     
     // Computed

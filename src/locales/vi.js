@@ -1,4 +1,4 @@
-// locales/vi.js - Updated với các text mới cho Content feature
+// src/locales/vi.js - Updated với các text mới cho Nearby Users
 export default {
   // Authentication
   login: 'Đăng nhập',
@@ -47,6 +47,24 @@ export default {
   confirmUnfriend: 'Bạn có chắc muốn hủy kết bạn?',
   unknownUser: 'Người dùng không xác định',
   viewAllFriends: 'Toàn bộ bạn bè',
+  joinedOn: 'Tham gia vào',
+
+  // Nearby Users - NEW/UPDATED
+  nearbyUsers: 'Tìm người xung quanh',
+  getNearbyLocation: 'Lấy vị trí',
+  refreshLocation: 'Làm mới',
+  allowLocation: 'Cho phép truy cập vị trí',
+  locationPermissionRequired: 'Cần quyền truy cập vị trí',
+  locationPermissionDescription: 'Cho phép truy cập vị trí để tìm người dùng xung quanh bạn',
+  noNearbyUsers: 'Không có người dùng nào xung quanh',
+  searchRadius: 'Bán kính tìm kiếm',
+  distanceAway: 'cách',
+  locationError: 'Lỗi lấy vị trí',
+  retryLocation: 'Thử lại',
+  mapView: 'Bản đồ',
+  listView: 'Danh sách',
+  getLocation: 'Lấy vị trí',
+  refresh: 'Làm mới',
 
   // Create Post - UPDATED với Content feature
   writeCaption: 'Viết tiêu đề ngắn gọn...',
@@ -75,6 +93,7 @@ export default {
   noPosts: 'Chưa có bài viết nào',
   textPost: 'Bài viết văn bản',
   selectPost: 'Chọn bài viết để xem chi tiết',
+  selectOption: 'Chọn một tùy chọn',
 
   // Post Details
   caption: 'Tiêu đề',
@@ -146,6 +165,11 @@ export default {
   scrollToNext: 'Cuộn để xem bài viết tiếp theo',
   scrollTooFast: 'Thao tác cuộn quá nhanh',
 
+  // Language
+  language: 'Ngôn ngữ',
+  vietnamese: 'Tiếng Việt',
+  english: 'English',
+
   // Success Messages
   loginSuccess: 'Đăng nhập thành công!',
   signupSuccess: 'Đăng ký thành công!',
@@ -176,7 +200,7 @@ export default {
   invalidFileType: 'Loại file không hợp lệ! Chỉ chấp nhận ảnh/video.',
   tooManyFiles: 'Quá nhiều files! Tối đa 10 media.',
   missingCaption: 'Vui lòng nhập tiêu đề!',
-  missingContent: 'Vui lòng nhập nội dung bài viết!', // NEW
+  missingContent: 'Vui lòng nhập nội dung bài viết!',
   missingMedia: 'Vui lòng chọn ảnh hoặc video!',
   notAuthenticated: 'Vui lòng đăng nhập!',
   permissionDenied: 'Không có quyền thực hiện!',

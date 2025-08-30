@@ -1,7 +1,8 @@
 <!--
-src/components/FriendRight.vue - Updated với Nearby Friends section
+src/components/FriendRight.vue - Updated để hiển thị "Tìm người xung quanh"
 Component sidebar bên phải cho trang Friends
-Logic: 4 buttons với counter cho mỗi section, thêm "Tìm bạn bè xung quanh"
+UPDATED: Thay đổi text từ "Tìm bạn bè xung quanh" thành "Tìm người xung quanh"
+Logic: 4 buttons với counter cho mỗi section, tìm TẤT CẢ users xung quanh
 Emit activeTab để FriendMain biết hiển thị gì
 -->
 <template>
@@ -53,7 +54,7 @@ Emit activeTab để FriendMain biết hiển thị gì
       </button>
     </div>
 
-    <!-- Nearby Friends Section - NEW -->
+    <!-- Nearby Users Section - UPDATED text -->
     <div class="section">
       <button 
         class="section-btn"
@@ -62,9 +63,8 @@ Emit activeTab để FriendMain biết hiển thị gì
       >
         <div class="section-header">
           <div class="section-icon nearby-icon"></div>
-          <h3 class="section-title">Tìm bạn xung quanh</h3>
+          <h3 class="section-title">{{ getText('nearbyUsers') }}</h3>
         </div>
-        <div class="section-counter">{{ nearbyCount }}</div>
       </button>
     </div>
 
@@ -92,7 +92,6 @@ export default {
       getFriendSuggestions,
       isLoading
     } = useFriends()
-    const { nearbyCount } = useNearbyFriends()
     const { getText } = useLanguage()
 
     const activeTab = ref('friends')
@@ -149,7 +148,6 @@ export default {
       friendsCount,
       suggestionsCount,
       requestsCount,
-      nearbyCount,
       isLoading,
       getText,
       setActiveTab,
@@ -231,7 +229,7 @@ export default {
   background-image: url('@/icons/notification.png');
 }
 
-/* NEW - Nearby friends icon */
+/* Nearby users icon */
 .nearby-icon {
   background-image: url('@/icons/location.png');
 }

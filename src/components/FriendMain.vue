@@ -1,8 +1,9 @@
 <!--
-src/components/FriendMain.vue - Updated với Nearby Friends support
+src/components/FriendMain.vue - Updated để hiển thị TẤT CẢ users xung quanh
 Component chính hiển thị nội dung friends với map support
-Logic: Hiển thị friends, suggestions, requests, nearby map dựa vào activeTab
-Thêm section "nearby" để hiển thị Mapbox map với user locations
+UPDATED: Nearby section hiển thị tất cả users xung quanh (không chỉ friends)
+Logic: Hiển thị friends, suggestions, requests, nearby users dựa vào activeTab
+Thêm section "nearby" để hiển thị Mapbox map với TẤT CẢ user locations xung quanh
 -->
 <template>
   <div class="friend-main">
@@ -120,42 +121,42 @@ Thêm section "nearby" để hiển thị Mapbox map với user locations
       </div>
     </div>
 
-    <!-- Nearby Friends Map - NEW -->
+    <!-- Nearby Users Map - UPDATED để hiển thị tất cả users -->
     <div v-else-if="activeTab === 'nearby'" class="content-container nearby-container">
       <!-- Map Controls -->
       <div class="map-controls">
-        <h3 class="map-title">Bạn bè xung quanh ({{ SEARCH_RADIUS_KM }}km)</h3>
+        <h3 class="map-title">{{ getText('nearbyUsers') }} ({{ SEARCH_RADIUS_KM }}km)</h3>
         <div class="control-buttons">
           <button 
             class="location-btn"
             @click="handleGetLocation"
             :disabled="nearbyLoading"
           >
-            {{ nearbyLoading ? 'Đang tải...' : 'Lấy vị trí' }}
+            {{ nearbyLoading ? getText('loading') : getText('getLocation') }}
           </button>
           <button 
             class="refresh-btn"
             @click="handleRefreshNearby"
             :disabled="!hasLocation || nearbyLoading"
           >
-            Làm mới
+            {{ getText('refresh') }}
           </button>
           <button 
             class="list-btn"
             @click="toggleViewMode"
             :disabled="!hasLocation"
           >
-            {{ showMapView ? 'Danh sách' : 'Bản đồ' }}
+            {{ showMapView ? getText('listView') : getText('mapView') }}
           </button>
         </div>
       </div>
 
       <!-- Location Permission Request -->
       <div v-if="!hasLocation && !nearbyLoading" class="location-request">
-        <h4>Cần quyền truy cập vị trí</h4>
-        <p>Cho phép truy cập vị trí để tìm bạn bè xung quanh bạn</p>
+        <h4>{{ getText('locationPermissionRequired') }}</h4>
+        <p>{{ getText('locationPermissionDescription') }}</p>
         <button class="get-location-btn" @click="handleGetLocation">
-          Cho phép truy cập vị trí
+          {{ getText('allowLocation') }}
         </button>
       </div>
 
@@ -164,28 +165,38 @@ Thêm section "nearby" để hiển thị Mapbox map với user locations
         <!-- Map View -->
         <div v-if="showMapView" id="nearby-map" class="mapbox-map"></div>
         
-        <!-- List View -->
+        <!-- List View - UPDATED để hiển thị nearby users -->
         <div v-else class="nearby-list-view">
           <div v-if="nearbyFriends.length === 0" class="no-nearby-list">
             <div class="no-nearby-icon">🔍</div>
-            <p>Không có bạn bè nào xung quanh</p>
-            <small>Bán kính tìm kiếm: {{ SEARCH_RADIUS_KM }}km</small>
+            <p>{{ getText('noNearbyUsers') }}</p>
+            <small>{{ getText('searchRadius') }}: {{ SEARCH_RADIUS_KM }}km</small>
           </div>
           <div v-else class="nearby-friends-full-list">
             <div 
-              v-for="friend in nearbyFriends" 
-              :key="friend.friendId"
+              v-for="nearbyUser in nearbyFriends" 
+              :key="nearbyUser.userId"
               class="nearby-friend-card"
             >
               <div class="nearby-friend-info">
                 <div 
                   class="nearby-friend-avatar"
-                  :style="{ backgroundImage: friend.userInfo?.Avatar ? `url(${friend.userInfo.Avatar})` : '' }"
+                  :style="{ backgroundImage: nearbyUser.userInfo?.Avatar ? `url(${nearbyUser.userInfo.Avatar})` : '' }"
                 ></div>
                 <div class="nearby-friend-details">
-                  <div class="nearby-friend-name">{{ friend.userInfo?.UserName || getText('unknownUser') }}</div>
-                  <div class="nearby-friend-distance">Cách {{ friend.distance }}km</div>
+                  <div class="nearby-friend-name">{{ nearbyUser.userInfo?.UserName || getText('unknownUser') }}</div>
+                  <div class="nearby-friend-distance">{{ nearbyUser.distance }}km {{ getText('distanceAway') }}</div>
                 </div>
+              </div>
+              <!-- UPDATED: Thêm action button để kết bạn với nearby users -->
+              <div class="nearby-friend-actions">
+                <button 
+                  class="add-nearby-friend-btn"
+                  @click="handleAddNearbyFriend(nearbyUser.userId)"
+                  :disabled="actionLoading"
+                >
+                  {{ getText('addFriend') }}
+                </button>
               </div>
             </div>
           </div>
@@ -195,9 +206,9 @@ Thêm section "nearby" để hiển thị Mapbox map với user locations
       <!-- Error State -->
       <div v-if="locationError" class="location-error">
         <div class="error-icon">⚠️</div>
-        <h4>Lỗi lấy vị trí</h4>
+        <h4>{{ getText('locationError') }}</h4>
         <p>{{ locationError }}</p>
-        <button class="retry-btn" @click="handleGetLocation">Thử lại</button>
+        <button class="retry-btn" @click="handleGetLocation">{{ getText('retryLocation') }}</button>
       </div>
     </div>
 
@@ -245,7 +256,7 @@ export default {
       initializeNearbyFriends,
       initializeMap,
       refreshNearbyFriends,
-      nearbyFriends,
+      nearbyFriends, // Tên giữ nguyên cho compatibility, thực tế là nearbyUsers
       hasLocation,
       isLoading: nearbyLoading,
       cleanup: cleanupNearby,
@@ -264,7 +275,7 @@ export default {
 
     const currentUserId = computed(() => user.value?.uid)
 
-    // Data loading methods (existing)
+    // Data loading methods (existing - không thay đổi)
     const loadFriends = async () => {
       if (!currentUserId.value) return
 
@@ -310,7 +321,7 @@ export default {
       }
     }
 
-    // Action handlers (existing)
+    // Action handlers (existing - không thay đổi)
     const handleUnfriend = async (friend) => {
       if (!confirm(getText('confirmUnfriend'))) return
 
@@ -372,7 +383,23 @@ export default {
       }
     }
 
-    // Nearby Friends handlers - NEW
+    // UPDATED: Handler để kết bạn với nearby users
+    const handleAddNearbyFriend = async (receiverId) => {
+      if (!currentUserId.value) return
+
+      actionLoading.value = true
+      try {
+        await sendFriendRequest(currentUserId.value, receiverId)
+        showSuccess('friendRequestSent')
+        emit('data-updated')
+      } catch (error) {
+        showError(error, 'sendRequest')
+      } finally {
+        actionLoading.value = false
+      }
+    }
+
+    // Nearby Users handlers - UPDATED
     const handleGetLocation = async () => {
       locationError.value = ''
       
@@ -382,7 +409,14 @@ export default {
         // Initialize map sau khi có location và đang ở map view
         await nextTick()
         if (hasLocation.value && showMapView.value) {
-          initializeMap('nearby-map')
+          // Delay một chút để DOM render xong
+          setTimeout(() => {
+            try {
+              initializeMap('nearby-map')
+            } catch (error) {
+              console.warn('Map initialization warning:', error)
+            }
+          }, 100)
         }
         
       } catch (error) {
@@ -398,18 +432,21 @@ export default {
       }
     }
 
-    // Toggle between map and list view - NEW
+    // Toggle between map and list view
     const toggleViewMode = async () => {
       showMapView.value = !showMapView.value
       
       // Initialize map khi switch về map view
       if (showMapView.value && hasLocation.value) {
         await nextTick()
-        try {
-          initializeMap('nearby-map')
-        } catch (error) {
-          // Map có thể đã được khởi tạo rồi
-        }
+        // Delay để DOM render
+        setTimeout(() => {
+          try {
+            initializeMap('nearby-map')
+          } catch (error) {
+            console.warn('Map toggle initialization warning:', error)
+          }
+        }, 100)
       }
     }
 
@@ -478,7 +515,7 @@ export default {
       friendsList,
       suggestionsList,
       requestsList,
-      nearbyFriends,
+      nearbyFriends, // Tên giữ nguyên cho compatibility
       isLoading,
       actionLoading,
       nearbyLoading,
@@ -492,6 +529,7 @@ export default {
       handleSendRequest,
       handleAcceptRequest,
       handleRejectRequest,
+      handleAddNearbyFriend, // UPDATED: Thêm handler mới
       handleGetLocation,
       handleRefreshNearby,
       toggleViewMode
@@ -654,7 +692,7 @@ export default {
   transform: none;
 }
 
-/* NEW - Nearby Friends Styles */
+/* Nearby Users Styles - UPDATED */
 .nearby-container {
   padding: 0;
 }
@@ -747,9 +785,39 @@ export default {
   flex: 1;
   min-height: 12rem;
   border-radius: 0;
+  position: relative;
+  width: 100%;
 }
 
-/* NEW - List View Styles */
+/* Ensure mapbox controls work properly */
+.mapbox-map :deep(.mapboxgl-canvas-container) {
+  cursor: grab;
+}
+
+.mapbox-map :deep(.mapboxgl-canvas-container:active) {
+  cursor: grabbing;
+}
+
+.mapbox-map :deep(.mapboxgl-canvas) {
+  outline: none;
+}
+
+.mapbox-map :deep(.mapboxgl-ctrl-group) {
+  background: rgba(43, 45, 66, 0.8);
+  border-radius: 0.25rem;
+}
+
+.mapbox-map :deep(.mapboxgl-ctrl-group button) {
+  background: transparent;
+  color: var(--theme-color);
+  border: none;
+}
+
+.mapbox-map :deep(.mapboxgl-ctrl-group button:hover) {
+  background: rgba(255, 235, 124, 0.1);
+}
+
+/* List View Styles - UPDATED cho nearby users */
 .nearby-list-view {
   flex: 1;
   overflow-y: auto;
@@ -793,6 +861,9 @@ export default {
   border: 1px solid var(--theme-color-20);
   border-radius: 0.5rem;
   padding: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   transition: all 0.3s ease;
 }
 
@@ -806,6 +877,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex: 1;
 }
 
 .nearby-friend-avatar {
@@ -835,5 +907,35 @@ export default {
   font-size: 0.625rem;
   color: var(--theme-color);
   opacity: 0.7;
+}
+
+/* UPDATED: Styles cho nearby friend actions */
+.nearby-friend-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.add-nearby-friend-btn {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid var(--theme-color);
+  background: var(--theme-color);
+  color: #2B2D42;
+}
+
+.add-nearby-friend-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+  box-shadow: 0 0.125rem 0.25rem var(--theme-color-20);
+}
+
+.add-nearby-friend-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 </style>
