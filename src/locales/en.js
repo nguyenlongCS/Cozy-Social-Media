@@ -48,6 +48,19 @@ export default {
   unknownUser: 'Unknown User',
   viewAllFriends: 'View All Friends',
 
+  // Nearby Friends - NEW
+  nearbyFriends: 'Find Nearby Friends',
+  getNearbyLocation: 'Get Location',
+  refreshLocation: 'Refresh',
+  allowLocation: 'Allow Location Access',
+  locationPermissionRequired: 'Location Permission Required',
+  locationPermissionDescription: 'Allow location access to find friends around you',
+  noNearbyFriends: 'No nearby friends',
+  searchRadius: 'Search radius',
+  distanceAway: 'away',
+  locationError: 'Location Error',
+  retryLocation: 'Try Again',
+
   // Create Post - UPDATED với Content feature
   writeCaption: 'Write a short title...',
   addMedia: 'Add photo/video',

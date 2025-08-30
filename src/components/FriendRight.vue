@@ -1,7 +1,8 @@
 <!--
-src/components/FriendRight.vue - Refactored
+src/components/FriendRight.vue - Updated với Nearby Friends section
 Component sidebar bên phải cho trang Friends
-Logic: 3 buttons với counter cho mỗi section, emit activeTab để FriendMain biết hiển thị gì
+Logic: 4 buttons với counter cho mỗi section, thêm "Tìm bạn bè xung quanh"
+Emit activeTab để FriendMain biết hiển thị gì
 -->
 <template>
   <div class="friend-right">
@@ -52,6 +53,21 @@ Logic: 3 buttons với counter cho mỗi section, emit activeTab để FriendMai
       </button>
     </div>
 
+    <!-- Nearby Friends Section - NEW -->
+    <div class="section">
+      <button 
+        class="section-btn"
+        :class="{ active: activeTab === 'nearby' }"
+        @click="setActiveTab('nearby')"
+      >
+        <div class="section-header">
+          <div class="section-icon nearby-icon"></div>
+          <h3 class="section-title">Tìm bạn xung quanh</h3>
+        </div>
+        <div class="section-counter">{{ nearbyCount }}</div>
+      </button>
+    </div>
+
     <div v-if="isLoading" class="loading-section">
       <div class="loading-text">{{ getText('loading') }}...</div>
     </div>
@@ -62,6 +78,7 @@ Logic: 3 buttons với counter cho mỗi section, emit activeTab để FriendMai
 import { ref, onMounted, watch } from 'vue'
 import { useAuth } from '@/composables/useAuth'
 import { useFriends } from '@/composables/useFriends'
+import { useNearbyFriends } from '@/composables/useNearbyFriends'
 import { useLanguage } from '@/composables/useLanguage'
 
 export default {
@@ -75,6 +92,7 @@ export default {
       getFriendSuggestions,
       isLoading
     } = useFriends()
+    const { nearbyCount } = useNearbyFriends()
     const { getText } = useLanguage()
 
     const activeTab = ref('friends')
@@ -131,6 +149,7 @@ export default {
       friendsCount,
       suggestionsCount,
       requestsCount,
+      nearbyCount,
       isLoading,
       getText,
       setActiveTab,
@@ -210,6 +229,11 @@ export default {
 
 .requests-icon {
   background-image: url('@/icons/notification.png');
+}
+
+/* NEW - Nearby friends icon */
+.nearby-icon {
+  background-image: url('@/icons/location.png');
 }
 
 .section-title {

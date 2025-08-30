@@ -1,11 +1,11 @@
 /*
-firestore.rules - Fixed Permissions cho Like và Comment
-Chỉnh sửa rules để sửa lỗi like/comment thất bại
+firestore.rules - Updated với userLocations collection support
+Chỉnh sửa rules để thêm support cho tính năng "Tìm bạn bè xung quanh"
 Logic: 
-- Sửa permission rules cho posts collection để user có thể read/write khi authenticated
-- Sửa permission rules cho likes và comments collection để user có thể tự do CRUD
-- Loại bỏ các ràng buộc strict về ownership trong create operations
-- Giữ nguyên security cho user profile và friend operations
+- Thêm rules cho userLocations collection để users có thể lưu vị trí
+- Authenticated users có thể read/write location data của chính mình
+- Authenticated users có thể read locations của friends để tính nearby
+- Giữ nguyên security cho các collections khác
 */
 
 rules_version = '2';
@@ -70,6 +70,13 @@ service cloud.firestore {
     match /userInterests/{userId} {
       allow read: if true; // Public read để gợi ý content
       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // NEW - User Locations collection cho nearby friends feature
+    match /userLocations/{userId} {
+      allow read: if request.auth != null; // Authenticated users có thể đọc locations để tìm nearby friends
+      allow write: if request.auth != null && request.auth.uid == userId; // Chỉ owner có thể write location của mình
+      allow delete: if request.auth != null && request.auth.uid == userId; // Chỉ owner có thể xóa location của mình
     }
     
     // Deny all other collections
