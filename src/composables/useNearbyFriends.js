@@ -38,7 +38,7 @@ export function useNearbyFriends() {
   const userMarkers = ref(new Map())
 
   // Constants cho location
-  const SEARCH_RADIUS_KM = 10 // Bán kính tìm kiếm 10km
+  const SEARCH_RADIUS_KM = 1000 // Bán kính tìm kiếm 1000km
   const LOCATION_TIMEOUT = 10000 // 10 giây timeout
   const MAPBOX_TOKEN = 'pk.eyJ1IjoibG9uZ25ndXllbjIwMDQiLCJhIjoiY21leHo0dTZ5MTlwZjJtbXdvdjlpbm5vNSJ9.HrXVxi7vT0CIJKkVqwtTIQ' // Public token demo
 

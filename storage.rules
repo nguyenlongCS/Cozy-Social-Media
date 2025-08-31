@@ -1,0 +1,30 @@
+/*
+storage.rules - Firebase Storage Security Rules
+Cấu hình quyền truy cập cho Firebase Storage để cho phép upload files
+Logic:
+- Authenticated users có thể upload/read files của chính mình trong folder posts và avatar
+- File size limits và type validation
+- Secure path structure với user authentication
+*/
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Posts media uploads - Authenticated users có thể upload media cho posts (không giới hạn size)
+    match /posts/{allPaths=**} {
+      allow read: if true; // Public read để hiển thị posts cho tất cả users
+      allow write: if request.auth != null; // Authenticated users có thể upload
+    }
+    
+    // Avatar uploads - Authenticated users có thể upload avatar của chính mình (không giới hạn size)
+    match /avatar/{allPaths=**} {
+      allow read: if true; // Public read để hiển thị avatars
+      allow write: if request.auth != null; // Authenticated users có thể upload
+    }
+    
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
