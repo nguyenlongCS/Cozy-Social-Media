@@ -1,6 +1,6 @@
 # 🚀 Social Media Web
 
-> Demo: [fir-auth-cozy.web.app](https://fir-auth-cozy.web.app) hoặc [ems.io.vn](https://ems.io.vn)  
+> Link Truy Cập: [fir-auth-cozy.web.app](https://fir-auth-cozy.web.app) hoặc [ems.io.vn](https://ems.io.vn)  
 
 Nền tảng mạng xã hội thu nhỏ với nhiều tính năng tương tác: đăng ký/đăng nhập, kết bạn, nhắn tin realtime, feeds cá nhân hóa, thông báo, quản trị, tích hợp API...
 
