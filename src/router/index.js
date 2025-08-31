@@ -1,5 +1,6 @@
 /*
-src/router/index.js
+src/router/index.js - Updated với Admin Route
+Router configuration với admin route được thêm
 */
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '@/view/Home.vue'
@@ -10,6 +11,7 @@ import Friends from '@/view/Friends.vue'
 import Messages from '@/view/Messages.vue'
 import Discover from '@/view/Discover.vue'
 import News from '@/view/News.vue'
+import Admin from '@/view/Admin.vue'
 
 const routes = [
   {
@@ -51,6 +53,11 @@ const routes = [
     path: '/discover',
     name: 'Discover',
     component: Discover
+  },
+  {
+    path: '/admin',
+    name: 'Admin',
+    component: Admin
   },
   // Catch-all route for 404 errors
   {

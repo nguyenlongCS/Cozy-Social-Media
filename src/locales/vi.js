@@ -1,4 +1,4 @@
-// src/locales/vi.js - Updated với các text mới cho Nearby Users
+// src/locales/vi.js - Updated với các text mới cho Admin functionality
 export default {
   // Authentication
   login: 'Đăng nhập',
@@ -19,6 +19,56 @@ export default {
   search: 'Tìm kiếm...',
   home: 'Trang chủ',
   profile: 'Hồ sơ',
+
+  // Admin Feature - NEW
+  adminPanel: 'Quản Trị',
+  admin: 'Quản trị viên',
+  adminDashboard: 'Bảng Điều Khiển Quản Trị',
+  accessDenied: 'Từ Chối Truy Cập',
+  adminAccessRequired: 'Yêu cầu quyền quản trị viên',
+  backToHome: 'Về Trang Chủ',
+  verifyingAdminAccess: 'Đang xác thực quyền quản trị',
+  
+  // Admin Dashboard Stats
+  totalUsers: 'Tổng Người Dùng',
+  totalPosts: 'Tổng Bài Viết',
+  totalInteractions: 'Tổng Tương Tác',
+  avgInteractions: 'Tương tác trung bình',
+  totalLikes: 'Tổng Lượt Thích',
+  totalComments: 'Tổng Bình Luận',
+  
+  // Admin Management
+  manageUsers: 'Quản Lý Người Dùng',
+  managePosts: 'Quản Lý Bài Viết',
+  analytics: 'Phân Tích',
+  recentUsers: 'Người Dùng Mới',
+  topPosts: 'Bài Viết Hot',
+  searchResults: 'Kết Quả Tìm Kiếm',
+  noUsersFound: 'Không tìm thấy người dùng',
+  noPostsFound: 'Không tìm thấy bài viết',
+  
+  // Admin Actions
+  deleteUser: 'Xóa Người Dùng',
+  confirmDeleteUser: 'Bạn có chắc muốn xóa người dùng',
+  confirmDeletePost: 'Bạn có chắc muốn xóa bài viết',
+  by: 'bởi',
+  
+  // Admin Analytics
+  userAnalytics: 'Phân Tích Người Dùng',
+  postAnalytics: 'Phân Tích Bài Viết',
+  engagementAnalytics: 'Phân Tích Tương Tác',
+  newUsersToday: 'Người Dùng Mới Hôm Nay',
+  
+  // Admin Help
+  adminHelp: 'Hướng Dẫn Quản Trị',
+  adminUserHelpText: 'Tìm kiếm và quản lý tài khoản người dùng. Bạn có thể xóa người dùng và tất cả dữ liệu liên quan.',
+  adminPostHelpText: 'Xem và quản lý bài viết. Bạn có thể xóa bài viết cùng các bình luận và lượt thích liên quan.',
+  adminAnalyticsHelpText: 'Xem thống kê nền tảng và các chỉ số tương tác của người dùng.',
+  
+  // System Info
+  systemInfo: 'Thông Tin Hệ Thống',
+  version: 'Phiên Bản',
+  lastUpdate: 'Cập Nhật Cuối',
 
   // Login Protection Messages
   loginToAccessProfile: 'Vui lòng đăng nhập để xem hồ sơ',
@@ -49,7 +99,7 @@ export default {
   viewAllFriends: 'Toàn bộ bạn bè',
   joinedOn: 'Tham gia vào',
 
-  // Nearby Users - NEW/UPDATED
+  // Nearby Users
   nearbyUsers: 'Tìm người xung quanh',
   getNearbyLocation: 'Lấy vị trí',
   refreshLocation: 'Làm mới',
@@ -75,7 +125,7 @@ export default {
   multiMediaHint: 'Chọn nhiều ảnh/video (tối đa 10)',
   mediaLimit: 'Tối đa 10 media',
   
-  // Content Feature - UPDATED
+  // Content Feature
   postContent: 'Nội dung bài viết',
   writeContent: 'Viết nội dung chi tiết...',
   content: 'Nội dung',
@@ -183,6 +233,7 @@ export default {
   friendRequestSent: 'Đã gửi lời mời kết bạn!',
   friendRequestAccepted: 'Đã chấp nhận lời mời kết bạn!',
   friendRequestRejected: 'Đã từ chối lời mời kết bạn!',
+  deleteUser: 'Xóa người dùng!',
 
   // Error Messages
   fillAllFields: 'Vui lòng nhập đầy đủ thông tin!',
@@ -226,6 +277,7 @@ export default {
   downloadMediaFailed: 'Tải xuống thất bại!',
   reportComingSoon: 'Tính năng báo cáo sắp ra mắt!',
   discover: 'Không thể tải trang khám phá!',
+  admin: 'Thao tác quản trị thất bại!',
 
   defaultError: 'Có lỗi xảy ra!'
 }

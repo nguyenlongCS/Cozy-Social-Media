@@ -1,4 +1,4 @@
-// src/locales/en.js - Updated với các text mới cho Nearby Users
+// src/locales/en.js - Updated với các text mới cho Admin functionality
 export default {
   // Authentication
   login: 'Login',
@@ -19,6 +19,47 @@ export default {
   search: 'Search...',
   home: 'Home',
   profile: 'Profile',
+
+  // Admin Feature - NEW
+  adminPanel: 'Admin Panel',
+  admin: 'Admin',
+  adminDashboard: 'Admin Dashboard',
+  accessDenied: 'Access Denied',
+  adminAccessRequired: 'Administrator access required',
+  backToHome: 'Back to Home',
+  verifyingAdminAccess: 'Verifying admin access',
+  
+  // Admin Dashboard Stats
+  totalUsers: 'Total Users',
+  totalPosts: 'Total Posts',
+  totalInteractions: 'Total Interactions',
+  avgInteractions: 'Avg per Post',
+  totalLikes: 'Total Likes',
+  totalComments: 'Total Comments',
+  
+  // Admin Management
+  manageUsers: 'Manage Users',
+  managePosts: 'Manage Posts',
+  analytics: 'Analytics',
+  recentUsers: 'Recent Users',
+  topPosts: 'Top Posts',
+  searchResults: 'Search Results',
+  noUsersFound: 'No users found',
+  noPostsFound: 'No posts found',
+  
+  // Admin Actions
+  deleteUser: 'Delete User',
+  confirmDeleteUser: 'Are you sure you want to delete user',
+  confirmDeletePost: 'Are you sure you want to delete post',
+  by: 'by',
+  
+  // Admin Analytics
+  userAnalytics: 'User Analytics',
+  postAnalytics: 'Post Analytics',
+  engagementAnalytics: 'Engagement Analytics',
+  newUsersToday: 'New Users Today',
+  allUsers: 'All users',
+  allPosts: 'All posts',
 
   // Login Protection Messages
   loginToAccessProfile: 'Please login to view profile',
@@ -49,7 +90,7 @@ export default {
   viewAllFriends: 'View All Friends',
   joinedOn: 'Joined on',
 
-  // Nearby Users - NEW/UPDATED
+  // Nearby Users
   nearbyUsers: 'Find Nearby People',
   getNearbyLocation: 'Get Location',
   refreshLocation: 'Refresh',
@@ -75,7 +116,7 @@ export default {
   multiMediaHint: 'Select multiple photos/videos (max 10)',
   mediaLimit: 'Max 10 media',
   
-  // Content Feature - UPDATED
+  // Content Feature
   postContent: 'Post Content',
   writeContent: 'Write detailed content...',
   content: 'Content',
@@ -183,6 +224,7 @@ export default {
   friendRequestSent: 'Friend request sent!',
   friendRequestAccepted: 'Friend request accepted!',
   friendRequestRejected: 'Friend request rejected!',
+  deleteUser: 'Delete User',
 
   // Error Messages
   fillAllFields: 'Please fill in all fields!',
@@ -226,6 +268,7 @@ export default {
   downloadMediaFailed: 'Download failed!',
   reportComingSoon: 'Report feature coming soon!',
   discover: 'Failed to load discover page!',
+  admin: 'Admin operation failed!',
 
   defaultError: 'An error occurred!'
 }

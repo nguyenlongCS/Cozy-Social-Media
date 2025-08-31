@@ -1,11 +1,13 @@
 <!--
-src/components/HomeLeft.vue - Updated with Discover Button
-Component sidebar bên trái trang chủ với danh sách bạn bè
+src/components/HomeLeft.vue - Updated with Admin Button
+Component sidebar bên trái trang chủ với danh sách bạn bè và nút Admin
 Logic: 
 - Menu buttons với authentication check
+- Nút Admin chỉ hiện khi user là admin
 - Hiển thị 5 bạn bè đầu tiên với avatar và tên
 - Button "Toàn bộ bạn bè" chuyển đến trang /friends
-- Added: Button "Khám phá" chuyển đến trang /discover
+- Button "Khám phá" chuyển đến trang /discover
+- Button "Quản trị" chuyển đến trang /admin (chỉ admin)
 -->
 <template>
   <div class="menu">
@@ -15,6 +17,12 @@ Logic:
     <button class="btn" @click="goToDiscover">
       {{ getText('explore') }}
     </button>
+    
+    <!-- Admin Button - chỉ hiển thị cho admin -->
+    <button v-if="isAdmin && user" class="btn admin-btn" @click="goToAdmin">
+      {{ getText('adminPanel') }}
+    </button>
+    
     <button class="btn">
       {{ getText('settings') }}
     </button>
@@ -64,6 +72,7 @@ import { useLanguage } from '@/composables/useLanguage'
 import { useAuth } from '@/composables/useAuth'
 import { useUsers } from '@/composables/useUsers'
 import { useFriends } from '@/composables/useFriends'
+import { useAdmin } from '@/composables/useAdmin'
 import { useErrorHandler } from '@/composables/useErrorHandler'
 
 export default {
@@ -74,6 +83,7 @@ export default {
     const { user } = useAuth()
     const { getUserById } = useUsers()
     const { getFriends, isLoading } = useFriends()
+    const { isAdmin, checkAdminStatus } = useAdmin()
     const { showError } = useErrorHandler()
 
     const friendsList = ref([])
@@ -90,6 +100,15 @@ export default {
     
     // Navigate to discover page
     const goToDiscover = () => router.push('/discover')
+    
+    // Navigate to admin page - NEW
+    const goToAdmin = () => {
+      if (!isAdmin.value) {
+        showError({ message: 'ADMIN_ACCESS_REQUIRED' }, 'admin')
+        return
+      }
+      router.push('/admin')
+    }
 
     const loadFriendsList = async () => {
       if (!user.value) {
@@ -111,26 +130,39 @@ export default {
       }
     }
 
+    // Check admin status khi user thay đổi
+    const checkUserAdminStatus = async () => {
+      if (user.value) {
+        await checkAdminStatus()
+      }
+    }
+
     watch(user, (newUser) => {
       if (newUser) {
         loadFriendsList()
+        checkUserAdminStatus()
       } else {
         friendsList.value = []
       }
     }, { immediate: true })
 
     onMounted(() => {
-      if (user.value) loadFriendsList()
+      if (user.value) {
+        loadFriendsList()
+        checkUserAdminStatus()
+      }
     })
 
     return {
       user,
       friendsList,
       isLoading,
+      isAdmin, // NEW - Admin status
       getText,
       handleCreatePost,
       goToFriends,
-      goToDiscover
+      goToDiscover,
+      goToAdmin // NEW - Admin navigation
     }
   }
 }
@@ -153,6 +185,29 @@ export default {
   border: none;
   border-radius: 0.3125rem;
   font-size: 0.875rem;
+}
+
+/* Admin button styling */
+.admin-btn {
+  background: var(--theme-color);
+  color: #2B2D42;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-btn::before {
+  content: '👑';
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+}
+
+.admin-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0.25rem 0.5rem rgba(255, 107, 107, 0.3);
 }
 
 .separator {

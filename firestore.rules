@@ -1,10 +1,10 @@
 /*
-firestore.rules - Updated với userLocations collection support
-Chỉnh sửa rules để thêm support cho tính năng "Tìm bạn bè xung quanh"
+firestore.rules - FIXED: Thêm permissions cho admin collection
+Chỉnh sửa rules để thêm support cho tính năng admin panel
 Logic: 
-- Thêm rules cho userLocations collection để users có thể lưu vị trí
-- Authenticated users có thể read/write location data của chính mình
-- Authenticated users có thể read locations của friends để tính nearby
+- Thêm rules cho admin collection để authenticated users có thể check admin status
+- Authenticated users có thể read admin collection để verify permissions
+- Chỉ có thể read, không write để bảo mật
 - Giữ nguyên security cho các collections khác
 */
 
@@ -15,6 +15,12 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if true; // Cho phép đọc public để hiển thị profile, search users
       allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // FIXED: Admin collection - Authenticated users có thể đọc để check admin status
+    match /admin/{adminId} {
+      allow read: if request.auth != null; // Authenticated users có thể check admin status
+      allow write: if false; // Không cho phép write để bảo mật - chỉ admin database có thể thay đổi
     }
     
     // Posts collection - FIXED: Cho phép authenticated users read/write để support like operations
@@ -72,7 +78,7 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
     
-    // NEW - User Locations collection cho nearby friends feature
+    // User Locations collection cho nearby friends feature
     match /userLocations/{userId} {
       allow read: if request.auth != null; // Authenticated users có thể đọc locations để tìm nearby friends
       allow write: if request.auth != null && request.auth.uid == userId; // Chỉ owner có thể write location của mình
