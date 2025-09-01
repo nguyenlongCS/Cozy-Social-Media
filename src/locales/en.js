@@ -1,4 +1,4 @@
-// src/locales/en.js - Updated với các text mới cho Admin functionality
+// Admin// src/locales/en.js - Updated với các text mới cho Admin functionality
 export default {
   // Authentication
   login: 'Login',
@@ -24,6 +24,7 @@ export default {
   adminPanel: 'Admin Panel',
   admin: 'Admin',
   adminDashboard: 'Admin Dashboard',
+  dashboard: 'Dashboard',
   accessDenied: 'Access Denied',
   adminAccessRequired: 'Administrator access required',
   backToHome: 'Back to Home',
@@ -41,6 +42,8 @@ export default {
   manageUsers: 'Manage Users',
   managePosts: 'Manage Posts',
   analytics: 'Analytics',
+  allUsers: 'All Users',
+  allPosts: 'All Posts',
   recentUsers: 'Recent Users',
   topPosts: 'Top Posts',
   searchResults: 'Search Results',
@@ -53,13 +56,39 @@ export default {
   confirmDeletePost: 'Are you sure you want to delete post',
   by: 'by',
   
+  // Admin Analytics - NEW
+  userGrowth: 'User Growth',
+  postsDistribution: 'Posts Distribution', 
+  engagementChart: 'Engagement Overview',
+  topUsersChart: 'Top Active Users',
+  newUsers: 'New Users',
+  textPosts: 'Text Posts',
+  imagePosts: 'Image Posts',
+  videoPosts: 'Video Posts',
+  engagementData: 'Engagement',
+  activeUsers: 'Active Users',
+  postsToday: 'Posts Today',
+  engagementRate: 'Engagement Rate',
+  systemAnalytics: 'System Analytics',
+  uptime: 'Uptime',
+  chartNotAvailable: 'Chart display not available',
+
   // Admin Analytics
   userAnalytics: 'User Analytics',
   postAnalytics: 'Post Analytics',
   engagementAnalytics: 'Engagement Analytics',
   newUsersToday: 'New Users Today',
-  allUsers: 'All users',
-  allPosts: 'All posts',
+  
+  // Admin Help
+  adminHelp: 'Admin Help',
+  adminUserHelpText: 'Search and manage user accounts. You can delete users and all their related data.',
+  adminPostHelpText: 'View and manage posts. You can delete posts and their associated comments and likes.',
+  adminAnalyticsHelpText: 'View platform statistics and user engagement metrics.',
+  
+  // System Info
+  systemInfo: 'System Info',
+  version: 'Version',
+  lastUpdate: 'Last Update',
 
   // Login Protection Messages
   loginToAccessProfile: 'Please login to view profile',
@@ -224,7 +253,7 @@ export default {
   friendRequestSent: 'Friend request sent!',
   friendRequestAccepted: 'Friend request accepted!',
   friendRequestRejected: 'Friend request rejected!',
-  deleteUser: 'Delete User',
+  deleteUser: 'User deleted successfully!',
 
   // Error Messages
   fillAllFields: 'Please fill in all fields!',

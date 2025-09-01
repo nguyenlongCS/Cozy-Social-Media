@@ -24,6 +24,7 @@ export default {
   adminPanel: 'Quản Trị',
   admin: 'Quản trị viên',
   adminDashboard: 'Bảng Điều Khiển Quản Trị',
+  dashboard: 'Bảng Điều Khiển',
   accessDenied: 'Từ Chối Truy Cập',
   adminAccessRequired: 'Yêu cầu quyền quản trị viên',
   backToHome: 'Về Trang Chủ',
@@ -33,7 +34,7 @@ export default {
   totalUsers: 'Tổng Người Dùng',
   totalPosts: 'Tổng Bài Viết',
   totalInteractions: 'Tổng Tương Tác',
-  avgInteractions: 'Tương tác trung bình',
+  avgInteractions: 'TB mỗi bài',
   totalLikes: 'Tổng Lượt Thích',
   totalComments: 'Tổng Bình Luận',
   
@@ -41,6 +42,8 @@ export default {
   manageUsers: 'Quản Lý Người Dùng',
   managePosts: 'Quản Lý Bài Viết',
   analytics: 'Phân Tích',
+  allUsers: 'Tất Cả Người Dùng',
+  allPosts: 'Tất Cả Bài Viết',
   recentUsers: 'Người Dùng Mới',
   topPosts: 'Bài Viết Hot',
   searchResults: 'Kết Quả Tìm Kiếm',
@@ -53,6 +56,23 @@ export default {
   confirmDeletePost: 'Bạn có chắc muốn xóa bài viết',
   by: 'bởi',
   
+  // Admin Analytics - NEW
+  userGrowth: 'Tăng Trưởng Người Dùng',
+  postsDistribution: 'Phân Bố Bài Viết',
+  engagementChart: 'Tổng Quan Tương Tác', 
+  topUsersChart: 'Người Dùng Hoạt Động Nhất',
+  newUsers: 'Người Dùng Mới',
+  textPosts: 'Bài Viết Text',
+  imagePosts: 'Bài Viết Ảnh',
+  videoPosts: 'Bài Viết Video',
+  engagementData: 'Tương Tác',
+  activeUsers: 'Người Dùng Hoạt Động',
+  postsToday: 'Bài Viết Hôm Nay',
+  engagementRate: 'Tỷ Lệ Tương Tác',
+  systemAnalytics: 'Phân Tích Hệ Thống',
+  uptime: 'Thời Gian Hoạt Động',
+  chartNotAvailable: 'Không thể hiển thị biểu đồ',
+
   // Admin Analytics
   userAnalytics: 'Phân Tích Người Dùng',
   postAnalytics: 'Phân Tích Bài Viết',
@@ -233,7 +253,7 @@ export default {
   friendRequestSent: 'Đã gửi lời mời kết bạn!',
   friendRequestAccepted: 'Đã chấp nhận lời mời kết bạn!',
   friendRequestRejected: 'Đã từ chối lời mời kết bạn!',
-  deleteUser: 'Xóa người dùng!',
+  deleteUser: 'Đã xóa người dùng thành công!',
 
   // Error Messages
   fillAllFields: 'Vui lòng nhập đầy đủ thông tin!',
